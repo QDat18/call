@@ -113,6 +113,35 @@ body {
     transform: scale(1.05);
 }
 
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Video Call Button */
+#start-video-call {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+#start-video-call:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Voice Call Button */
+#start-voice-call {
+    background: linear-gradient(135deg, var(--success-color), #059669);
+    color: white;
+}
+
+#start-voice-call:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669, var(--success-color));
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
 /* Messages Area */
 .messages-area {
     flex: 1;
@@ -370,6 +399,199 @@ body {
     transform: scale(1.05);
 }
 
+.send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Incoming Call Modal */
+.incoming-call-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.incoming-call-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.incoming-call-content {
+    position: relative;
+    background: white;
+    border-radius: 24px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.incoming-call-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.incoming-call-header i {
+    font-size: 48px;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.incoming-call-header h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin: 0;
+}
+
+.incoming-call-body {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.caller-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 48px;
+    color: white;
+}
+
+.caller-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.caller-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0 0 0.5rem 0;
+}
+
+.call-type {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.incoming-call-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.call-action-btn {
+    flex: 1;
+    padding: 1rem;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s;
+}
+
+.btn-accept {
+    background: linear-gradient(135deg, var(--success-color), #059669);
+    color: white;
+}
+
+.btn-accept:hover {
+    background: linear-gradient(135deg, #059669, var(--success-color));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-decline {
+    background: linear-gradient(135deg, var(--danger-color), #dc2626);
+    color: white;
+}
+
+.btn-decline:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+}
+
+.loading-overlay.show {
+    display: flex;
+}
+
+.loading-content {
+    background: white;
+    padding: 2rem 3rem;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--light-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Scrollbar */
 .messages-area::-webkit-scrollbar {
     width: 6px;
@@ -404,7 +626,6 @@ body {
 
 @section('content')
 <div class="chat-container">
-
     <!-- Header -->
     <div class="chat-header">
         <a href="{{ route('conversations.index') }}" class="back-button">
@@ -453,7 +674,7 @@ body {
                     @php $previousDate = $currentDate; @endphp
                 @endif
 
-                <div class="message-wrapper {{ $isSent ? 'sent' : 'received' }}">
+                <div class="message-wrapper {{ $isSent ? 'sent' : 'received' }}" data-message-id="{{ $message->message_id }}">
                     @if(!$isSent)
                         <img src="{{ $message->sender->avatar_url ?? asset('images/default-avatar.png') }}"
                              alt="{{ $message->sender->first_name }}"
@@ -493,6 +714,11 @@ body {
                     @endif
                 </div>
             @endforeach
+        @else
+            <div class="empty-messages text-center text-gray-500 py-12">
+                <i class="fas fa-comments text-5xl mb-4 opacity-50"></i>
+                <p class="text-lg">No messages yet. Start the conversation!</p>
+            </div>
         @endif
     </div>
 
@@ -521,7 +747,7 @@ body {
                               class="message-input"
                               placeholder="Type a message..."
                               rows="1"></textarea>
-                    <button type="button" class="emoji-btn" title="Emoji">Smile</button>
+                    <button type="button" class="emoji-btn" title="Emoji">😊</button>
                 </div>
 
                 <button type="submit" class="send-btn" id="send-btn">
@@ -531,69 +757,339 @@ body {
         </form>
     </div>
 </div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p id="loading-text">Initiating call...</p>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
-{{-- Load JS --}}
-@vite(['resources/js/bootstrap.ts'])
-@vite(['resources/js/chat-init.ts'])
-@vite(['resources/js/video-call-init.ts'])
-
-<script type="module">
+<script>
 /**
- * Khởi tạo chat + video call
+ * Chat & Video Call Integration
  */
-(() => {
-    const conversationId = {{ $conversation->conversation_id }};
-    const currentUserId = {{ auth()->id() }};
-    const receiverId = {{ $otherUser?->user_id ?? 0 }}; // FIX: Dùng user_id
-    const currentUserName = "{{ addslashes(auth()->user()->first_name) }}";
 
-    // TRUYỀN CHO video-call-init.ts
-    window.conversationId = conversationId;
-    window.currentUserId = currentUserId;
+// Global configuration
+window.chatConfig = {
+    conversationId: {{ $conversation->conversation_id }},
+    currentUserId: {{ auth()->id() }},
+    receiverId: {{ $otherUser?->user_id ?? 0 }},
+    currentUserName: "{{ addslashes(auth()->user()->first_name) }}",
+    otherUserName: "{{ addslashes($otherUser ? $otherUser->first_name . ' ' . $otherUser->last_name : 'User') }}",
+    otherUserAvatar: "{{ $otherUser ? ($otherUser->avatar_url ?? asset('images/default-avatar.png')) : asset('images/default-avatar.png') }}"
+};
 
-    // KIỂM TRA receiverId
-    if (!receiverId || receiverId <= 0) {
-        console.error("LỖI: Không tìm thấy người nhận (receiverId = 0)");
-        alert("Không thể gọi video. Vui lòng tải lại trang.");
+console.log('💬 Chat configuration:', window.chatConfig);
+
+// Video Call Manager
+class VideoCallManager {
+    constructor() {
+        this.config = window.chatConfig;
+        this.currentCallId = null;
+        this.setupCallButtons();
+        this.listenForIncomingCalls();
+    }
+
+    setupCallButtons() {
+        const videoBtn = document.getElementById('start-video-call');
+        const voiceBtn = document.getElementById('start-voice-call');
+
+        if (videoBtn) {
+            videoBtn.addEventListener('click', () => this.initiateCall('video'));
+            console.log('✅ Video button attached');
+        }
+
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', () => this.initiateCall('audio'));
+            console.log('✅ Voice button attached');
+        }
+    }
+
+    listenForIncomingCalls() {
+        if (!window.Echo) {
+            console.error('❌ Echo not initialized');
+            return;
+        }
+
+        window.Echo.private(`user.${this.config.currentUserId}`)
+            .listen('.call.invitation', (data) => {
+                console.log('📞 Incoming call:', data);
+                this.showIncomingCallModal(data);
+            });
+
+        console.log('✅ Listening for calls on:', `user.${this.config.currentUserId}`);
+    }
+
+    async initiateCall(callType) {
+        try {
+            console.log(`🚀 Initiating ${callType} call...`);
+            console.log('Config:', {
+                conversationId: this.config.conversationId,
+                callType: callType
+            });
+
+            this.showLoading(`Starting ${callType} call...`);
+
+            // ✅ ĐÚNG URL
+            const url = '/api/video-calls/initiate';
+            console.log('Calling URL:', url);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': this.getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    conversation_id: this.config.conversationId,
+                    call_type: callType
+                })
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response headers:', {
+                contentType: response.headers.get('content-type')
+            });
+
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('❌ Non-JSON response:', text.substring(0, 500));
+                throw new Error('Server returned HTML instead of JSON. Check if you are logged in.');
+            }
+
+            const data = await response.json();
+            console.log('Response data:', data);
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Failed to initiate call');
+            }
+
+            if (!data.success || !data.call_id) {
+                throw new Error('Invalid response from server: ' + JSON.stringify(data));
+            }
+
+            console.log('✅ Call initiated successfully:', data);
+
+            // Redirect to call room
+            const roomUrl = `/video-calls/${data.call_id}/room`;
+            console.log('Redirecting to:', roomUrl);
+            window.location.href = roomUrl;
+
+        } catch (error) {
+            console.error('❌ Failed to initiate call:', error);
+            this.hideLoading();
+            
+            let errorMessage = error.message;
+            if (errorMessage.includes('HTML instead of JSON')) {
+                errorMessage = 'Server error. Please refresh the page and try again.';
+            }
+            
+            alert('Failed to start call:\n' + errorMessage);
+        }
+    }
+
+    showIncomingCallModal(callData) {
+        const { callId, roomId, caller, callType } = callData;
+
+        const modal = document.createElement('div');
+        modal.id = 'incoming-call-modal';
+        modal.className = 'incoming-call-modal';
+        modal.innerHTML = `
+            <div class="incoming-call-overlay"></div>
+            <div class="incoming-call-content">
+                <div class="incoming-call-header">
+                    <i class="fas fa-${callType === 'video' ? 'video' : 'phone'}"></i>
+                    <h3>Incoming ${callType === 'video' ? 'Video' : 'Voice'} Call</h3>
+                </div>
+                
+                <div class="incoming-call-body">
+                    <div class="caller-avatar">
+                        <img src="${this.config.otherUserAvatar}" alt="${caller.name}">
+                    </div>
+                    <h4 class="caller-name">${caller.name}</h4>
+                    <p class="call-type">${callType === 'video' ? 'Video' : 'Voice'} call</p>
+                </div>
+
+                <div class="incoming-call-actions">
+                    <button class="call-action-btn btn-decline" onclick="videoCallManager.declineCall(${callId})">
+                        <i class="fas fa-phone-slash"></i>
+                        Decline
+                    </button>
+                    <button class="call-action-btn btn-accept" onclick="videoCallManager.acceptCall(${callId})">
+                        <i class="fas fa-phone"></i>
+                        Accept
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Play ringtone
+        const ringtone = document.getElementById('ringtone-audio');
+        if (ringtone) {
+            ringtone.play().catch(e => console.warn('Cannot play ringtone:', e));
+        }
+    }
+
+    async acceptCall(callId) {
+        try {
+            console.log('✅ Accepting call:', callId);
+
+            const response = await fetch('/api/video-calls/accept', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': this.getCSRFToken()
+                },
+                body: JSON.stringify({ call_id: callId })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to accept call');
+            }
+
+            // Stop ringtone
+            const ringtone = document.getElementById('ringtone-audio');
+            if (ringtone) ringtone.pause();
+
+            // Remove modal
+            this.removeIncomingCallModal();
+
+            // Redirect to call room
+            window.location.href = `/video-calls/${callId}/room`;
+
+        } catch (error) {
+            console.error('❌ Failed to accept call:', error);
+            alert('Failed to accept call: ' + error.message);
+        }
+    }
+
+    async declineCall(callId) {
+        try {
+            console.log('❌ Declining call:', callId);
+
+            const response = await fetch('/api/video-calls/decline', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': this.getCSRFToken()
+                },
+                body: JSON.stringify({ call_id: callId })
+            });
+
+            if (!response.ok) {
+                console.error('Failed to decline call');
+            }
+
+            // Stop ringtone
+            const ringtone = document.getElementById('ringtone-audio');
+            if (ringtone) ringtone.pause();
+
+            // Remove modal
+            this.removeIncomingCallModal();
+
+        } catch (error) {
+            console.error('❌ Failed to decline call:', error);
+            this.removeIncomingCallModal();
+        }
+    }
+
+    removeIncomingCallModal() {
+        const modal = document.getElementById('incoming-call-modal');
+        if (modal) modal.remove();
+    }
+
+    showLoading(message = 'Loading...') {
+        let overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.add('show');
+            const text = document.getElementById('loading-text');
+            if (text) text.textContent = message;
+        }
+    }
+
+    hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.remove('show');
+        }
+    }
+
+    getCSRFToken() {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!token) {
+            console.error('❌ CSRF token not found!');
+        }
+        return token || '';
+    }
+}
+
+// Initialize
+let videoCallManager;
+
+async function initializeApp() {
+    console.log('🚀 Initializing app...');
+
+    // Validate config
+    if (!window.chatConfig.conversationId) {
+        console.error('❌ Missing conversationId');
         return;
     }
 
-    // Khởi tạo chat
-    const initChat = async () => {
-        let attempts = 0;
-        while (!window.initializeChat && attempts < 50) {
-            await new Promise(r => setTimeout(r, 100));
-            attempts++;
-        }
-        if (window.initializeChat) {
-            await window.initializeChat(conversationId, currentUserId, currentUserName);
-        }
-    };
-
-    // Khởi tạo video call
-    const initVideoCall = async () => {
-        let attempts = 0;
-        while (!window.initializeVideoCall && attempts < 50) {
-            await new Promise(r => setTimeout(r, 100));
-            attempts++;
-        }
-        if (window.initializeVideoCall) {
-            await window.initializeVideoCall(currentUserId, receiverId);
-        }
-    };
-
-    // Chạy khi DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            initChat();
-            initVideoCall();
-        });
-    } else {
-        initChat();
-        initVideoCall();
+    if (!window.chatConfig.receiverId) {
+        console.error('❌ Missing receiverId');
+        return;
     }
-})();
+
+    // Wait for Echo
+    let attempts = 0;
+    while (!window.Echo && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+
+    if (!window.Echo) {
+        console.error('❌ Echo not initialized after 5 seconds');
+        alert('Connection error. Please refresh the page.');
+        return;
+    }
+
+    console.log('✅ Echo ready');
+
+    // Initialize video call manager
+    videoCallManager = new VideoCallManager();
+    window.videoCallManager = videoCallManager;
+    console.log('✅ Video call manager initialized');
+}
+
+// Run initialization
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
 </script>
+
+{{-- Load Vite assets for chat functionality --}}
+@vite([
+    'resources/js/bootstrap.ts',
+    'resources/js/chat-page.ts'
+])
+
+{{-- Hidden ringtone audio --}}
+<audio id="ringtone-audio" loop style="display: none;">
+    <source src="{{ asset('sounds/ringtone.mp3') }}" type="audio/mpeg">
+</audio>
 @endpush

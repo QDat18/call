@@ -108,8 +108,8 @@ class VolunteerOpportunityController extends Controller
                 ->where('opportunity_id', $id)
                 ->exists();
         }
-
-        return view('opportunities.show', compact('opportunity', 'similarOpportunities', 'hasApplied', 'isFavorited'));
+        $reviews = $opportunity->reviews()->latest()->take(10)->get();
+        return view('opportunities.show', compact('opportunity', 'similarOpportunities', 'hasApplied', 'isFavorited','reviews'));
     }
 
     /**

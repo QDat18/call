@@ -11,14 +11,46 @@ use Illuminate\Support\Facades\Validator;
 class VolunteerProfileController extends Controller
 {
     public function show()
-    {
-        $user = Auth::user();
-        if (!$user->isVolunteer()) {
-            abort(403, 'Only volunteers can access this page!');
-        }
-        $profile = $user->volunteerProfile ?? VolunteerProfile::create(['user_id' => $user->user_id]);
-        return view('volunteer.profile', compact('profile'));
+{
+    $user = Auth::user();
+    
+    if (!$user->isVolunteer()) {
+        abort(403, 'Only volunteers can access this page!');
     }
+
+    // Tạo profile nếu chưa có
+    $profile = $user->volunteerProfile ?? VolunteerProfile::create(['user_id' => $user->user_id]);
+
+    // THỐNG KÊ
+    $stats = [
+        'total_hours' => $profile->total_volunteer_hours ?? 0,
+        'rating' => $profile->volunteer_rating ?? 0,
+        'applications' => $user->applications()->count(),
+        'accepted_applications' => $user->applications()->where('status', 'Accepted')->count(),
+        'completed_activities' => $user->activities()->where('status', 'Verified')->count(),
+        'reviews_count' => $user->receivedReviews()->where('is_approved', true)->count(),
+    ];
+
+    // THÀNH TỰU
+    $achievements = [];
+    $hours = $profile->total_volunteer_hours ?? 0;
+    $rating = $profile->volunteer_rating ?? 0;
+
+    if ($hours >= 10) {
+        $achievements[] = ['name' => 'Bronze Volunteer', 'description' => '10 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'bronze'];
+    }
+    if ($hours >= 50) {
+        $achievements[] = ['name' => 'Silver Volunteer', 'description' => '50 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'silver'];
+    }
+    if ($hours >= 100) {
+        $achievements[] = ['name' => 'Gold Volunteer', 'description' => '100 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'gold'];
+    }
+    if ($rating >= 4.5) {
+        $achievements[] = ['name' => 'Top Rated', 'description' => 'Đánh giá 4.5+', 'icon' => 'fas fa-star', 'color' => 'yellow'];
+    }
+
+    return view('volunteer.profile.profile', compact('profile', 'stats', 'achievements'));
+}
 
     public function edit()
     {
@@ -28,7 +60,7 @@ class VolunteerProfileController extends Controller
         }
 
         $profile = $user->volunteerProfile ?? VolunteerProfile::create(['user_id' => $user->user_id]);
-        return view('volunteer.edit-profile', compact('profile'));
+        return view('volunteer.profile.edit-profile', compact('profile'));
     }
 
     public function update(Request $request)

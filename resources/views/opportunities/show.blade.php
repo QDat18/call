@@ -196,11 +196,18 @@
                     <div class="mt-3">
                         <h6 class="text-muted mb-2">Kỹ năng cần thiết:</h6>
                         <div class="d-flex flex-wrap gap-2">
-                            @foreach(explode(',', $opportunity->required_skills) as $skill)
-                            <span class="badge bg-light text-dark border">
-                                <i class="fas fa-check text-success"></i> {{ trim($skill) }}
-                            </span>
-                            @endforeach
+                            @php
+    $skills = is_array($opportunity->required_skills)
+        ? $opportunity->required_skills
+        : explode(',', $opportunity->required_skills ?? '');
+@endphp
+
+@foreach($skills as $skill)
+    <span class="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full mr-2 mb-2">
+        {{ trim($skill) }}
+    </span>
+@endforeach
+
                         </div>
                     </div>
                     @endif

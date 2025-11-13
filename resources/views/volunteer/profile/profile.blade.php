@@ -1,266 +1,232 @@
+{{-- resources/views/volunteer/profile/profile.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Volunteer Profile')
+@section('title', 'Hồ Sơ Tình Nguyện - ' . $profile->user->first_name)
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+    .gradient-purple { background: linear-gradient(135deg, #8b5cf6, #6b46c1); }
+    .card-hover { @apply transition transform hover:-translate-y-2 hover:shadow-2xl; }
+    .badge-bronze { @apply text-orange-700 bg-orange-100; }
+    .badge-silver { @apply text-gray-600 bg-gray-200; }
+    .badge-gold { @apply text-yellow-600 bg-yellow-100; }
+    .badge-star { @apply text-yellow-500 bg-yellow-50; }
+</style>
+@endpush
 
 @section('content')
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-    <div class="max-w-6xl mx-auto px-4">
-        
-        <!-- Profile Header -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
-            <div class="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-            <div class="px-6 pb-6">
-                <div class="flex items-end -mt-16 mb-4">
-                    <img src="{{ Auth::user()->avatar_url ? Storage::url(Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name . ' ' . Auth::user()->last_name) }}" 
-                         alt="{{ Auth::user()->full_name }}"
-                         class="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 object-cover shadow-lg">
-                    <div class="ml-6 mb-2 flex-1">
-                        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ Auth::user()->full_name }}</h1>
-                        <p class="text-gray-600 dark:text-gray-400">Volunteer</p>
-                        @if(Auth::user()->email_verified_at)
-                        <span class="inline-block mt-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 text-xs rounded-full">
-                            <i class="fas fa-check-circle mr-1"></i>Verified
-                        </span>
-                        @endif
-                    </div>
-                    <div class="mb-2">
-                        <a href="{{ route('volunteer.profile.edit') }}" 
-                           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                            <i class="fas fa-edit mr-2"></i>Edit Profile
-                        </a>
-                    </div>
-                </div>
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 py-12 px-4">
+    <div class="max-w-6xl mx-auto">
+
+        <!-- Navigation Tabs -->
+        <div class="flex justify-center mb-12">
+            <div class="bg-white rounded-full shadow-2xl p-2 flex space-x-2">
+                <a href="{{ route('volunteer.dashboard') }}" 
+                   class="px-8 py-4 rounded-full font-bold text-gray-700 hover:bg-purple-100 transition flex items-center gap-3">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="{{ route('volunteer.profile.profile') }}" 
+                   class="px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg flex items-center gap-3">
+                    <i class="fas fa-user-tie"></i> Hồ Sơ
+                </a>
+                <a href="{{ route('volunteer.profile.edit') }}" 
+                   class="px-8 py-4 rounded-full font-bold text-gray-700 hover:bg-purple-100 transition flex items-center gap-3">
+                    <i class="fas fa-edit"></i> Chỉnh Sửa
+                </a>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Main Content -->
-            <div class="lg:col-span-2 space-y-6">
-                
-                <!-- Volunteer Stats -->
-                @if($volunteerProfile)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Volunteer Stats</h2>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="text-center p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                            <div class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-                                {{ $volunteerProfile->total_volunteer_hours }}
-                            </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Hours</div>
+        <div class="grid lg:grid-cols-3 gap-8">
+
+            <!-- Left: Avatar + Info + Stats -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-3xl shadow-2xl p-8 text-center border border-purple-100 card-hover">
+                    <img src="{{ $profile->user->avatar_url 
+                        ? asset('storage/'.$profile->user->avatar_url) 
+                        : 'https://ui-avatars.com/api/?name='.urlencode($profile->user->first_name.' '.$profile->user->last_name).'&background=8b5cf6&color=fff&size=256' }}" 
+                         class="w-48 h-48 rounded-full mx-auto object-cover border-8 border-white shadow-2xl ring-4 ring-purple-200">
+
+                    <h1 class="text-3xl font-bold text-purple-800 mt-6">
+                        {{ $profile->user->first_name }} {{ $profile->user->last_name }}
+                    </h1>
+                    <p class="text-xl text-gray-600 mt-2">Tình Nguyện Viên</p>
+
+                    @if($profile->preferred_location)
+                        <p class="text-sm text-gray-500 mt-2">
+                            <i class="fas fa-map-marker-alt"></i> {{ $profile->preferred_location }}
+                        </p>
+                    @endif
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 gap-4 mt-8">
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-2xl p-6">
+                            <div class="text-3xl font-bold">{{ $stats['total_hours'] }}</div>
+                            <div class="text-sm">Giờ TNV</div>
                         </div>
-                        <div class="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                            <div class="text-3xl font-bold text-green-600 dark:text-green-400">
-                                {{ $completedActivities ?? 0 }}
+                        <div class="bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-2xl p-6">
+                            <div class="text-3xl font-bold">{{ number_format($stats['rating'], 1) }}</div>
+                            <div class="text-sm flex items-center justify-center gap-1">
+                                <i class="fas fa-star"></i> Đánh giá
                             </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Activities</div>
                         </div>
-                        <div class="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                            <div class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-                                {{ number_format($volunteerProfile->volunteer_rating, 1) }}
-                                <i class="fas fa-star text-xl"></i>
-                            </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Rating</div>
+                    </div>
+
+                    <div class="mt-6 space-y-3">
+                        <div class="bg-green-50 text-green-800 px-6 py-3 rounded-xl font-bold">
+                            {{ $stats['accepted_applications'] }} / {{ $stats['applications'] }} Đơn chấp nhận
+                        </div>
+                        <div class="bg-blue-50 text-blue-800 px-6 py-3 rounded-xl font-bold">
+                            {{ $stats['completed_activities'] }} Hoạt động hoàn thành
                         </div>
                     </div>
                 </div>
 
-                <!-- Bio -->
-                @if($volunteerProfile && $volunteerProfile->bio)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">About Me</h2>
-                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed">{{ $volunteerProfile->bio }}</p>
-                </div>
+                <!-- Achievements -->
+                @if(count($achievements) > 0)
+                    <div class="bg-white rounded-3xl shadow-2xl p-8 mt-8 border border-purple-100 card-hover">
+                        <h3 class="text-2xl font-bold text-purple-800 mb-6 text-center">
+                            <i class="fas fa-trophy text-yellow-500"></i> Thành Tựu
+                        </h3>
+                        <div class="space-y-4">
+                            @foreach($achievements as $ach)
+                                <div class="flex items-center gap-4 p-4 rounded-2xl {{ 
+                                    $ach['color'] == 'bronze' ? 'badge-bronze' : 
+                                    ($ach['color'] == 'silver' ? 'badge-silver' : 
+                                    ($ach['color'] == 'gold' ? 'badge-gold' : 'badge-star')) 
+                                }}">
+                                    <i class="{{ $ach['icon'] }} text-3xl"></i>
+                                    <div>
+                                        <div class="font-bold">{{ $ach['name'] }}</div>
+                                        <div class="text-sm">{{ $ach['description'] }}</div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 @endif
-
-                <!-- Skills -->
-                @if($volunteerProfile && $volunteerProfile->skills)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Skills & Expertise</h2>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach(explode(',', $volunteerProfile->skills) as $skill)
-                        <span class="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm font-medium">
-                            {{ trim($skill) }}
-                        </span>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                <!-- Availability -->
-                @if($volunteerProfile && $volunteerProfile->availability)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Availability</h2>
-                    <p class="text-gray-700 dark:text-gray-300">{{ $volunteerProfile->availability }}</p>
-                </div>
-                @endif
-                @endif
-
-                <!-- Personal Information -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Personal Information</h2>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm text-gray-600 dark:text-gray-400">Email</label>
-                            <p class="text-gray-900 dark:text-gray-100 font-medium">{{ Auth::user()->email }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600 dark:text-gray-400">Phone</label>
-                            <p class="text-gray-900 dark:text-gray-100 font-medium">{{ Auth::user()->phone ?? 'Not provided' }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600 dark:text-gray-400">Date of Birth</label>
-                            <p class="text-gray-900 dark:text-gray-100 font-medium">
-                                {{ Auth::user()->date_of_birth ? Auth::user()->date_of_birth->format('M d, Y') : 'Not provided' }}
-                            </p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-600 dark:text-gray-400">Gender</label>
-                            <p class="text-gray-900 dark:text-gray-100 font-medium">{{ ucfirst(Auth::user()->gender ?? 'Not provided') }}</p>
-                        </div>
-                        <div class="col-span-2">
-                            <label class="text-sm text-gray-600 dark:text-gray-400">Location</label>
-                            <p class="text-gray-900 dark:text-gray-100 font-medium">
-                                {{ Auth::user()->city ? Auth::user()->city . ', ' : '' }}{{ Auth::user()->country ?? 'Not provided' }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Activities -->
-                @if(isset($recentActivities) && $recentActivities->count() > 0)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Activities</h2>
-                        <a href="{{ route('volunteer.activities.index') }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 text-sm">
-                            View All <i class="fas fa-arrow-right ml-1"></i>
-                        </a>
-                    </div>
-                    <div class="space-y-3">
-                        @foreach($recentActivities as $activity)
-                        <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                            <div>
-                                <p class="font-medium text-gray-900 dark:text-gray-100">{{ $activity->opportunity->title ?? 'Activity' }}</p>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ $activity->hours_volunteered }} hours • {{ $activity->date->format('M d, Y') }}</p>
-                            </div>
-                            <span class="px-3 py-1 text-xs font-medium rounded-full 
-                                {{ $activity->verification_status === 'Verified' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 
-                                   ($activity->verification_status === 'Pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' : 
-                                   'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300') }}">
-                                {{ $activity->verification_status }}
-                            </span>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                <!-- Account Settings -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Account Settings</h2>
-                    <div class="space-y-3">
-                        <a href="{{ route('user.change-password') }}" 
-                           class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                            <div class="flex items-center">
-                                <i class="fas fa-key text-gray-400 mr-3"></i>
-                                <span class="text-gray-900 dark:text-gray-100">Change Password</span>
-                            </div>
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                        </a>
-                        <a href="{{ route('notifications.index') }}" 
-                           class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                            <div class="flex items-center">
-                                <i class="fas fa-bell text-gray-400 mr-3"></i>
-                                <span class="text-gray-900 dark:text-gray-100">Notification Settings</span>
-                            </div>
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                        </a>
-                    </div>
-                </div>
             </div>
 
-            <!-- Sidebar -->
-            <div class="space-y-6">
-                
-                <!-- Quick Links -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
-                    <div class="space-y-2">
-                        <a href="{{ route('opportunities.index') }}" 
-                           class="block w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-center">
-                            <i class="fas fa-search mr-2"></i>Find Opportunities
-                        </a>
-                        <a href="{{ route('volunteer.applications.my') }}" 
-                           class="block w-full px-4 py-2 border border-indigo-600 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition text-center">
-                            <i class="fas fa-file-alt mr-2"></i>My Applications
-                        </a>
-                        <a href="{{ route('volunteer.favorites.index') }}" 
-                           class="block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center">
-                            <i class="fas fa-heart mr-2"></i>Favorites
-                        </a>
+            <!-- Right: Detailed Info -->
+            <div class="lg:col-span-2 space-y-8">
+
+                <!-- Bio -->
+                @if($profile->bio)
+                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
+                        <h3 class="text-2xl font-bold text-purple-800 mb-6">
+                            <i class="fas fa-quote-left text-purple-500"></i> Giới Thiệu
+                        </h3>
+                        <p class="text-gray-700 leading-relaxed text-lg bg-purple-50 p-8 rounded-2xl border-l-4 border-purple-600">
+                            {{ $profile->bio }}
+                        </p>
+                    </div>
+                @endif
+
+                <!-- Info Grid -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Occupation & Education -->
+                    <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-purple-800">Nghề Nghiệp</h3>
+                        </div>
+                        <p class="text-lg font-semibold text-gray-700">{{ $profile->occupation ?? 'Chưa cập nhật' }}</p>
+                        @if($profile->education_level)
+                            <p class="text-sm text-gray-600 mt-3">
+                                <i class="fas fa-graduation-cap"></i> {{ $profile->education_level }}
+                                @if($profile->university) - {{ $profile->university }} @endif
+                            </p>
+                        @endif
+                    </div>
+
+                    <!-- Availability & Transport -->
+                    <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-blue-800">Thời Gian & Di Chuyển</h3>
+                        </div>
+                        <p class="text-lg font-semibold">
+                            <span class="px-4 py-2 rounded-full bg-blue-100 text-blue-800">
+                                {{ $profile->availability ?? 'Chưa cập nhật' }}
+                            </span>
+                        </p>
+                        @if($profile->transportation)
+                            <p class="text-sm text-gray-600 mt-3">
+                                <i class="fas fa-car"></i> {{ $profile->transportation }}
+                            </p>
+                        @endif
                     </div>
                 </div>
 
-                <!-- Account Status -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Account Status</h3>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Member Since</span>
-                            <span class="font-medium text-gray-900 dark:text-gray-100">{{ Auth::user()->created_at->format('M Y') }}</span>
+                <!-- Skills -->
+                @if($profile->skills)
+                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-orange-800">Kỹ Năng</h3>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Last Login</span>
-                            <span class="font-medium text-gray-900 dark:text-gray-100">
-                                {{ Auth::user()->last_login_at ? Auth::user()->last_login_at->diffForHumans() : 'Never' }}
-                            </span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Status</span>
-                            <span class="px-2 py-1 {{ Auth::user()->is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' }} rounded-full text-xs font-medium">
-                                {{ Auth::user()->is_active ? 'Active' : 'Inactive' }}
-                            </span>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach(explode(',', $profile->skills) as $skill)
+                                <span class="px-5 py-3 rounded-full bg-orange-100 text-orange-800 font-bold text-sm shadow">
+                                    {{ trim($skill) }}
+                                </span>
+                            @endforeach
                         </div>
                     </div>
-                </div>
+                @endif
 
-                <!-- Public Profile -->
-                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-sm p-6 text-white">
-                    <h3 class="text-lg font-bold mb-2">Public Profile</h3>
-                    <p class="text-sm opacity-90 mb-4">Share your volunteer profile with organizations</p>
-                    <a href="{{ route('user.public-profile', Auth::user()->user_id) }}" 
-                       target="_blank"
-                       class="block w-full px-4 py-2 bg-white text-indigo-600 rounded-lg text-center hover:bg-gray-100 transition font-medium">
-                        View Public Profile
+                <!-- Interests -->
+                @if($profile->interests)
+                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-pink-800">Sở Thích Tình Nguyện</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach(explode(',', $profile->interests) as $interest)
+                                <span class="px-5 py-3 rounded-full bg-pink-100 text-pink-800 font-bold text-sm shadow">
+                                    {{ trim($interest) }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Experience -->
+                @if($profile->volunteer_experience)
+                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                <i class="fas fa-hands-helping"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-emerald-800">Kinh Nghiệm Tình Nguyện</h3>
+                        </div>
+                        <div class="bg-emerald-50 p-8 rounded-2xl border-l-4 border-emerald-500">
+                            <p class="text-gray-700 leading-relaxed text-lg">{{ $profile->volunteer_experience }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Action Buttons -->
+                <div class="flex justify-center gap-6 mt-12">
+                    <a href="{{ route('volunteer.profile.edit') }}" 
+                       class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-10 py-5 rounded-2xl font-bold text-xl shadow-2xl hover:shadow-purple-500/50 transform hover:scale-105 transition duration-300 flex items-center gap-4">
+                        <i class="fas fa-edit"></i> Chỉnh Sửa Hồ Sơ
+                    </a>
+                    <a href="{{ route('volunteer.dashboard') }}" 
+                       class="bg-white text-purple-700 px-10 py-5 rounded-2xl font-bold text-xl border-4 border-purple-600 hover:bg-purple-600 hover:text-white transition transform hover:scale-105 shadow-2xl flex items-center gap-4">
+                        <i class="fas fa-home"></i> Về Dashboard
                     </a>
                 </div>
-
-                <!-- Social Links -->
-                @if(Auth::user()->facebook_url || Auth::user()->instagram_url || Auth::user()->linkedin_url)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Social Media</h3>
-                    <div class="flex space-x-3">
-                        @if(Auth::user()->facebook_url)
-                        <a href="{{ Auth::user()->facebook_url }}" target="_blank" 
-                           class="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 transition">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        @endif
-                        @if(Auth::user()->instagram_url)
-                        <a href="{{ Auth::user()->instagram_url }}" target="_blank" 
-                           class="w-10 h-10 flex items-center justify-center bg-pink-600 text-white rounded-full hover:bg-pink-700 transition">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        @endif
-                        @if(Auth::user()->linkedin_url)
-                        <a href="{{ Auth::user()->linkedin_url }}" target="_blank" 
-                           class="w-10 h-10 flex items-center justify-center bg-blue-700 text-white rounded-full hover:bg-blue-800 transition">
-                            <i class="fab fa-linkedin-in"></i>
-                        </a>
-                        @endif
-                    </div>
-                </div>
-                @endif
             </div>
         </div>
     </div>

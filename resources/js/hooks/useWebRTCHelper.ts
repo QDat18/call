@@ -17,6 +17,8 @@ interface UseWebRTCReturn {
     endCall: () => Promise<void>;
     toggleAudio: () => void;
     toggleVideo: () => void;
+
+    handleRemoteIce: (candidate: any) => Promise<void> | void;
 }
 
 const ICE_SERVERS = {
@@ -44,15 +46,15 @@ export function createWebRTCInstance(config: WebRTCConfig): UseWebRTCReturn {
         const peer = new RTCPeerConnection(ICE_SERVERS);
 
         peer.onicecandidate = (event) => {
-            if (event.candidate) {
-                api.post("/video-calls/ice-candidate", {
-                    call_id: config.callId,
-                    from_user_id: config.currentUserId,
-                    to_user_id: config.remoteUserId,
-                    candidate: event.candidate,
-                }).catch((err) => console.error("❌ ICE send failed:", err));
-            }
-        };
+    if (event.candidate) {
+        api.post("/video-calls/ice-candidate", {
+            call_id: config.callId,
+            candidate: event.candidate,
+            to_user_id: config.remoteUserId,
+        }).catch((err) => console.error("❌ ICE send failed:", err));
+    }
+};
+
 
         peer.ontrack = (event) => {
             const remoteVideo = document.getElementById("remote-video") as HTMLVideoElement;
@@ -93,7 +95,10 @@ export function createWebRTCInstance(config: WebRTCConfig): UseWebRTCReturn {
         const track = localStream?.getVideoTracks()[0];
         if (track) track.enabled = !track.enabled;
     }
-
+    function handleRemoteIce(candidate: any) {
+    console.log("🌐 Adding remote ICE:", candidate);
+    pc?.addIceCandidate(new RTCIceCandidate(candidate));
+}
     // ✅ Trả về cả remoteStream để không còn báo lỗi unused
     return {
         get peerConnection() {
@@ -110,5 +115,6 @@ export function createWebRTCInstance(config: WebRTCConfig): UseWebRTCReturn {
         endCall,
         toggleAudio,
         toggleVideo,
+        handleRemoteIce,
     };
 }

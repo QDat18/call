@@ -92,7 +92,7 @@
                 <!-- Local Video Placeholder -->
                 <div class="local-placeholder" id="local-placeholder">
                     <img 
-                        src="{{ auth()->user()->avatar_url ?? asset('images/default-avatar.png') }}" 
+                        src="{{ auth()->user()->avatar_url ?? asset('images/local.jpg?v=' . time()) }}" 
                         alt="You"
                         class="local-avatar">
                 </div>
@@ -454,13 +454,20 @@
 }
 
 .controls-bar {
-    padding: 15px 25px;
-    background: rgba(0,0,0,0.9);
-    backdrop-filter: blur(20px);
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
+    border-radius: 40px;
+    padding: 8px 14px;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    gap: 14px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 20;
 }
 
 .controls-group {
@@ -469,20 +476,31 @@
 }
 
 .control-button {
-    width: 56px;
-    height: 56px;
+    width: 45px;
+    height: 45px;
     border-radius: 50%;
     border: none;
+    background: rgba(255,255,255,0.15);
+    color: white;
     cursor: pointer;
-    transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 18px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.controls-center {
+    display: flex;
+    flex-direction: row; /* 🔥 nằm ngang */
+    align-items: center;
+    gap: 16px;
 }
 
 .control-button:hover {
-    transform: scale(1.1);
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.08);
 }
 
 .control-button.active {
@@ -491,13 +509,20 @@
 }
 
 .btn-end-call {
-    background: var(--danger);
-    color: white;
+    background: #ef4444;
 }
 
 .btn-end-call:hover {
     background: #dc2626;
-    transform: scale(1.1);
+}
+
+.control-label {
+    display: none; /* Ẩn chữ "Mute", "Camera" để gọn như Messenger */
+}
+
+/* Hiệu ứng icon đang bật/tắt */
+.control-button[data-state="off"] {
+    opacity: 0.6;
 }
 
 @media (max-width: 768px) {
@@ -526,69 +551,446 @@
 @endpush
 
 @push('scripts')
-<script>
-    window.videoCallData = {
-        callId: {{ $callId }},
-        conversationId: {{ $conversationId }},
-        currentUserId: {{ auth()->id() }},
-        callType: '{{ $callType }}',
-        isInitiator: {{ $isInitiator ? 'true' : 'false' }},
-        participantId: {{ $participant->user_id }},
-        participantName: '{{ $participant->first_name }} {{ $participant->last_name }}'
-    };
+<script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 
-    let timer;
-    function startTimer() {
-        timer = setInterval(() => {
-            const now = new Date();
-            const elapsed = Math.floor((now - new Date({{ $startedAt ?? 'Date.now()' }}) ) / 1000);
-            const m = Math.floor(elapsed / 60);
-            const s = elapsed % 60;
-            document.getElementById('call-timer').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+<script>
+// ✅ Set global video call data
+window.videoCallData = {
+    callId: {{ $callId }},
+    conversationId: {{ $conversationId }},
+    currentUserId: {{ auth()->id() }},
+    participantId: {{ $participant->user_id }},
+    receiverId: {{ $receiverId }},
+    participantName: '{{ $participant->first_name }} {{ $participant->last_name }}',
+    callType: '{{ $callType }}',
+    isInitiator: {{ $isInitiator ? 'true' : 'false' }},
+    roomId: '{{ $roomId }}'
+};
+
+console.log('✅ Video call data initialized:', window.videoCallData);
+
+// 🔥 POLLING: Kiểm tra call status mỗi 2 giây
+let pollInterval = null;
+
+function startCallStatusPolling() {
+    console.log('🔄 Starting call status polling...');
+    
+    pollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/video-calls/${window.videoCallData.callId}/status`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📊 Call status:', data.status);
+
+                // ✅ Nếu call ended/declined → redirect cả 2 bên
+                if (data.status === 'ended' || data.status === 'declined') {
+                    console.log('📞 Call ended by other user');
+                    stopCallStatusPolling();
+                    
+                    if (window.agoraCall) {
+                        await agoraCall.leaveCall();
+                    }
+                    
+                    window.location.href = `/video-calls/${data.call_id}/ended`;
+                }
+            }
+        } catch (error) {
+            console.error('❌ Polling error:', error);
+        }
+    }, 2000);
+}
+
+function stopCallStatusPolling() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+        console.log('⏹️ Stopped polling');
+    }
+}
+
+// Agora Video Call Class
+class AgoraVideoCall {
+    constructor(config) {
+        this.config = config;
+        this.client = null;
+        this.localAudioTrack = null;
+        this.localVideoTrack = null;
+        this.remoteUsers = new Map();
+        this.isJoined = false;
+        
+        console.log('📞 AgoraVideoCall constructor:', config);
+        this.initializeClient();
+    }
+
+    initializeClient() {
+        this.client = AgoraRTC.createClient({
+            mode: 'rtc',
+            codec: 'vp8'
+        });
+
+        console.log('✅ Agora client created');
+        this.setupEventHandlers();
+    }
+
+    setupEventHandlers() {
+        this.client.on('user-published', async (user, mediaType) => {
+            await this.client.subscribe(user, mediaType);
+            console.log('✅ Subscribe success:', user.uid, mediaType);
+
+            if (mediaType === 'video') {
+                const remoteVideoContainer = document.getElementById('remote-video');
+                if (remoteVideoContainer && user.videoTrack) {
+                    user.videoTrack.play(remoteVideoContainer);
+                    this.hideRemotePlaceholder();
+                }
+            }
+
+            if (mediaType === 'audio') {
+                user.audioTrack?.play();
+            }
+
+            this.remoteUsers.set(user.uid, user);
+            this.updateCallStatus('Connected');
+        });
+
+        this.client.on('user-unpublished', (user, mediaType) => {
+            console.log('❌ User unpublished:', user.uid, mediaType);
+            if (mediaType === 'video') {
+                this.showRemotePlaceholder();
+            }
+        });
+
+        this.client.on('user-left', (user) => {
+            console.log('👋 User left:', user.uid);
+            this.remoteUsers.delete(user.uid);
+            this.showRemotePlaceholder();
+        });
+
+        this.client.on('connection-state-change', (curState, prevState) => {
+            console.log('🔌 Connection state:', prevState, '->', curState);
+        });
+
+        this.client.on('network-quality', (stats) => {
+            this.updateNetworkQuality(stats.uplinkNetworkQuality);
+        });
+    }
+
+    async joinCall(roomId) {
+        try {
+            console.log('🚀 Starting joinCall with roomId:', roomId);
+
+            const tokenData = await this.getAgoraToken(roomId);
+
+            console.log('📝 Token data received:', {
+                appId: tokenData.appId,
+                token: tokenData.token ? 'present' : 'null (testing mode)',
+                uid: tokenData.uid,
+                channel: roomId
+            });
+
+            if (!tokenData.appId) {
+                throw new Error('App ID is missing from server response');
+            }
+
+            await this.client.join(
+                tokenData.appId,
+                roomId,
+                tokenData.token,
+                this.config.currentUserId
+            );
+
+            this.isJoined = true;
+            console.log('✅ Joined channel successfully:', roomId);
+
+            await this.createLocalTracks();
+            await this.publishLocalTracks();
+
+            this.updateCallStatus('Connected');
+            this.startCallTimer();
+
+            // ✅ BẮT ĐẦU POLLING SAU KHI JOIN THÀNH CÔNG
+            startCallStatusPolling();
+
+        } catch (error) {
+            console.error('❌ Failed to join call:', error);
+            alert('Failed to join call: ' + error.message);
+            throw error;
+        }
+    }
+
+    async getAgoraToken(channel) {
+        try {
+            console.log('🎫 Requesting token for channel:', channel);
+
+            const response = await fetch('/api/video-calls/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ channel })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Token request failed:', errorText);
+                throw new Error('Failed to get token from server');
+            }
+
+            const data = await response.json();
+            console.log('✅ Token response:', data);
+
+            if (!data.app_id) {
+                console.error('❌ App ID missing in response:', data);
+                throw new Error('App ID is missing from token response');
+            }
+
+            return {
+                appId: data.app_id,
+                token: data.token || null,
+                uid: data.uid
+            };
+
+        } catch (error) {
+            console.error('❌ Error fetching Agora token:', error);
+            throw error;
+        }
+    }
+
+    async createLocalTracks() {
+        try {
+            console.log('🎤 Creating local audio track...');
+            this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+            console.log('✅ Audio track created');
+
+            if (this.config.callType === 'video') {
+                console.log('📹 Creating local video track...');
+                this.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+                    encoderConfig: '720p_2'
+                });
+                console.log('✅ Video track created');
+
+                const localVideoContainer = document.getElementById('local-video');
+                if (localVideoContainer && this.localVideoTrack) {
+                    this.localVideoTrack.play(localVideoContainer);
+                    this.hideLocalPlaceholder();
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Failed to create local tracks:', error);
+            alert('Could not access camera/microphone: ' + error.message);
+            throw error;
+        }
+    }
+
+    async publishLocalTracks() {
+        try {
+            const tracks = [];
+            if (this.localAudioTrack) tracks.push(this.localAudioTrack);
+            if (this.localVideoTrack) tracks.push(this.localVideoTrack);
+
+            if (tracks.length > 0) {
+                await this.client.publish(tracks);
+                console.log('✅ Published local tracks:', tracks.length);
+            }
+        } catch (error) {
+            console.error('❌ Failed to publish tracks:', error);
+            throw error;
+        }
+    }
+
+    async toggleAudio() {
+        if (!this.localAudioTrack) return false;
+        
+        const enabled = this.localAudioTrack.enabled;
+        await this.localAudioTrack.setEnabled(!enabled);
+        return !enabled;
+    }
+
+    async toggleVideo() {
+    if (!this.localVideoTrack) return false;
+    
+    const enabled = this.localVideoTrack.enabled;
+    await this.localVideoTrack.setEnabled(!enabled);
+    
+    const placeholder = document.getElementById('local-placeholder');
+    const video = document.getElementById('local-video');
+
+    if (enabled) {
+        // Tắt cam → hiện placeholder (có ảnh local.png)
+        placeholder.style.display = 'flex';
+        video.style.display = 'none';
+    } else {
+        // Bật cam → ẩn placeholder
+        placeholder.style.display = 'none';
+        video.style.display = 'block';
+    }
+    
+    return !enabled;
+}
+
+    async leaveCall() {
+        try {
+            // ✅ DỪNG POLLING KHI LEAVE
+            stopCallStatusPolling();
+
+            if (this.localAudioTrack) {
+                this.localAudioTrack.close();
+                this.localAudioTrack = null;
+            }
+            
+            if (this.localVideoTrack) {
+                this.localVideoTrack.close();
+                this.localVideoTrack = null;
+            }
+
+            if (this.client && this.isJoined) {
+                await this.client.leave();
+                this.isJoined = false;
+            }
+
+            console.log('✅ Left call successfully');
+        } catch (error) {
+            console.error('❌ Error leaving call:', error);
+        }
+    }
+
+    async endCall() {
+        try {
+            await this.leaveCall();
+
+            const response = await fetch('/api/video-calls/end', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ call_id: this.config.callId })
+            });
+
+            if (response.ok) {
+                window.location.href = `/video-calls/${this.config.callId}/ended`;
+            }
+        } catch (error) {
+            console.error('❌ Error ending call:', error);
+        }
+    }
+
+    hideRemotePlaceholder() {
+        const el = document.getElementById('remote-placeholder');
+        if (el) el.style.display = 'none';
+    }
+
+    showRemotePlaceholder() {
+        const el = document.getElementById('remote-placeholder');
+        if (el) el.style.display = 'flex';
+    }
+
+    hideLocalPlaceholder() {
+        const el = document.getElementById('local-placeholder');
+        if (el) el.style.display = 'none';
+    }
+
+    updateCallStatus(status) {
+        const el = document.getElementById('call-status');
+        if (el) el.textContent = status;
+    }
+
+    updateNetworkQuality(quality) {
+        const indicator = document.getElementById('network-indicator');
+        if (!indicator) return;
+
+        const texts = ['Excellent', 'Good', 'Fair', 'Poor', 'Bad', 'Very Bad'];
+        const colors = ['#10b981', '#22c55e', '#eab308', '#f97316', '#ef4444', '#dc2626'];
+        
+        const text = texts[quality - 1] || 'Unknown';
+        const color = colors[quality - 1] || '#6b7280';
+        
+        const textEl = indicator.querySelector('.network-text');
+        if (textEl) {
+            textEl.textContent = text;
+            indicator.style.color = color;
+        }
+    }
+
+    startCallTimer() {
+        const timerEl = document.getElementById('call-timer');
+        if (!timerEl) return;
+
+        let seconds = 0;
+        setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            timerEl.textContent = 
+                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }, 1000);
     }
+}
 
-    function toggleMinimize() {
-        const room = document.querySelector('.video-call-room');
-        room.classList.toggle('minimized');
-    }
+// Initialize call
+let agoraCall;
 
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 DOM loaded, initializing Agora call...');
+    
+    try {
+        agoraCall = new AgoraVideoCall(window.videoCallData);
+        
+        if (window.videoCallData.roomId) {
+            console.log('📞 Auto-joining room:', window.videoCallData.roomId);
+            await agoraCall.joinCall(window.videoCallData.roomId);
         } else {
-            document.exitFullscreen();
+            console.error('❌ No room ID provided');
         }
+
+        setupControlButtons();
+        window.agoraCall = agoraCall;
+        
+    } catch (error) {
+        console.error('❌ Failed to initialize Agora:', error);
+        alert('Failed to initialize video call: ' + error.message);
     }
+});
 
-    document.addEventListener('DOMContentLoaded', () => {
-        startTimer();
-        setTimeout(() => {
-            document.getElementById('remote-placeholder').style.display = 'none';
-            document.getElementById('call-status').textContent = 'Connected';
-        }, 2000);
-    });
-
-    // Controls
-    document.getElementById('btn-microphone')?.addEventListener('click', () => {
+function setupControlButtons() {
+    // Microphone
+    document.getElementById('btn-microphone')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-microphone');
-        btn.classList.toggle('active');
-        btn.innerHTML = btn.classList.contains('active') ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
-        if (window.toggleAudio) window.toggleAudio();
+        const enabled = await agoraCall.toggleAudio();
+        btn.setAttribute('data-state', enabled ? 'on' : 'off');
+        btn.querySelector('i').className = enabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
+        const label = btn.querySelector('.control-label');
+        if (label) label.textContent = enabled ? 'Mute' : 'Unmute';
     });
 
-    document.getElementById('btn-camera')?.addEventListener('click', () => {
+    // Camera
+    document.getElementById('btn-camera')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-camera');
-        btn.classList.toggle('active');
-        btn.innerHTML = btn.classList.contains('active') ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
-        if (window.toggleVideo) window.toggleVideo();
+        const enabled = await agoraCall.toggleVideo();
+        btn.setAttribute('data-state', enabled ? 'on' : 'off');
+        btn.querySelector('i').className = enabled ? 'fas fa-video' : 'fas fa-video-slash';
     });
 
-    document.getElementById('btn-end-call')?.addEventListener('click', () => {
-        if (confirm('Kết thúc cuộc gọi?')) {
-            clearInterval(timer);
-            window.location.href = `/video-calls/{{ $callId }}/ended`;
+    // End call
+    document.getElementById('btn-end-call')?.addEventListener('click', async () => {
+        if (confirm('End this call?')) {
+            await agoraCall.endCall();
         }
     });
+}
+
+// ✅ CLEANUP: Dừng polling khi close/reload page
+window.addEventListener('beforeunload', () => {
+    stopCallStatusPolling();
+    if (agoraCall) agoraCall.leaveCall();
+});
 </script>
 @endpush

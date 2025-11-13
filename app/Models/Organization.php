@@ -5,13 +5,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\ClearAnalyticsCache;
 
-class Organization extends Model{
+class Organization extends Model
+{
     use HasFactory;
-    use ClearAnalyticsCache;
+
     protected $primaryKey = 'org_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
+        'org_id',
         'user_id',
         'organization_name',
         'organization_type',
@@ -37,18 +41,38 @@ class Organization extends Model{
         'updated_at' => 'datetime',
     ];
 
-    public function user() : BelongsTo{
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($organization) {
+            if (empty($organization->org_id)) {
+                $organization->org_id = 'org_' . uniqid();
+            }
+        });
+    }
+
+    public function user(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function opportunities() : HasMany{
+    public function opportunities(): HasMany
+    {
         return $this->hasMany(VolunteerOpportunity::class, 'org_id', 'org_id');
     }
 
-    public function activities():HasMany{
+    public function activities(): HasMany
+    {
         return $this->hasMany(VolunteerActivity::class, 'org_id', 'org_id');
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'org_id', 'org_id');
+    }
+
+    // Scopes
     public function scopeVerified($query)
     {
         return $query->where('verification_status', 'Verified');
@@ -69,6 +93,12 @@ class Organization extends Model{
         return $query->where('organization_type', $type);
     }
 
+    public function scopeActive($query)
+    {
+        return $query->where('verification_status', 'Verified');
+    }
+
+    // Methods
     public function verify(): void
     {
         $this->update(['verification_status' => 'Verified']);
@@ -82,6 +112,11 @@ class Organization extends Model{
     public function isVerified(): bool
     {
         return $this->verification_status === 'Verified';
+    }
+
+    public function isPending(): bool
+    {
+        return $this->verification_status === 'Pending';
     }
 
     public function incrementVolunteerCount(): void
@@ -101,10 +136,38 @@ class Organization extends Model{
         $this->increment('total_opportunities');
     }
 
-    public function updateRating(float $newRating, int $reviewCount): void
+    public function decrementOpportunities(): void
     {
-        $currentTotal = (float) $this->rating * ($reviewCount - 1);
-        $this->rating = ($currentTotal + $newRating) / $reviewCount;
-        $this->save();
-    }    
+        if ($this->total_opportunities > 0) {
+            $this->decrement('total_opportunities');
+        }
+    }
+
+    public function updateRating(): void
+    {
+        $reviews = $this->reviews();
+        $averageRating = $reviews->avg('rating');
+        $this->update(['rating' => $averageRating ?? 0]);
+    }
+
+    // Accessors
+    public function getActiveOpportunitiesCountAttribute()
+    {
+        return $this->opportunities()->where('status', 'Active')->count();
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        return $this->user->avatar_url ?? null;
+    }
+
+    public function getEmailAttribute()
+    {
+        return $this->user->email ?? null;
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->user->phone ?? null;
+    }
 }

@@ -169,16 +169,12 @@ Route::middleware('auth')->group(function () {
     // ============================================
     // VIDEO CALLS API
     // ============================================
-    Route::prefix('video-calls')->group(function () {
-        Route::post('/initiate', [VideoCallController::class, 'initiate']);
-        Route::post('/offer', [VideoCallController::class, 'sendOffer']);
-        Route::post('/answer', [VideoCallController::class, 'sendAnswer']);
-        Route::post('/ice-candidate', [VideoCallController::class, 'sendIceCandidate']);
-        Route::post('/decline', [VideoCallController::class, 'decline']);
-        Route::post('/end', [VideoCallController::class, 'end']);
-        Route::get('/{callId}', [VideoCallController::class, 'show']);
-        Route::get('/recent', [VideoCallController::class, 'recent']);
-    });
+    Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/call/token', [VideoCallController::class, 'token'])->name('call.token');
+    Route::post('/call/accept', [VideoCallController::class, 'accept']);
+    Route::post('/call/decline', [VideoCallController::class, 'decline']);
+    Route::post('/call/end', [VideoCallController::class, 'end']);
+});
 });
     /*
     |--------------------------------------------------------------------------
@@ -526,7 +522,7 @@ Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
     Route::get('/search/trending', [SearchController::class, 'trendingOpportunities'])->name('search.trending');
 
     // Video Calls API
-    Route::get('/video-calls/stats', [VideoCallController::class, 'stats'])->name('video-calls.stats');
+    //Route::get('/video-calls/stats', [VideoCallController::class, 'stats'])->name('video-calls.stats');
 });
 
 /*

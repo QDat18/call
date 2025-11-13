@@ -47,7 +47,7 @@ class VolunteerActivityController extends Controller
         $totalHours = $query->where('status', 'Verified')->sum('hours_worked');
         $pendingHours = $query->where('status', 'Pending')->sum('hours_worked');
         
-        return view('volunteer-activities.index', compact('activities', 'totalHours', 'pendingHours'));
+        return view('volunteer.activities.index', compact('activities', 'totalHours', 'pendingHours'));
     }
 
     // Hiển thị form log giờ tình nguyện
@@ -69,7 +69,7 @@ class VolunteerActivityController extends Controller
             )
             ->get();
         
-        return view('volunteer-activities.create', compact('opportunities'));
+        return view('volunteer.activities.create', compact('opportunities'));
     }
 
     // Lưu activity (log giờ tình nguyện)

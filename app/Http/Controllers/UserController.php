@@ -216,7 +216,7 @@ class UserController extends Controller
         // Get volunteer activities if volunteer
         $activities = null;
         if ($user->isVolunteer()) {
-            $activities = $user->volunteerActivities()
+            $activities = $user->activities()
                 ->where('status', 'Verified')
                 ->with('opportunity')
                 ->latest()
@@ -259,7 +259,7 @@ class UserController extends Controller
         //     ];
         // }
         if ($user->isVolunteer()) {
-            foreach ($user->volunteerActivities()->latest()->take(3)->get() as $activity) {
+            foreach ($user->activities()->latest()->take(3)->get() as $activity) {
                 $recentActivity[] = [
                     'icon' => 'hands-helping',
                     'color' => 'purple',
@@ -290,7 +290,7 @@ class UserController extends Controller
                 'rating' => $user->volunteerProfile->volunteer_rating ?? 0,
                 'applications' => $user->applications()->count(),
                 'accepted_applications' => $user->applications()->where('status', 'Accepted')->count(),
-                'completed_activities' => $user->volunteerActivities()->where('status', 'Verified')->count(),
+                'completed_activities' => $user->ativities()->where('status', 'Verified')->count(),
                 'reviews_count' => $user->receivedReviews()->where('is_approved', true)->count(),
             ];
         } elseif ($user->isOrganization()) {

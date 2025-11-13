@@ -471,4 +471,90 @@ class OpportunityController extends Controller
             ], 500);
         }
     }
+    public function organizationsList(Request $request)
+    {
+        $query = Organization::query()
+            ->where('verification_status', 'Verified')
+            ->withCount([
+                'opportunities as active_opportunities_count' => function($q) {
+                    $q->where('status', 'Active');
+                }
+            ])
+            ->with('user');
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('organization_name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('organization_type', $request->type);
+        }
+
+        // Sort
+        $sortBy = $request->get('sort', 'rating');
+        switch($sortBy) {
+            case 'newest':
+                $query->latest();
+                break;
+            case 'rating':
+                $query->orderBy('rating', 'desc');
+                break;
+            case 'volunteers':
+                $query->orderBy('volunteer_count', 'desc');
+                break;
+            case 'opportunities':
+                $query->orderBy('total_opportunities', 'desc');
+                break;
+            default:
+                $query->orderBy('rating', 'desc');
+        }
+
+        $organizations = $query->paginate(12);
+
+        // Get organization types for filter
+        $organizationTypes = Organization::distinct()
+            ->pluck('organization_type')
+            ->filter()
+            ->toArray();
+
+        return view('organizations.index', compact('organizations', 'organizationTypes'));
+    }
+
+    /**
+     * Display organization detail page (public)
+     */
+    public function organizationDetail($id)
+    {
+        $organization = Organization::with(['user'])
+            ->withCount([
+                'opportunities as active_opportunities_count' => function($q) {
+                    $q->where('status', 'Active');
+                }
+            ])
+            ->findOrFail($id);
+
+        // Get recent opportunities (public can see)
+        $recentOpportunities = $organization->opportunities()
+            ->where('status', 'Active')
+            ->with('category')
+            ->latest()
+            ->take(6)
+            ->get();
+
+        // Get statistics
+        $stats = [
+            'total_opportunities' => $organization->total_opportunities,
+            'active_opportunities' => $organization->active_opportunities_count,
+            'volunteer_count' => $organization->volunteer_count,
+            'rating' => $organization->rating,
+        ];
+
+        return view('organizations.show', compact('organization', 'recentOpportunities', 'stats'));
+    }
 }

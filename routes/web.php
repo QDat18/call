@@ -26,6 +26,7 @@ use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\OrganizationAnalyticsController;
 use App\Http\Controllers\ConnectionController;
 use Illuminate\Support\Facades\Broadcast;
+use App\Services\AgoraTokenBuilder;
 
 
 /*
@@ -246,45 +247,67 @@ Route::middleware('auth')->prefix('video-calls')->name('video-calls.')->group(fu
 // VIDEO CALLS API ROUTES
 // ============================================
 Route::middleware('auth')->prefix('api/video-calls')->name('api.video-calls.')->group(function () {
-    // Call Management
     Route::post('/initiate', [VideoCallController::class, 'initiate'])->name('initiate');
+    Route::post('/accept', [VideoCallController::class, 'accept'])->name('accept');
     Route::post('/decline', [VideoCallController::class, 'decline'])->name('decline');
     Route::post('/end', [VideoCallController::class, 'end'])->name('end');
-    
-    // WebRTC Signaling
-    Route::post('/offer', [VideoCallController::class, 'sendOffer'])->name('offer');
-    Route::get('/offer-sdp/{callId}', [VideoCallController::class, 'getOffer'])->name('get-offer');
-    Route::post('/answer', [VideoCallController::class, 'answer'])->name('answer');
-    Route::post('/ice-candidate', [VideoCallController::class, 'ice'])->name('ice-candidate');
-    
-    // Call Info
-    Route::get('/{callId}', [VideoCallController::class, 'show'])->name('show');
-    
-    // Statistics
-    Route::get('/stats', [VideoCallController::class, 'stats'])->name('stats');
-});
 
+    // Token cho WebRTC / Agora
+    Route::post('/token', [VideoCallController::class, 'token'])->name('call.token');
+    Route::get('/{call_id}/status', [VideoCallController::class, 'status'])->name('status');
+});
+    Route::get('/test-agora-config', function() {
+    return response()->json([
+        'app_id' => config('services.agora.app_id'),
+        'has_certificate' => !empty(config('services.agora.certificate')),
+        'certificate_length' => strlen(config('services.agora.certificate') ?? ''),
+        'token_expire' => config('services.agora.token_expire'),
+        'env_app_id' => env('AGORA_APP_ID'),
+        'env_certificate' => env('AGORA_APP_CERTIFICATE'),
+    ]);
+})->middleware('auth');
 /*
 |--------------------------------------------------------------------------
 | VOLUNTEER ROUTES
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->prefix('volunteer')->name('volunteer.')->group(function () {
-    Route::get('/profile', [VolunteerProfileController::class, 'show'])->name('profile');
+Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.')->group(function () {
+
+    // Volunteer Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'volunteerDashboard'])->name('dashboard');
+
+    // Volunteer Profile
+    Route::get('/profile', [VolunteerProfileController::class, 'show'])->name('profile.profile');
     Route::get('/profile/edit', [VolunteerProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [VolunteerProfileController::class, 'update'])->name('profile.update');
-    
-    Route::get('/opportunities', [VolunteerOpportunityController::class, 'index'])->name('opportunities.index');
-    Route::get('/opportunities/search', [VolunteerOpportunityController::class, 'search'])->name('opportunities.search');
-    
-    Route::get('/applications', [ApplicationController::class, 'index'])->name('applications.index');
+    Route::put('/profile/skills', [VolunteerProfileController::class, 'updateSkills'])->name('profile.skills');
+    Route::put('/profile/availability', [VolunteerProfileController::class, 'updateAvailability'])->name('profile.availability');
+
+    // Applications
+    Route::get('/applications', [ApplicationController::class, 'myApplications'])->name('applications.my');
+    Route::get('/applications/create', [ApplicationController::class, 'create'])->name('applications.create');
     Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
-    Route::put('/applications/{id}/withdraw', [ApplicationController::class, 'withdraw'])->name('applications.withdraw');
-    
+    Route::get('/applications/{id}', action: [ApplicationController::class, 'show'])->name('applications.show');
+    Route::post('/applications/{id}/withdraw', [ApplicationController::class, 'withdraw'])->name('applications.withdraw');
+
+    // Volunteer Activities
     Route::get('/activities', [VolunteerActivityController::class, 'index'])->name('activities.index');
-    Route::get('/analytics', [AnalyticsController::class, 'volunteer'])->name('analytics');
-    
+    Route::get('/activities/create', [VolunteerActivityController::class, 'create'])->name('activities.create');
+    Route::post('/activities', [VolunteerActivityController::class, 'store'])->name('activities.store');
+    Route::get('/activities/{id}', [VolunteerActivityController::class, 'show'])->name('activities.show');
+    Route::post('/activities/{id}/dispute', [VolunteerActivityController::class, 'dispute'])->name('activities.dispute');
+    Route::get('/activities/export', [VolunteerActivityController::class, 'export'])->name('activities.export');
+
+    // Favorites
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
+    Route::put('/favorites/{id}/notes', [FavoriteController::class, 'updateNotes'])->name('favorites.notes');
+    Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
+    Route::post('/favorites/bulk-destroy', [FavoriteController::class, 'bulkDestroy'])->name('favorites.bulk-destroy');
+    Route::get('/favorites/export', [FavoriteController::class, 'export'])->name('favorites.export');
+
+    // Analytics
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
 });
 
 /*
@@ -314,6 +337,9 @@ Route::middleware(['auth'])->prefix('organization')->name('organization.')->grou
     Route::get('/activities', [VolunteerActivityController::class, 'organizationIndex'])->name('activities.index');
     Route::post('/activities/{id}/verify', [VolunteerActivityController::class, 'verify'])->name('activities.verify');
     
+    Route::get('/organizations', [OpportunityController::class, 'organizationsList'])->name('organizations.index');
+    Route::get('/organizations/{id}', [OpportunityController::class, 'organizationDetail'])->name('organizations.show');
+
     Route::get('/analytics', [OrganizationAnalyticsController::class, 'index'])->name('analytics');
 });
 
@@ -456,4 +482,36 @@ Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
 */
 Route::fallback(function () {
     return view('errors.404');
+});
+Route::get('/test-agora-token', function () {
+    $appId = config('services.agora.app_id');
+    $appCertificate = config('services.agora.certificate');
+    $channelName = 'test_' . time();
+    $uid = Auth::id() ?? rand(1, 999999);
+    $expireTime = 3600; // 1h
+    $expireTimestamp = time() + $expireTime;
+
+    try {
+        $token = AgoraTokenBuilder::generateToken(
+            $appId,
+            $appCertificate,
+            $channelName,
+            $uid,
+            $expireTimestamp
+        );
+
+        return response()->json([
+            'success' => true,
+            'app_id' => $appId,
+            'channel' => $channelName,
+            'uid' => $uid,
+            'token' => $token,
+            'expires_at' => date('Y-m-d H:i:s', $expireTimestamp)
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });

@@ -178,4 +178,9 @@ class VolunteerOpportunity extends Model{
     {
         return $this->status === 'Active';
     }    
+    public function reviews()
+    {
+    return $this->hasMany(Review::class, 'opportunity_id');
+    }
+
 }

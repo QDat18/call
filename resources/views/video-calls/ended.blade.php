@@ -33,11 +33,6 @@
                             @endif
                         </h3>
                         <p class="text-muted mb-0">
-                            @php
-                                $otherUser = $call->initiated_by === auth()->id() 
-                                    ? $call->recipient 
-                                    : $call->initiator;
-                            @endphp
                             {{ $call->call_type === 'video' ? 'Video' : 'Audio' }} call with 
                             <strong>{{ $otherUser->first_name }} {{ $otherUser->last_name }}</strong>
                         </p>
@@ -47,19 +42,21 @@
                     <div class="card-body">
                         <!-- Participant Info -->
                         <div class="participant-section text-center mb-4">
-                            <img 
-                                src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}" 
-                                alt="{{ $otherUser->first_name }}"
-                                class="participant-avatar">
-                            <h5 class="mt-3 mb-1">{{ $otherUser->first_name }} {{ $otherUser->last_name }}</h5>
-                            <p class="text-muted mb-0">
-                                @if($otherUser->user_type === 'Organization')
-                                    <i class="fas fa-building me-1"></i>Organization
-                                @elseif($otherUser->user_type === 'Volunteer')
-                                    <i class="fas fa-user me-1"></i>Volunteer
-                                @endif
-                            </p>
-                        </div>
+    <img 
+        src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}" 
+        alt="{{ $otherUser->first_name ?? 'User' }}"
+        class="participant-avatar">
+    <h5 class="mt-3 mb-1">{{ $otherUser->first_name ?? 'Unknown' }} {{ $otherUser->last_name ?? 'User' }}</h5>
+    <p class="text-muted mb-0">
+        @if(isset($otherUser->user_type))
+            @if($otherUser->user_type === 'Organization')
+                <i class="fas fa-building me-1"></i>Organization
+            @elseif($otherUser->user_type === 'Volunteer')
+                <i class="fas fa-user me-1"></i>Volunteer
+            @endif
+        @endif
+    </p>
+</div>
 
                         <!-- Call Stats -->
                         <div class="call-stats">

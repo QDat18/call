@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8962c0459bf5e71ed6434932401e2a43",
+    "content-hash": "2c7a7ddfbefa444cb0822f2de93204b3",
     "packages": [
         {
             "name": "brick/math",
@@ -3223,6 +3223,62 @@
                 "source": "https://github.com/paragonie/sodium_compat/tree/v2.4.0"
             },
             "time": "2025-10-06T08:47:40+00:00"
+        },
+        {
+            "name": "peterujah/php-agora-tokens",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/peterujah/php-agora-tokens.git",
+                "reference": "4feeb4538601606aa4cb0ead420923535ceb64ff"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/peterujah/php-agora-tokens/zipball/4feeb4538601606aa4cb0ead420923535ceb64ff",
+                "reference": "4feeb4538601606aa4cb0ead420923535ceb64ff",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^7.0 || ^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.2-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Peterujah\\Agora\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ujah Chigozie",
+                    "email": "ujahchigozie@gmail.com"
+                }
+            ],
+            "description": "This package is a Composer-friendly rewrite of Agora,s PHP token generator.",
+            "keywords": [
+                "agora",
+                "agora WebRTC ",
+                "agora live-streaming",
+                "agora rtc",
+                "agora rtm",
+                "agora-tokens",
+                "php",
+                "php agora"
+            ],
+            "support": {
+                "issues": "https://github.com/peterujah/php-agora-tokens/issues",
+                "source": "https://github.com/peterujah/php-agora-tokens/tree/1.1.0"
+            },
+            "time": "2025-05-16T01:12:09+00:00"
         },
         {
             "name": "phiki/phiki",
@@ -6797,6 +6853,47 @@
                 }
             ],
             "time": "2025-09-11T10:12:26+00:00"
+        },
+        {
+            "name": "taylanunutmaz/agora-token-builder",
+            "version": "v1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/taylanunutmaz/agora-token-builder.git",
+                "reference": "53f127d63a396cfba063ba3e9cb07d855dd67502"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/taylanunutmaz/agora-token-builder/zipball/53f127d63a396cfba063ba3e9cb07d855dd67502",
+                "reference": "53f127d63a396cfba063ba3e9cb07d855dd67502",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": ">=1.0",
+                "php": ">=7.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "TaylanUnutmaz\\AgoraTokenBuilder\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylan Unutmaz",
+                    "email": "taylanunutmaz@gmail.com"
+                }
+            ],
+            "description": "Token builder for agora.io",
+            "support": {
+                "issues": "https://github.com/taylanunutmaz/agora-token-builder/issues",
+                "source": "https://github.com/taylanunutmaz/agora-token-builder/tree/v1.1"
+            },
+            "time": "2021-01-25T16:34:58+00:00"
         },
         {
             "name": "tijsverkoyen/css-to-inline-styles",

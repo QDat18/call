@@ -233,7 +233,7 @@ class AnalyticsController extends Controller
             return ['metrics' => $metrics];
         });
 
-        return view('analytics.volunteer', array_merge($data, ['period' => $period]));
+        return view('volunteer.analytics.index', array_merge($data, ['period' => $period]));
     }
 
     // Impact report - OPTIMIZED

@@ -1,296 +1,251 @@
+{{-- resources/views/volunteer/dashboard.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Dashboard - Tình Nguyện Viên')
+@section('title', 'Bảng Điều Khiển - Tình Nguyện Viên')
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+    :root {
+        --purple-500: #8b5cf6;
+        --purple-600: #7c3aed;
+        --purple-700: #6b46c1;
+        --purple-800: #5b21b6;
+    }
+    .gradient-purple { background: linear-gradient(135deg, var(--purple-500), var(--purple-700)); }
+    .btn-gradient { 
+        @apply bg-gradient-to-r from-purple-600 to-purple-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition hover:scale-105 hover:shadow-2xl;
+    }
+    .card-hover { @apply transition transform hover:-translate-y-1 hover:shadow-2xl; }
+    .badge-glow { @apply shadow-lg shadow-purple-500/50; }
+    .like-btn.liked { @apply text-purple-600; }
+    .like-btn.liked svg { @apply fill-purple-600; }
+</style>
+@endpush
 
 @section('content')
-<div class="container py-4">
-    <!-- Welcome Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-primary text-white">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <img src="{{ auth()->user()->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->first_name) }}" 
-                                 class="rounded-circle" width="80" height="80" alt="Avatar">
-                        </div>
-                        <div class="flex-grow-1">
-                            <h2 class="mb-1">Xin chào, {{ auth()->user()->first_name }}! 👋</h2>
-                            <p class="mb-0 opacity-75">Chào mừng trở lại với VolunteerConnect</p>
-                        </div>
-                        <div class="text-end">
-                            <div class="h3 mb-0">{{ $stats['total_hours'] ?? 0 }}</div>
-                            <small>Giờ Tình Nguyện</small>
-                        </div>
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
+    <!-- Hero Welcome -->
+    <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white py-16">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-6">
+                    <img src="{{ auth()->user()->avatar_url ? asset('storage/'.auth()->user()->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->first_name).'&background=8b5cf6&color=fff' }}" 
+                         class="w-24 h-24 rounded-full border-4 border-white shadow-2xl object-cover">
+                    <div>
+                        <h1 class="text-4xl font-bold mb-2">Xin chào, {{ auth()->user()->first_name }}!</h1>
+                        <p class="text-xl opacity-90">Hôm nay bạn sẽ lan tỏa điều tốt đẹp nào?</p>
                     </div>
+                </div>
+                <div class="text-center bg-white/20 backdrop-blur-md rounded-2xl p-6">
+                    <div class="text-5xl font-bold">{{ $stats['total_hours'] ?? 0 }}</div>
+                    <div class="text-lg opacity-90">Giờ tình nguyện</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-file-alt fa-2x text-primary"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h3 class="mb-0">{{ $stats['pending_applications'] ?? 0 }}</h3>
-                            <small class="text-muted">Đơn Chờ Duyệt</small>
-                        </div>
-                    </div>
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        <!-- Stats Cards - Tím Gradient -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+            <div class="bg-white rounded-2xl shadow-xl p-6 text-center card-hover border border-purple-100">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center text-white text-2xl">
+                    <i class="fas fa-clock"></i>
                 </div>
+                <div class="text-3xl font-bold text-purple-700">{{ $stats['total_hours'] ?? 0 }}</div>
+                <div class="text-gray-600">Tổng giờ</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-xl p-6 text-center card-hover border border-purple-100">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="text-3xl font-bold text-yellow-600">{{ $stats['pending_applications'] ?? 0 }}</div>
+                <div class="text-gray-600">Đơn chờ duyệt</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-xl p-6 text-center card-hover border border-purple-100">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-2xl">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="text-3xl font-bold text-green-600">{{ $stats['accepted_applications'] ?? 0 }}</div>
+                <div class="text-gray-600">Được chấp nhận</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-xl p-6 text-center card-hover border border-purple-100">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center text-white text-2xl">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="text-3xl font-bold text-pink-600">{{ number_format($stats['rating'] ?? 0, 1) }}</div>
+                <div class="text-gray-600">Đánh giá</div>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-check-circle fa-2x text-success"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h3 class="mb-0">{{ $stats['accepted_applications'] ?? 0 }}</h3>
-                            <small class="text-muted">Đơn Được Chấp Nhận</small>
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Recommended Opportunities -->
+                <div class="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-2xl font-bold">Gợi Ý Dành Riêng Cho Bạn</h3>
+                            <a href="{{ route('opportunities.index') }}" class="btn-gradient text-sm">Xem Tất Cả</a>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-clock fa-2x text-warning"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h3 class="mb-0">{{ $stats['total_hours'] ?? 0 }}</h3>
-                            <small class="text-muted">Tổng Giờ</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-info bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-star fa-2x text-info"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h3 class="mb-0">{{ number_format($stats['rating'] ?? 0, 1) }}</h3>
-                            <small class="text-muted">Đánh Giá</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Left Column -->
-        <div class="col-lg-8">
-            <!-- Recommended Opportunities -->
-            <div class="card mb-4">
-                <div class="card-header bg-white py-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0">
-                            <i class="fas fa-magic text-primary"></i> Gợi Ý Cho Bạn
-                        </h5>
-                        <a href="{{ route('opportunities.index') }}" class="btn btn-sm btn-outline-primary">
-                            Xem Tất Cả
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @forelse($recommendedOpportunities as $opportunity)
-                        <div class="d-flex mb-3 pb-3 border-bottom">
-                            <div class="flex-shrink-0">
-                                <span class="badge bg-{{ $opportunity->category->color ?? 'primary' }} rounded-circle p-3">
-                                    <i class="{{ $opportunity->category->icon ?? 'fas fa-heart' }} fa-lg"></i>
-                                </span>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">
-                                    <a href="{{ route('opportunities.show', $opportunity->opportunity_id) }}" 
-                                       class="text-decoration-none text-dark">
-                                        {{ $opportunity->title }}
-                                    </a>
-                                </h6>
-                                <small class="text-muted">
-                                    <i class="fas fa-building"></i> {{ $opportunity->organization->organization_name }}
-                                </small>
-                                <br>
-                                <small class="text-muted">
-                                    <i class="fas fa-map-marker-alt"></i> {{ $opportunity->location }}
-                                    <span class="mx-2">|</span>
-                                    <i class="fas fa-calendar"></i> {{ \Carbon\Carbon::parse($opportunity->start_date)->format('d/m/Y') }}
-                                </small>
-                                <div class="mt-2">
-                                    <span class="badge bg-primary-subtle text-primary">
-                                        Match: {{ $opportunity->match_score ?? 85 }}%
-                                    </span>
+                    <div class="p-6 space-y-6">
+                        @forelse($recommendations as $opportunity)
+                            <div class="flex items-center gap-4 p-4 rounded-xl hover:bg-purple-50 transition card-hover">
+                                <div class="flex-shrink-0">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                                        <i class="{{ $opportunity->category->icon ?? 'fas fa-heart' }}"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h4 class="font-bold text-lg text-purple-800">
+                                        <a href="{{ route('opportunities.show', $opportunity->opportunity_id) }}" class="hover:text-purple-600">
+                                            {{ $opportunity->title }}
+                                        </a>
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-building"></i> {{ $opportunity->organization->organization_name }}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        <i class="fas fa-map-marker-alt"></i> {{ $opportunity->location }} • 
+                                        <i class="fas fa-calendar"></i> {{ \Carbon\Carbon::parse($opportunity->start_date)->format('d/m/Y') }}
+                                    </p>
+                                    <div class="mt-2">
+                                        <span class="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold badge-glow">
+                                            Match: {{ $opportunity->match_score ?? 85 }}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <a href="{{ route('volunteer.applications.create', ['opportunity_id' => $opportunity->opportunity_id]) }}" 
+                                       class="btn-gradient text-sm">Ứng Tuyển Ngay</a>
                                 </div>
                             </div>
-                            <div class="text-end">
-                                <a href="{{ route('applications.create', ['opportunity_id' => $opportunity->opportunity_id]) }}" 
-                                   class="btn btn-sm btn-primary">
-                                    Ứng Tuyển
+                        @empty
+                            <div class="text-center py-12">
+                                <i class="fas fa-search text-6xl text-purple-300 mb-4"></i>
+                                <p class="text-xl text-gray-600">Chưa có gợi ý phù hợp</p>
+                                <a href="{{ route('volunteer.profile.edit') }}" class="mt-4 inline-block btn-gradient">
+                                    Cập Nhật Hồ Sơ Để Nhận Gợi Ý Tốt Hơn
                                 </a>
                             </div>
-                        </div>
-                    @empty
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-search fa-3x mb-3"></i>
-                            <p>Chưa có cơ hội phù hợp</p>
-                            <a href="{{ route('profile.edit') }}" class="btn btn-outline-primary">
-                                Cập Nhật Profile
-                            </a>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-
-            <!-- Recent Applications -->
-            <div class="card">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-alt text-primary"></i> Đơn Ứng Tuyển Gần Đây
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Cơ Hội</th>
-                                    <th>Tổ Chức</th>
-                                    <th>Ngày Nộp</th>
-                                    <th>Trạng Thái</th>
-                                    <th>Hành Động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($recentApplications as $app)
-                                    <tr>
-                                        <td>
-                                            <a href="{{ route('opportunities.show', $app->opportunity->opportunity_id) }}">
-                                                {{ Str::limit($app->opportunity->title, 40) }}
-                                            </a>
-                                        </td>
-                                        <td>{{ $app->opportunity->organization->organization_name }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($app->applied_date)->format('d/m/Y') }}</td>
-                                        <td>
-                                            @php
-                                                $statusColors = [
-                                                    'Pending' => 'warning',
-                                                    'Accepted' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Under Review' => 'info'
-                                                ];
-                                                $color = $statusColors[$app->status] ?? 'secondary';
-                                            @endphp
-                                            <span class="badge bg-{{ $color }}">{{ $app->status }}</span>
-                                        </td>
-                                        <td>
-                                            <a href="{{ route('applications.show', $app->application_id) }}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">
-                                            Chưa có đơn ứng tuyển nào
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                        @endforelse
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Right Column -->
-        <div class="col-lg-4">
-            <!-- Activity Chart -->
-            <div class="card mb-4">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0">
-                        <i class="fas fa-chart-line text-primary"></i> Hoạt Động Gần Đây
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <canvas id="activityChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="card mb-4">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0">
-                        <i class="fas fa-bolt text-primary"></i> Hành Động Nhanh
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('opportunities.index') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-search"></i> Tìm Cơ Hội
-                        </a>
-                        <a href="{{ route('volunteer-activities.create') }}" class="btn btn-outline-success">
-                            <i class="fas fa-plus"></i> Log Giờ Tình Nguyện
-                        </a>
-                        <a href="{{ route('profile.edit') }}" class="btn btn-outline-info">
-                            <i class="fas fa-user-edit"></i> Cập Nhật Profile
-                        </a>
-                        <a href="{{ route('analytics.volunteer') }}" class="btn btn-outline-warning">
-                            <i class="fas fa-chart-bar"></i> Xem Thống Kê
-                        </a>
+                <!-- Recent Applications -->
+                <div class="bg-white rounded-2xl shadow-xl border border-purple-100">
+                    <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6">
+                        <h3 class="text-2xl font-bold">Đơn Ứng Tuyển Gần Đây</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left text-purple-700 border-b border-purple-200">
+                                        <th class="pb-3">Cơ Hội</th>
+                                        <th class="pb-3">Tổ Chức</th>
+                                        <th class="pb-3">Ngày Nộp</th>
+                                        <th class="pb-3">Trạng Thái</th>
+                                        <th class="pb-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($recentApplications as $app)
+                                        <tr class="border-b border-purple-100 hover:bg-purple-50 transition">
+                                            <td class="py-4">
+                                                <a href="{{ route('opportunities.show', $app->opportunity->opportunity_id) }}" class="font-medium text-purple-800 hover:text-purple-600">
+                                                    {{ Str::limit($app->opportunity->title, 40) }}
+                                                </a>
+                                            </td>
+                                            <td class="py-4 text-gray-600">{{ $app->opportunity->organization->organization_name }}</td>
+                                            <td class="py-4 text-sm text-gray-500">{{ \Carbon\Carbon::parse($app->applied_date)->format('d/m/Y') }}</td>
+                                            <td class="py-4">
+                                                @php
+                                                    $status = $app->status;
+                                                    $colors = [
+                                                        'Pending' => 'bg-yellow-100 text-yellow-800',
+                                                        'Accepted' => 'bg-green-100 text-green-800',
+                                                        'Rejected' => 'bg-red-100 text-red-800',
+                                                        'Under Review' => 'bg-blue-100 text-blue-800'
+                                                    ];
+                                                @endphp
+                                                <span class="px-3 py-1 rounded-full text-sm font-medium {{ $colors[$status] ?? 'bg-gray-100 text-gray-800' }}">
+                                                    {{ $status }}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 text-right">
+                                                <a href="{{ route('applications.show', $app->application_id) }}" class="text-purple-600 hover:text-purple-800">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-12 text-gray-500">
+                                                <i class="fas fa-file-alt text-6xl mb-4 text-purple-300"></i>
+                                                <p class="text-xl">Chưa có đơn ứng tuyển nào</p>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Achievements -->
-            <div class="card">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0">
-                        <i class="fas fa-trophy text-warning"></i> Thành Tích
-                    </h6>
+            <!-- Right Sidebar -->
+            <div class="space-y-8">
+                <!-- Activity Chart -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-purple-100">
+                    <h3 class="text-xl font-bold text-purple-800 mb-6">Hoạt Động Gần Đây</h3>
+                    <canvas id="activityChart" height="240"></canvas>
                 </div>
-                <div class="card-body">
-                    @forelse($achievements ?? [] as $achievement)
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="flex-shrink-0">
-                                <span class="fs-2">{{ $achievement['icon'] }}</span>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-purple-100">
+                    <h3 class="text-xl font-bold text-purple-800 mb-6">Hành Động Nhanh</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <a href="{{ route('opportunities.index') }}" class="bg-gradient-to-br from-purple-500 to-purple-700 text-white p-4 rounded-xl text-center hover:shadow-xl transition card-hover">
+                            <i class="fas fa-search text-2xl mb-2"></i>
+                            <span class="block font-semibold">Tìm Cơ Hội</span>
+                        </a>
+                        <a href="{{ route('volunteer-activities.create') }}" class="bg-gradient-to-br from-green-500 to-emerald-600 text-white p-4 rounded-xl text-center hover:shadow-xl transition card-hover">
+                            <i class="fas fa-plus text-2xl mb-2"></i>
+                            <span class="block font-semibold">Log Giờ</span>
+                        </a>
+                        <a href="{{ route('volunteer.profile.edit') }}" class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4 rounded-xl text-center hover:shadow-xl transition card-hover">
+                            <i class="fas fa-user-edit text-2xl mb-2"></i>
+                            <span class="block font-semibold">Hồ Sơ</span>
+                        </a>
+                        <a href="{{ route('volunteer.analytics') }}" class="bg-gradient-to-br from-orange-500 to-red-600 text-white p-4 rounded-xl text-center hover:shadow-xl transition card-hover">
+                            <i class="fas fa-chart-bar text-2xl mb-2"></i>
+                            <span class="block font-semibold">Thống Kê</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-purple-100">
+                    <h3 class="text-xl font-bold text-purple-800 mb-6">Thành Tích Nổi Bật</h3>
+                    <div class="space-y-4">
+                        @forelse($achievements ?? [] as $achievement)
+                            <div class="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
+                                <div class="text-3xl">{{ $achievement['icon'] }}</div>
+                                <div>
+                                    <div class="font-bold text-purple-800">{{ $achievement['title'] }}</div>
+                                    <div class="text-sm text-gray-600">{{ $achievement['description'] ?? '' }}</div>
+                                </div>
                             </div>
-                            <div class="flex-grow-1 ms-3">
-                                <strong>{{ $achievement['title'] }}</strong>
+                        @empty
+                            <div class="text-center py-8">
+                                <i class="fas fa-medal text-6xl text-purple-300 mb-4"></i>
+                                <p class="text-gray-600">Hoàn thành hoạt động để nhận thành tích!</p>
                             </div>
-                        </div>
-                    @empty
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-medal fa-3x mb-3 opacity-50"></i>
-                            <p class="small">Hoàn thành hoạt động để nhận thành tích!</p>
-                        </div>
-                    @endforelse
+                        @endforelse
+                    </div>
                 </div>
             </div>
         </div>
@@ -305,28 +260,25 @@
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: {!! json_encode($chartLabels ?? []) !!},
+            labels: {!! json_encode($chartLabels ?? ['Th1','Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8','Th9','Th11','Th12']) !!},
             datasets: [{
-                label: 'Giờ Tình Nguyện',
-                data: {!! json_encode($chartData ?? []) !!},
-                borderColor: '#3B82F6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                label: 'Giờ tình nguyện',
+                data: {!! json_encode($chartData ?? [5, 15, 10, 25, 30, 40]) !!},
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
                 tension: 0.4,
-                fill: true
+                fill: true,
+                pointBackgroundColor: '#8b5cf6',
+                pointRadius: 6
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                }
+                legend: { display: false }
             },
             scales: {
-                y: {
-                    beginAtZero: true
-                }
+                y: { beginAtZero: true }
             }
         }
     });

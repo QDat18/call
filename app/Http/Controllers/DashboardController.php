@@ -35,7 +35,7 @@ class DashboardController extends Controller
             'applications' => $user->applications()->count(),
             'accepted' => $user->applications()->where('status', 'Accepted')->count(),
             'pending' => $user->applications()->where('status', 'Pending')->count(),
-            'completed_activities' => $user->volunteerActivities()->where('status', 'Verified')->count(),
+            'completed_activities' => $user->activities()->where('status', 'Verified')->count(),
         ];
 
         $recentApplications = $user->applications()
@@ -60,10 +60,9 @@ class DashboardController extends Controller
                     ->where('start_date', '>=', now());
             })
             ->with(['opportunity'])
-            ->orderBy('opportunity.start_date')
             ->take(5)
             ->get();
-        $activityHistory = $user->volunteerActivities()
+        $activityHistory = $user->activities()
             ->where('status', 'Verified')
             ->with(['opportunity', 'organization'])
             ->latest()
@@ -76,7 +75,7 @@ class DashboardController extends Controller
                 return now()->subMonths($months)->format('M');
             })->toArray(),
             'data' => collect(range(5, 0))->map(function ($months) use ($user) {
-                return $user->volunteerActivities()
+                return $user->activities()
                     ->whereYear('activity_date', now()->subMonths($months)->year)
                     ->whereMonth('activity_date', now()->subMonths($months)->month)
                     ->where('status', 'Verified')
