@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -8,10 +9,11 @@ use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
-class OrganizationVerificationController extends Controller{
-    public function __construct(){
-        $this->middleware(['auth', 'role: Admin']);
-    }
+class OrganizationVerificationController extends Controller
+{
+    // public function __construct(){
+    //     $this->middleware(['auth', 'role: Admin']);
+    // }
     public function index(Request $request)
     {
         $query = Organization::with('user');
@@ -35,16 +37,16 @@ class OrganizationVerificationController extends Controller{
         $stats = [
             'total_opportunities' => $organization->opportunities()->count(),
             'active_opportunities' => $organization->opportunities()->where('status', 'Active')->count(),
-            'total_volunteers' => $organization->getTotalVolunteersAttribute(),
-            'total_hours_received' => $organization->getTotalHoursAttribute(),
+            'total_volunteers' => $organization->total_volunteers,
+            'total_hours_received' => $organization->total_hours,
         ];
         return view('admin.organizations.show', compact('organization', 'stats'));
     }
-    
+
     public function approve(Request $request, $id)
     {
         $organization = Organization::findOrFail($id);
-        
+
         $organization->verification_status = 'Verified';
         $organization->save();
 
@@ -82,9 +84,9 @@ class OrganizationVerificationController extends Controller{
         }
 
         $organization = Organization::findOrFail($id);
-        
+
         // TODO: Create notification for organization
-        
+
         // TODO: Send email requesting additional documents
 
         return redirect()->back()->with('success', 'Document request has been sent to the organization.');

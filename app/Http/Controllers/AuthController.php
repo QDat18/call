@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\VerificationEmail;
+use Exception;
 
 class AuthController extends Controller
 {
@@ -116,12 +120,15 @@ class AuthController extends Controller
             // Update last login
             $user->update(['last_login_at' => now()]);
 
-            return redirect()->route('home')
-                ->with('success', 'Welcome to VolunteerConnect! Your account has been created successfully.');
+            // return redirect() -> route('home')
+            //     ->with('success', 'Welcome to VolunteerConnect! Your account has been created.')
+            //     ->with('show_profile_toast', true);
 
+            return redirect()->route('volunteer.profile.edit')
+                ->with('success', 'Chào mừng bạn! Vui lòng hoàn thiện hồ sơ và xác thực tài khoản.');
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'Registration failed. Please try again.')
                 ->withInput();
@@ -143,7 +150,7 @@ class AuthController extends Controller
             'city' => 'required|string|max:50',
             'district' => 'required|string|max:50',
             'address' => 'required|string',
-            
+
             // Organization information
             'organization_name' => 'required|string|max:150',
             'organization_type' => 'required|in:NGO,NPO,Charity,School,Hospital,Community Group',
@@ -153,7 +160,9 @@ class AuthController extends Controller
             'website' => 'nullable|url|max:100',
             'contact_person' => 'nullable|string|max:100',
             'founded_year' => 'required|integer|min:1900|max:' . date('Y'),
-            
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'registration_document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+
             // Terms
             'terms' => 'required|accepted',
             'verify_info' => 'required|accepted',
@@ -179,6 +188,7 @@ class AuthController extends Controller
             'password.confirmed' => 'Password confirmation does not match',
             'terms.accepted' => 'You must agree to the terms and conditions',
             'verify_info.accepted' => 'You must confirm the accuracy of the information',
+            'registration_document.required' => 'Please upload authentication documents',
         ]);
 
         if ($validator->fails()) {
@@ -204,6 +214,15 @@ class AuthController extends Controller
                 'is_active' => true,
                 'is_verified' => false,
             ]);
+
+            $logoPath = null;
+            if ($request->hasFile('logo')) {
+                $logoPath = $request->file('logo')->store('logos', 'public');
+            }
+            $documentPath = null;
+            if ($request->hasFile('registration_document')) {
+                $documentPath = $request->file('registration_document')->store('documents', 'public');
+            }
 
             // Create organization
             Organization::create([
@@ -240,17 +259,19 @@ class AuthController extends Controller
             DB::commit();
 
             // Auto login
-            Auth::login($user);
+            // Auth::login($user);
 
-            // Update last login
-            $user->update(['last_login_at' => now()]);
+            // // Update last login
+            // $user->update(['last_login_at' => now()]);
 
-            return redirect()->route('home')
-                ->with('success', 'Welcome to VolunteerConnect! Your organization has been registered. Please submit verification documents to get verified badge.');
+            return redirect()->route('login')
+                ->with('success', 'Đăng ký thành công! Tài khoản của bạn đang chờ quản trị viên xét duyệt.');
 
+            // return redirect()->route('home')
+            //     ->with('success', 'Welcome to VolunteerConnect! Your organization has been registered. Please submit verification documents to get verified badge.');
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'Registration failed. Please try again.')
                 ->withInput();
@@ -305,13 +326,29 @@ class AuthController extends Controller
         $remember = $request->has('remember');
 
         if (Auth::attempt($credentials, $remember)) {
-            $request->session()->regenerate();
 
+            if ($user->user_type == 'Organization') {
+                $organization = $user->organization;
+                if ($organization && $organization->verification_status == 'Pending') {
+                    Auth::logout();
+                    return redirect()->back()
+                        ->with('error', 'Tài khoản của bạn đang chờ xét duyệt. Vui lòng thử lại sau.')
+                        ->withInput($request->only('email', 'remember'));
+                }
+                if ($organization && $organization->verification_status == 'Rejected') {
+                    Auth::logout();
+                    return redirect()->back()
+                        ->with('error', 'Tài khoản của bạn đã bị từ chối. Vui lòng liên hệ hỗ trợ')
+                        ->withInput($request->only('email', 'remember'));
+                }
+            }
+
+            $request->session()->regenerate();
             // Update last login
             $user->update(['last_login_at' => now()]);
 
             // Redirect based on user type
-            $redirectRoute = match($user->user_type) {
+            $redirectRoute = match ($user->user_type) {
                 'Admin' => route('admin.dashboard'),
                 'Organization' => route('organization.dashboard'),
                 'Volunteer' => route('volunteer.dashboard'),
@@ -431,13 +468,12 @@ class AuthController extends Controller
      */
     public function redirectToGoogle()
     {
-        // TODO: Implement Google OAuth redirect
-        // You'll need to install Laravel Socialite package:
-        // composer require laravel/socialite
-        // return Socialite::driver('google')->redirect();
-        
-        return redirect()->route('login')
-            ->with('error', 'Google login is not configured yet. Please use email/password login.');
+        try {
+            return Socialite::driver('google')->redirect();
+        } catch (Exception $e) {
+            return redirect()->route('login')
+                ->with('error', 'Unable to connect to Google. Please try again later.');
+        }
     }
 
     /**
@@ -445,10 +481,77 @@ class AuthController extends Controller
      */
     public function handleGoogleCallback()
     {
-        // TODO: Implement Google OAuth callback
-        
-        return redirect()->route('login')
-            ->with('error', 'Google login is not configured yet.');
+        try {
+            $googleUser = Socialite::driver('google')->user();
+
+            // Check if user exists
+            $user = User::where('email', $googleUser->email)->first();
+
+            if ($user) {
+                // User exists, login
+                if (!$user->is_active) {
+                    return redirect()->route('login')
+                        ->with('error', 'Your account has been deactivated. Please contact support.');
+                }
+
+                Auth::login($user);
+                $user->update(['last_login_at' => now()]);
+
+                $redirectRoute = match ($user->user_type) {
+                    'Admin' => route('admin.dashboard'),
+                    'Organization' => route('organization.dashboard'),
+                    'Volunteer' => route('volunteer.dashboard'),
+                    default => route('home'),
+                };
+
+                return redirect()->intended($redirectRoute)
+                    ->with('success', 'Welcome back, ' . $user->first_name . '!');
+            }
+
+            // New user - create account as Volunteer
+            DB::beginTransaction();
+
+            try {
+                // Split name into first and last name
+                $nameParts = explode(' ', $googleUser->name, 2);
+                $firstName = $nameParts[0];
+                $lastName = $nameParts[1] ?? '';
+
+                $user = User::create([
+                    'email' => $googleUser->email,
+                    'password' => Hash::make(Str::random(16)), // Random password
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'user_type' => 'Volunteer',
+                    'is_active' => true,
+                    'is_verified' => true, // Auto verify OAuth users
+                    'avatar_url' => $googleUser->avatar,
+                ]);
+
+                // Create volunteer profile
+                VolunteerProfile::create([
+                    'user_id' => $user->user_id,
+                    'total_volunteer_hours' => 0,
+                    'volunteer_rating' => 0.00,
+                ]);
+
+                DB::commit();
+
+                // Login
+                Auth::login($user);
+                $user->update(['last_login_at' => now()]);
+
+                return redirect()->route('volunteer.profile.edit')
+                    ->with('success', 'Chào mừng bạn! Vui lòng hoàn thiện hồ sơ và xác thực tài khoản.');
+            } catch (Exception $e) {
+                DB::rollBack();
+                return redirect()->route('login')
+                    ->with('error', 'Failed to create account. Please try again.');
+            }
+        } catch (Exception $e) {
+            return redirect()->route('login')
+                ->with('error', 'Failed to authenticate with Google. Please try again.');
+        }
     }
 
     /**
@@ -456,11 +559,12 @@ class AuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        // TODO: Implement Facebook OAuth redirect
-        // return Socialite::driver('facebook')->redirect();
-        
-        return redirect()->route('login')
-            ->with('error', 'Facebook login is not configured yet. Please use email/password login.');
+        try {
+            return Socialite::driver('facebook')->redirect();
+        } catch (Exception $e) {
+            return redirect()->route('login')
+                ->with('error', 'Unable to connect to Facebook. Please try again later.');
+        }
     }
 
     /**
@@ -468,9 +572,76 @@ class AuthController extends Controller
      */
     public function handleFacebookCallback()
     {
-        // TODO: Implement Facebook OAuth callback
-        
-        return redirect()->route('login')
-            ->with('error', 'Facebook login is not configured yet.');
+        try {
+            $facebookUser = Socialite::driver('facebook')->user();
+
+            // Check if user exists
+            $user = User::where('email', $facebookUser->email)->first();
+
+            if ($user) {
+                // User exists, login
+                if (!$user->is_active) {
+                    return redirect()->route('login')
+                        ->with('error', 'Your account has been deactivated. Please contact support.');
+                }
+
+                Auth::login($user);
+                $user->update(['last_login_at' => now()]);
+
+                $redirectRoute = match ($user->user_type) {
+                    'Admin' => route('admin.dashboard'),
+                    'Organization' => route('organization.dashboard'),
+                    'Volunteer' => route('volunteer.dashboard'),
+                    default => route('home'),
+                };
+
+                return redirect()->intended($redirectRoute)
+                    ->with('success', 'Welcome back, ' . $user->first_name . '!');
+            }
+
+            // New user - create account as Volunteer
+            DB::beginTransaction();
+
+            try {
+                // Split name into first and last name
+                $nameParts = explode(' ', $facebookUser->name, 2);
+                $firstName = $nameParts[0];
+                $lastName = $nameParts[1] ?? '';
+
+                $user = User::create([
+                    'email' => $facebookUser->email,
+                    'password' => Hash::make(Str::random(16)), // Random password
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'user_type' => 'Volunteer',
+                    'is_active' => true,
+                    'is_verified' => true, // Auto verify OAuth users
+                    'avatar_url' => $facebookUser->avatar,
+                ]);
+
+                // Create volunteer profile
+                VolunteerProfile::create([
+                    'user_id' => $user->user_id,
+                    'total_volunteer_hours' => 0,
+                    'volunteer_rating' => 0.00,
+                ]);
+
+                DB::commit();
+
+                // Login
+                Auth::login($user);
+                $user->update(['last_login_at' => now()]);
+
+                return redirect()->route('home')
+                    ->with('success', 'Welcome to VolunteerConnect! Your account has been created successfully.');
+            } catch (Exception $e) {
+                DB::rollBack();
+                return redirect()->route('login')
+                    ->with('error', 'Failed to create account. Please try again.');
+            }
+        } catch (Exception $e) {
+            return redirect()->route('login')
+                ->with('error', 'Failed to authenticate with Facebook. Please try again.');
+        }
     }
 }

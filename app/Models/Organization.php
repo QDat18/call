@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,7 +29,7 @@ class Organization extends Model
         'founded_year',
         'volunteer_count',
         'rating',
-        'total_opportunities',        
+        'total_opportunities',
     ];
 
     protected $casts = [
@@ -169,5 +170,26 @@ class Organization extends Model
     public function getPhoneAttribute()
     {
         return $this->user->phone ?? null;
+    }
+
+    public function getTotalVolunteersAttribute()
+    {
+        // Lấy danh sách ID các cơ hội của tổ chức này
+        $opportunityIds = $this->opportunities()->pluck('opportunity_id');
+
+        // Đếm số 'volunteer_id' duy nhất đã được 'Accepted'
+        return Application::whereIn('opportunity_id', $opportunityIds)
+            ->where('status', 'Accepted')
+            ->distinct('volunteer_id')
+            ->count();
+    }
+
+    public function getTotalHoursAttribute()
+    {
+        $primaryKey = $this->getKeyName(); // (ví dụ: 'org_id')
+
+        return VolunteerActivity::where('org_id', $this->$primaryKey)
+            ->where('status', 'Verified')
+            ->sum('hours_worked');
     }
 }

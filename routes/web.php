@@ -27,7 +27,16 @@ use App\Http\Controllers\OrganizationAnalyticsController;
 use App\Http\Controllers\ConnectionController;
 use Illuminate\Support\Facades\Broadcast;
 use App\Services\AgoraTokenBuilder;
+use App\Http\Controllers\Admin\OrganizationVerificationController;
+use App\Http\Controllers\Admin\DonationCampaignController;
 
+/*
+|--------------------------------------------------------------------------
+| Broadcast Routes - MUST BE FIRST
+|--------------------------------------------------------------------------
+*/
+
+Broadcast::routes(['middleware' => ['web', 'auth']]);
 
 /*
 |--------------------------------------------------------------------------
@@ -35,10 +44,8 @@ use App\Services\AgoraTokenBuilder;
 |--------------------------------------------------------------------------
 */
 
-// ✅ QUAN TRỌNG: Broadcast routes PHẢI ĐẶT TRƯỚC tất cả routes khác
-Broadcast::routes(['middleware' => ['web', 'auth']]);
-
 // Home & Static Pages
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/about', function () {
     return view('pages.about');
@@ -60,28 +67,36 @@ Route::get('/upgrade', function () {
     return view('pages.upgrade');
 })->name('upgrade');
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
+// Public User Profiles
 Route::get('/user/{id}/profile', [UserController::class, 'publicProfile'])->name('user.public-profile');
 
-// View posts feed (public)
+// Posts (Public)
 Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
 Route::get('/posts/{id}', [PostController::class, 'show'])->name('posts.show');
 
-// Public Opportunities
+// Opportunities (Public)
 Route::get('/opportunities', [VolunteerOpportunityController::class, 'index'])->name('opportunities.index');
 Route::get('/opportunities/{id}', [VolunteerOpportunityController::class, 'show'])->name('opportunities.show');
 
-// Public Organizations
+// Organizations (Public)
 Route::get('/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
 Route::get('/organizations/{id}', [OrganizationController::class, 'show'])->name('organizations.show');
 
-// Public Search
-Route::get('/search', [SearchController::class, 'search'])->name('search');
-Route::get('/search/advanced', [SearchController::class, 'advancedSearch'])->name('search.advanced');
-Route::get('/search/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
-Route::get('/search/category/{id}', [SearchController::class, 'searchByCategory'])->name('search.category');
+// Search Routes (Public)
+Route::prefix('search')->name('search.')->group(function () {
+    Route::get('/', [SearchController::class, 'index'])->name('index');
+    Route::get('/results', [SearchController::class, 'search'])->name('results');
+    Route::get('/advanced', [SearchController::class, 'advancedSearch'])->name('advanced');
+    Route::get('/category/{id}', [SearchController::class, 'searchByCategory'])->name('category');
+    Route::get('/location', [SearchController::class, 'searchByLocation'])->name('location');
+    Route::get('/suggestions', [SearchController::class, 'suggestions'])->name('suggestions');
+    Route::get('/quick', [SearchController::class, 'quickSearch'])->name('quick');
+    Route::get('/trending', [SearchController::class, 'trendingOpportunities'])->name('trending');
+    Route::get('/popular', [SearchController::class, 'popularSearches'])->name('popular');
+});
 
-// Public Reviews
+
+// Reviews (Public)
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->name('reviews.user');
 
@@ -90,7 +105,6 @@ Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->
 | Authentication Routes
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('guest')->group(function () {
     // Login
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -109,18 +123,16 @@ Route::middleware('guest')->group(function () {
         return view('auth.register-organization');
     })->name('register.organization');
 
-    // Form submissions
-    Route::post('/register/volunteer', [AuthController::class, 'registerVolunteer'])
-        ->name('register.volunteer.submit');
+    Route::post('/register/volunteer', [AuthController::class, 'registerVolunteer'])->name('register.volunteer.submit');
+    Route::post('/register/organization', [AuthController::class, 'registerOrganization'])->name('register.organization.submit');
 
-    Route::post('/register/organization', [AuthController::class, 'registerOrganization'])
-        ->name('register.organization.submit');
-        
-    // Social Login
-    Route::get('/login/google', [AuthController::class, 'redirectToGoogle'])->name('login.google');
-    Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback']);
-    Route::get('/login/facebook', [AuthController::class, 'redirectToFacebook'])->name('login.facebook');
-    Route::get('/login/facebook/callback', [AuthController::class, 'handleFacebookCallback']);
+    // Social Login - Google
+    Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+
+    // Social Login - Facebook
+    Route::get('/auth/facebook', [AuthController::class, 'redirectToFacebook'])->name('auth.facebook');
+    Route::get('/auth/facebook/callback', [AuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 
     // Password Reset
     Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
@@ -129,16 +141,14 @@ Route::middleware('guest')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-});
+// Logout
+Route::middleware('auth')->post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes (Tất cả user đã đăng nhập)
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('auth')->group(function () {
 
     // Dashboard
@@ -150,28 +160,26 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/avatar', [UserController::class, 'updateAvatar'])->name('update-avatar');
     Route::get('/users/{id}/profile', [UserController::class, 'profile'])->name('users.profile');
+    Route::get('/public-profile/{id}', [UserController::class, 'publicProfile'])->name('public-profile');
 
     // Password Change
     Route::get('/change-password', [UserController::class, 'showChangePasswordForm'])->name('user.change-password');
     Route::post('/change-password', [UserController::class, 'changePassword'])->name('user.change-password.update');
 
-    // Other User Routes
-    Route::get('/notifications', [UserController::class, 'notifications'])->name('notifications');
-    Route::get('/public-profile/{id}', [UserController::class, 'publicProfile'])->name('public-profile');
+    // User Deactivation
     Route::post('/user/deactivate', [UserController::class, 'deactivate'])->name('user.deactivate');
 
     // Notifications
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
-    Route::get('/user/notifications/recent', [UserController::class, 'getRecentNotifications'])->name('user.notifications.recent');
-    Route::post('/user/notifications/{notification}/mark-read', [UserController::class, 'markNotificationRead'])->name('user.notifications.mark-read');
-    Route::post('/user/notifications/mark-all-read', [UserController::class, 'markAllNotificationsRead'])->name('user.notifications.mark-all-read');
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
+        Route::get('/recent', [UserController::class, 'getRecentNotifications'])->name('recent');
+        Route::post('/{notification}/mark-read', [UserController::class, 'markNotificationRead'])->name('mark-read');
+        Route::post('/mark-all-read', [UserController::class, 'markAllNotificationsRead'])->name('mark-all-read');
+    });
 
-    // ✅ SỬA LỖI: XÓA Route::resource() VÀ CHỈ GIỮ LẠI PREFIX GROUP
-    // ❌ XÓA DÒNG NÀY: Route::resource('conversations', ConversationController::class);
-    
-    // ✅ Conversations Routes - Chỉ giữ group này
+    // Conversations
     Route::prefix('conversations')->name('conversations.')->group(function () {
         Route::get('/', [ConversationController::class, 'index'])->name('index');
         Route::get('/create', [ConversationController::class, 'create'])->name('create');
@@ -184,16 +192,18 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/archive', [ConversationController::class, 'archive'])->name('archive');
     });
 
-    // Messages Routes
-    Route::get('/conversations/{conversationId}/messages', [MessageController::class, 'index'])->name('messages.index');
-    Route::post('/conversations/{conversationId}/messages', [MessageController::class, 'send'])->name('messages.send');
-    Route::post('/conversations/{conversationId}/messages/read', [MessageController::class, 'markRead'])->name('messages.read');
-    Route::post('/conversations/{conversationId}/messages/upload', [MessageController::class, 'uploadAttachment'])->name('messages.upload');
-    Route::delete('/conversations/{conversationId}/messages/{messageId}', [MessageController::class, 'destroy'])->name('messages.destroy');
-    Route::get('/conversations/{conversationId}/messages/latest', [MessageController::class, 'getLatest'])->name('messages.latest');
-    Route::get('/messages/unread-count', [MessageController::class, 'getUnreadCount'])->name('messages.unread-count');
-    
-    // Connections Routes
+    // Messages
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::get('/conversation/{conversationId}', [MessageController::class, 'index'])->name('index');
+        Route::post('/conversation/{conversationId}', [MessageController::class, 'send'])->name('send');
+        Route::post('/conversation/{conversationId}/read', [MessageController::class, 'markRead'])->name('read');
+        Route::post('/conversation/{conversationId}/upload', [MessageController::class, 'uploadAttachment'])->name('upload');
+        Route::delete('/conversation/{conversationId}/{messageId}', [MessageController::class, 'destroy'])->name('destroy');
+        Route::get('/conversation/{conversationId}/latest', [MessageController::class, 'getLatest'])->name('latest');
+        Route::get('/unread-count', [MessageController::class, 'getUnreadCount'])->name('unread-count');
+    });
+
+    // Connections (Friends)
     Route::prefix('connections')->name('connections.')->group(function () {
         Route::get('/', [ConnectionController::class, 'index'])->name('index');
         Route::get('/search', [ConnectionController::class, 'searchUsers'])->name('search');
@@ -206,66 +216,49 @@ Route::middleware('auth')->group(function () {
         Route::get('/{userId}/status', [ConnectionController::class, 'getConnectionStatus'])->name('status');
     });
 
+    // Video Calls
+    Route::prefix('video-calls')->name('video-calls.')->group(function () {
+        Route::get('/', [VideoCallController::class, 'index'])->name('index');
+        Route::get('/{callId}/join', [VideoCallController::class, 'join'])->name('join');
+        Route::get('/{callId}/room', [VideoCallController::class, 'showRoom'])->name('room');
+        Route::get('/{callId}/ended', [VideoCallController::class, 'ended'])->name('ended');
+        Route::get('/recent', [VideoCallController::class, 'recent'])->name('recent');
+    });
+
     // Reviews
-    Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
-    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
-    Route::get('/reviews/{id}', [ReviewController::class, 'show'])->name('reviews.show');
-    Route::post('/reviews/{id}/helpful', [ReviewController::class, 'markHelpful'])->name('reviews.helpful');
+    Route::prefix('reviews')->name('reviews.')->group(function () {
+        Route::get('/create', [ReviewController::class, 'create'])->name('create');
+        Route::post('/', [ReviewController::class, 'store'])->name('store');
+        Route::get('/{id}', [ReviewController::class, 'show'])->name('show');
+        Route::post('/{id}/helpful', [ReviewController::class, 'markHelpful'])->name('helpful');
+    });
 
     // Posts
-    Route::get('/create', [PostController::class, 'create'])->name('posts.create');
-    Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
-    Route::get('/my-posts', [PostController::class, 'myPosts'])->name('posts.my-posts');
-    Route::get('/posts/{id}/edit', [PostController::class, 'edit'])->name('posts.edit');
-    Route::put('/posts/{id}', [PostController::class, 'update'])->name('posts.update');
-    Route::delete('/posts/{id}', [PostController::class, 'destroy'])->name('posts.destroy');
+    Route::prefix('posts')->name('posts.')->group(function () {
+        Route::get('/create', [PostController::class, 'create'])->name('create');
+        Route::post('/', [PostController::class, 'store'])->name('store');
+        Route::get('/my-posts', [PostController::class, 'myPosts'])->name('my-posts');
+        Route::get('/{id}/edit', [PostController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [PostController::class, 'update'])->name('update');
+        Route::delete('/{id}', [PostController::class, 'destroy'])->name('destroy');
 
-    // Post Interactions
-    Route::post('/posts/{id}/like', [PostController::class, 'toggleLike'])->name('posts.like');
-    Route::post('/posts/{id}/comment', [PostController::class, 'addCommentFromForm'])->name('posts.comment');
-    Route::post('/posts/{id}/share', [PostController::class, 'share'])->name('posts.share');
-    Route::post('/posts/{id}/bookmark', [PostController::class, 'bookmark'])->name('posts.bookmark');
-    Route::post('/posts/{id}/report', [PostController::class, 'report'])->name('posts.report');
+        // Post Interactions
+        Route::post('/{id}/like', [PostController::class, 'toggleLike'])->name('like');
+        Route::post('/{id}/comment', [PostController::class, 'addCommentFromForm'])->name('comment');
+        Route::post('/{id}/share', [PostController::class, 'share'])->name('share');
+        Route::post('/{id}/bookmark', [PostController::class, 'bookmark'])->name('bookmark');
+        Route::post('/{id}/report', [PostController::class, 'report'])->name('report');
+    });
 
+    // Comments
     Route::post('/comments', [PostController::class, 'storeComment'])->name('comments.store');
     Route::delete('/comments/{id}', [PostController::class, 'deleteComment'])->name('comments.destroy');
 
     // Bookmarks
-    Route::get('/bookmarks', [PostController::class, 'bookmarks'])->name('posts.bookmarks');
+    Route::get('/bookmarks', [PostController::class, 'bookmarks'])->name('bookmarks');
     Route::put('/bookmarks/{id}/notes', [PostController::class, 'updateBookmarkNotes'])->name('bookmarks.update-notes');
 });
 
-Route::middleware('auth')->prefix('video-calls')->name('video-calls.')->group(function () {
-    Route::get('/', [VideoCallController::class, 'index'])->name('index');
-    Route::get('/{callId}/join', [VideoCallController::class, 'join'])->name('join');
-    Route::get('/{callId}/room', [VideoCallController::class, 'showRoom'])->name('room');
-    Route::get('/{callId}/ended', [VideoCallController::class, 'ended'])->name('ended');
-    Route::get('/recent', [VideoCallController::class, 'recent'])->name('recent');
-});
-
-// ============================================
-// VIDEO CALLS API ROUTES
-// ============================================
-Route::middleware('auth')->prefix('api/video-calls')->name('api.video-calls.')->group(function () {
-    Route::post('/initiate', [VideoCallController::class, 'initiate'])->name('initiate');
-    Route::post('/accept', [VideoCallController::class, 'accept'])->name('accept');
-    Route::post('/decline', [VideoCallController::class, 'decline'])->name('decline');
-    Route::post('/end', [VideoCallController::class, 'end'])->name('end');
-
-    // Token cho WebRTC / Agora
-    Route::post('/token', [VideoCallController::class, 'token'])->name('call.token');
-    Route::get('/{call_id}/status', [VideoCallController::class, 'status'])->name('status');
-});
-    Route::get('/test-agora-config', function() {
-    return response()->json([
-        'app_id' => config('services.agora.app_id'),
-        'has_certificate' => !empty(config('services.agora.certificate')),
-        'certificate_length' => strlen(config('services.agora.certificate') ?? ''),
-        'token_expire' => config('services.agora.token_expire'),
-        'env_app_id' => env('AGORA_APP_ID'),
-        'env_certificate' => env('AGORA_APP_CERTIFICATE'),
-    ]);
-})->middleware('auth');
 /*
 |--------------------------------------------------------------------------
 | VOLUNTEER ROUTES
@@ -273,10 +266,10 @@ Route::middleware('auth')->prefix('api/video-calls')->name('api.video-calls.')->
 */
 Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.')->group(function () {
 
-    // Volunteer Dashboard
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'volunteerDashboard'])->name('dashboard');
 
-    // Volunteer Profile
+    // Profile
     Route::get('/profile', [VolunteerProfileController::class, 'show'])->name('profile.profile');
     Route::get('/profile/edit', [VolunteerProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [VolunteerProfileController::class, 'update'])->name('profile.update');
@@ -284,27 +277,41 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
     Route::put('/profile/availability', [VolunteerProfileController::class, 'updateAvailability'])->name('profile.availability');
 
     // Applications
-    Route::get('/applications', [ApplicationController::class, 'myApplications'])->name('applications.my');
-    Route::get('/applications/create', [ApplicationController::class, 'create'])->name('applications.create');
-    Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
-    Route::get('/applications/{id}', action: [ApplicationController::class, 'show'])->name('applications.show');
-    Route::post('/applications/{id}/withdraw', [ApplicationController::class, 'withdraw'])->name('applications.withdraw');
+    Route::prefix('applications')->name('applications.')->group(function () {
+        Route::get('/', [ApplicationController::class, 'myApplications'])->name('my');
+        Route::get('/create', [ApplicationController::class, 'create'])->name('create');
+        Route::post('/', [ApplicationController::class, 'store'])->name('store');
+        Route::get('/{id}', [ApplicationController::class, 'show'])->name('show');
+        Route::post('/{id}/withdraw', [ApplicationController::class, 'withdraw'])->name('withdraw');
+    });
 
-    // Volunteer Activities
-    Route::get('/activities', [VolunteerActivityController::class, 'index'])->name('activities.index');
-    Route::get('/activities/create', [VolunteerActivityController::class, 'create'])->name('activities.create');
-    Route::post('/activities', [VolunteerActivityController::class, 'store'])->name('activities.store');
-    Route::get('/activities/{id}', [VolunteerActivityController::class, 'show'])->name('activities.show');
-    Route::post('/activities/{id}/dispute', [VolunteerActivityController::class, 'dispute'])->name('activities.dispute');
-    Route::get('/activities/export', [VolunteerActivityController::class, 'export'])->name('activities.export');
+    // Activities
+    Route::prefix('activities')->name('activities.')->group(function () {
+        Route::get('/', [VolunteerActivityController::class, 'index'])->name('index');
+        Route::get('/create', [VolunteerActivityController::class, 'create'])->name('create');
+        Route::post('/', [VolunteerActivityController::class, 'store'])->name('store');
+        Route::get('/{id}', [VolunteerActivityController::class, 'show'])->name('show');
+        Route::post('/{id}/dispute', [VolunteerActivityController::class, 'dispute'])->name('dispute');
+        Route::get('/export', [VolunteerActivityController::class, 'export'])->name('export');
+    });
 
     // Favorites
-    Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
-    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
-    Route::put('/favorites/{id}/notes', [FavoriteController::class, 'updateNotes'])->name('favorites.notes');
-    Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
-    Route::post('/favorites/bulk-destroy', [FavoriteController::class, 'bulkDestroy'])->name('favorites.bulk-destroy');
-    Route::get('/favorites/export', [FavoriteController::class, 'export'])->name('favorites.export');
+    Route::prefix('favorites')->name('favorites.')->group(function () {
+        Route::get('/', [FavoriteController::class, 'index'])->name('index');
+        Route::post('/toggle', [FavoriteController::class, 'toggle'])->name('toggle');
+        Route::put('/{id}/notes', [FavoriteController::class, 'updateNotes'])->name('notes');
+        Route::delete('/{id}', [FavoriteController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-destroy', [FavoriteController::class, 'bulkDestroy'])->name('bulk-destroy');
+        Route::get('/export', [FavoriteController::class, 'export'])->name('export');
+    });
+
+    // xac thuc TOP
+    Route::post('/profile/send-verification-otp', [VolunteerProfileController::class, 'sendVerificationOtp'])
+        ->name('profile.sendOtp');
+    Route::get('/profile/verify-otp', [VolunteerProfileController::class, 'showOtpForm'])
+        ->name('profile.showOtp');
+    Route::post('/profile/verify-otp', [VolunteerProfileController::class, 'verifyOtp'])
+        ->name('profile.verifyOtp');
 
     // Analytics
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
@@ -316,30 +323,40 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->prefix('organization')->name('organization.')->group(function () {
+
+    // Profile
     Route::get('/profile', [OrganizationController::class, 'show'])->name('profile');
     Route::get('/profile/edit', [OrganizationController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [OrganizationController::class, 'update'])->name('profile.update');
-    
-    Route::get('/opportunities', [VolunteerOpportunityController::class, 'organizationIndex'])->name('opportunities.index');
-    Route::get('/opportunities/create', [VolunteerOpportunityController::class, 'create'])->name('opportunities.create');
-    Route::post('/opportunities', [VolunteerOpportunityController::class, 'store'])->name('opportunities.store');
-    Route::get('/opportunities/{id}/edit', [VolunteerOpportunityController::class, 'edit'])->name('opportunities.edit');
-    Route::put('/opportunities/{id}', [VolunteerOpportunityController::class, 'update'])->name('opportunities.update');
-    Route::delete('/opportunities/{id}', [VolunteerOpportunityController::class, 'destroy'])->name('opportunities.destroy');
-    Route::post('/opportunities/{id}/pause', [VolunteerOpportunityController::class, 'pause'])->name('opportunities.pause');
-    Route::post('/opportunities/{id}/resume', [VolunteerOpportunityController::class, 'resume'])->name('opportunities.resume');
-    
-    Route::get('/applications', [ApplicationController::class, 'organizationIndex'])->name('applications.index');
-    Route::put('/applications/{id}/review', [ApplicationController::class, 'review'])->name('applications.review');
-    
-    Route::get('/volunteers', [OrganizationController::class, 'volunteers'])->name('volunteers.index');
-    
-    Route::get('/activities', [VolunteerActivityController::class, 'organizationIndex'])->name('activities.index');
-    Route::post('/activities/{id}/verify', [VolunteerActivityController::class, 'verify'])->name('activities.verify');
-    
-    Route::get('/organizations', [OpportunityController::class, 'organizationsList'])->name('organizations.index');
-    Route::get('/organizations/{id}', [OpportunityController::class, 'organizationDetail'])->name('organizations.show');
 
+    // Opportunities
+    Route::prefix('opportunities')->name('opportunities.')->group(function () {
+        Route::get('/', [VolunteerOpportunityController::class, 'organizationIndex'])->name('index');
+        Route::get('/create', [VolunteerOpportunityController::class, 'create'])->name('create');
+        Route::post('/', [VolunteerOpportunityController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [VolunteerOpportunityController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [VolunteerOpportunityController::class, 'update'])->name('update');
+        Route::delete('/{id}', [VolunteerOpportunityController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/pause', [VolunteerOpportunityController::class, 'pause'])->name('pause');
+        Route::post('/{id}/resume', [VolunteerOpportunityController::class, 'resume'])->name('resume');
+    });
+
+    // Applications
+    Route::prefix('applications')->name('applications.')->group(function () {
+        Route::get('/', [ApplicationController::class, 'organizationIndex'])->name('index');
+        Route::put('/{id}/review', [ApplicationController::class, 'review'])->name('review');
+    });
+
+    // Volunteers
+    Route::get('/volunteers', [OrganizationController::class, 'volunteers'])->name('volunteers.index');
+
+    // Activities
+    Route::prefix('activities')->name('activities.')->group(function () {
+        Route::get('/', [VolunteerActivityController::class, 'organizationIndex'])->name('index');
+        Route::post('/{id}/verify', [VolunteerActivityController::class, 'verify'])->name('verify');
+    });
+
+    // Analytics
     Route::get('/analytics', [OrganizationAnalyticsController::class, 'index'])->name('analytics');
 });
 
@@ -348,133 +365,259 @@ Route::middleware(['auth'])->prefix('organization')->name('organization.')->grou
 | ADMIN ROUTES
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    
-    Route::get('/users', [AdminController::class, 'users'])->name('users.index');
-    Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
-    Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
-    Route::get('/users/{id}', [AdminController::class, 'showUser'])->name('users.show');
-    Route::get('/users/{id}/edit', [AdminController::class, 'editUser'])->name('users.edit');
-    Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('users.update');
-    Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.destroy');
-    Route::get('/users/export', [AdminController::class, 'exportUsers'])->name('users.export');
-    
-    Route::get('/organizations', [AdminController::class, 'organizations'])->name('organizations.index');
-    Route::get('/organizations/{id}', [AdminController::class, 'showOrganization'])->name('organizations.show');
-    Route::get('/organizations/verification', [AdminController::class, 'pendingOrganizations'])->name('organizations.verification');
-    Route::get('/organizations/export', [AdminController::class, 'exportOrganizations'])->name('organizations.export');
-    
-    Route::get('/opportunities', [AdminController::class, 'opportunities'])->name('opportunities.index');
-    Route::get('/opportunities/{id}', [AdminController::class, 'showOpportunity'])->name('opportunities.show');
-    Route::delete('/opportunities/{id}', [AdminController::class, 'deleteOpportunity'])->name('opportunities.destroy');
-    Route::get('/opportunities/export', [AdminController::class, 'exportOpportunities'])->name('opportunities.export');
-    
-    Route::get('/applications', [AdminController::class, 'index'])->name('applications.index');
-    Route::get('/applications-export', [AdminController::class, 'exportApplications'])->name('applications.export');
-    Route::get('/applications/{id}', [AdminController::class, 'showApplication'])->name('applications.show');
-    
-    Route::get('/activities', [AdminController::class, 'activities'])->name('activities.index');
-    Route::get('/activities/{id}', [AdminController::class, 'showActivity'])->name('activities.show');
-    Route::get('/activities/disputes', [AdminController::class, 'disputedActivities'])->name('activities.disputes');
-    Route::post('/activities/{id}/resolve-dispute', [AdminController::class, 'resolveDispute'])->name('activities.resolve-dispute');
-    
-    Route::get('/reviews', [ReviewController::class, 'pending'])->name('reviews.index');
-    Route::get('/reviews/all', [AdminController::class, 'allReviews'])->name('reviews.all');
-    Route::get('/reviews/pending', [ReviewController::class, 'pending'])->name('reviews.pending');
-    Route::post('/reviews/{id}/approve', [ReviewController::class, 'approve'])->name('reviews.approve');
-    Route::post('/reviews/{id}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
-    Route::post('/reviews/bulk-approve', [ReviewController::class, 'bulkApprove'])->name('reviews.bulk-approve');
-    
-    Route::get('/categories', [AdminController::class, 'categories'])->name('categories.index');
-    Route::get('/categories/create', function () {
-        return view('admin.categories.create');
-    })->name('categories.create');
-    Route::post('/categories', [AdminController::class, 'categoriesStore'])->name('categories.store');
-    Route::get('/categories/{id}/edit', function ($id) {
-        $category = \App\Models\Category::withCount('opportunities')->findOrFail($id);
-        return view('admin.categories.edit', compact('category'));
-    })->name('categories.edit');
-    Route::put('/categories/{id}', [AdminController::class, 'categoriesUpdate'])->name('categories.update');
-    Route::delete('/categories/{id}', [AdminController::class, 'categoriesDestroy'])->name('categories.destroy');
-    Route::post('/categories/{id}/toggle', [AdminController::class, 'categoriesToggle'])->name('categories.toggle');
-    
-    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
-    Route::get('/analytics/chart-data', [AnalyticsController::class, 'getChartData'])->name('analytics.chart-data');
-    Route::get('/analytics/impact', [AnalyticsController::class, 'impactReport'])->name('analytics.impact');
-    Route::post('/analytics/custom-report', [AnalyticsController::class, 'customReport'])->name('analytics.custom-report');
-    Route::post('/analytics/export', [AnalyticsController::class, 'exportReport'])->name('analytics.export');
-    Route::post('/analytics/clear-cache', [AnalyticsController::class, 'clearCache'])->name('analytics.clear-cache');
-    Route::get('/analytics/reports', [AnalyticsController::class, 'reports'])->name('analytics.reports');
-    
-    Route::get('/settings', [AdminController::class, 'settings'])->name('settings.index');
-    Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
-    
-    Route::prefix('emails')->name('emails.')->group(function () {
-        Route::post('/send', [AdminEmailController::class, 'sendEmail'])->name('send');
-        Route::get('/history', [AdminEmailController::class, 'history'])->name('history');
-        Route::get('/templates', [AdminEmailController::class, 'getTemplates'])->name('templates');
+Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+
+        // Dashboard
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+
+        // Users
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [AdminController::class, 'users'])->name('index');
+            Route::get('/create', [AdminController::class, 'createUser'])->name('create');
+            Route::post('/', [AdminController::class, 'storeUser'])->name('store');
+            Route::get('/{id}', [AdminController::class, 'showUser'])->name('show');
+            Route::get('/{id}/edit', [AdminController::class, 'editUser'])->name('edit');
+            Route::put('/{id}', [AdminController::class, 'updateUser'])->name('update');
+            Route::delete('/{id}', [AdminController::class, 'deleteUser'])->name('destroy');
+            Route::post('/{id}/activate', [AdminController::class, 'activateUser'])->name('activate');
+            Route::post('/{id}/deactivate', [AdminController::class, 'deactivateUser'])->name('deactivate');
+            Route::get('/export', [AdminController::class, 'exportUsers'])->name('export');
+        });
+
+        // Organizations
+        // Route::prefix('organizations')->name('organizations.')->group(function () {
+        //     Route::get('/', [AdminController::class, 'organizations'])->name('index');
+        //     Route::get('/{id}', [AdminController::class, 'showOrganization'])->name('show');
+        //     Route::get('/verification', [AdminController::class, 'pendingOrganizations'])->name('verification');
+        //     Route::post('/{id}/approve', [AdminController::class, 'approveOrganization'])->name('approve');
+        //     Route::post('/{id}/reject', [AdminController::class, 'rejectOrganization'])->name('reject');
+        //     Route::get('/export', [AdminController::class, 'exportOrganizations'])->name('export');
+        // });
+        Route::prefix('organizations')->name('organizations.')->group(function () {
+            // Route chính, có thể giữ lại AdminController
+            Route::get('/', [AdminController::class, 'organizations'])->name('index');
+
+            // === CẬP NHẬT CÁC ROUTE XÉT DUYỆT ===
+
+            // Trỏ 'verification' đến controller mới
+            Route::get('/verification', [OrganizationVerificationController::class, 'index'])->name('verification');
+
+            // Trỏ 'show' đến controller mới (vì nó hiển thị chi tiết để duyệt)
+            Route::get('/{id}', [OrganizationVerificationController::class, 'show'])->name('show');
+
+            // Trỏ 'approve' đến controller mới
+            Route::post('/{id}/approve', [OrganizationVerificationController::class, 'approve'])->name('approve');
+
+            // Trỏ 'reject' đến controller mới
+            Route::post('/{id}/reject', [OrganizationVerificationController::class, 'reject'])->name('reject');
+
+            // Thêm route cho việc yêu cầu tài liệu
+            Route::post('/{id}/request-documents', [OrganizationVerificationController::class, 'requestDocuments'])->name('request-documents');
+
+            // Route export có thể giữ lại
+            Route::get('/export', [AdminController::class, 'exportOrganizations'])->name('export');
+        });
+
+        // Opportunities
+        Route::prefix('opportunities')->name('opportunities.')->group(function () {
+            Route::get('/', [AdminController::class, 'opportunities'])->name('index');
+            Route::get('/{id}', [AdminController::class, 'showOpportunity'])->name('show');
+            Route::delete('/{id}', [AdminController::class, 'deleteOpportunity'])->name('destroy');
+            Route::get('/export', [AdminController::class, 'exportOpportunities'])->name('export');
+        });
+
+        // Applications
+        Route::prefix('applications')->name('applications.')->group(function () {
+            Route::get('/', [AdminController::class, 'index'])->name('index');
+            Route::get('/{id}', [AdminController::class, 'showApplication'])->name('show');
+            Route::get('/export', [AdminController::class, 'exportApplications'])->name('export');
+        });
+
+        // Activities
+        Route::prefix('activities')->name('activities.')->group(function () {
+            Route::get('/', [AdminController::class, 'activities'])->name('index');
+            Route::get('/{id}', [AdminController::class, 'showActivity'])->name('show');
+            Route::get('/disputes', [AdminController::class, 'disputedActivities'])->name('disputes');
+            Route::post('/{id}/resolve-dispute', [AdminController::class, 'resolveDispute'])->name('resolve-dispute');
+        });
+
+        // Reviews
+        Route::prefix('reviews')->name('reviews.')->group(function () {
+            Route::get('/', [ReviewController::class, 'pending'])->name('index');
+            Route::get('/all', [AdminController::class, 'allReviews'])->name('all');
+            Route::get('/pending', [ReviewController::class, 'pending'])->name('pending');
+            Route::post('/{id}/approve', [ReviewController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [ReviewController::class, 'reject'])->name('reject');
+            Route::post('/bulk-approve', [ReviewController::class, 'bulkApprove'])->name('bulk-approve');
+        });
+
+        // Categories
+        Route::prefix('categories')->name('categories.')->group(function () {
+            Route::get('/', [AdminController::class, 'categories'])->name('index');
+            Route::get('/create', function () {
+                return view('admin.categories.create');
+            })->name('create');
+            Route::post('/', [AdminController::class, 'categoriesStore'])->name('store');
+            Route::get('/{id}/edit', function ($id) {
+                $category = \App\Models\Category::withCount('opportunities')->findOrFail($id);
+                return view('admin.categories.edit', compact('category'));
+            })->name('edit');
+            Route::put('/{id}', [AdminController::class, 'categoriesUpdate'])->name('update');
+            Route::delete('/{id}', [AdminController::class, 'categoriesDestroy'])->name('destroy');
+            Route::post('/{id}/toggle', [AdminController::class, 'categoriesToggle'])->name('toggle');
+        });
+
+        // Analytics
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('/', [AnalyticsController::class, 'index'])->name('index');
+            Route::get('/chart-data', [AnalyticsController::class, 'getChartData'])->name('chart-data');
+            Route::get('/impact', [AnalyticsController::class, 'impactReport'])->name('impact');
+            Route::post('/custom-report', [AnalyticsController::class, 'customReport'])->name('custom-report');
+            Route::post('/export', [AnalyticsController::class, 'exportReport'])->name('export');
+            Route::post('/clear-cache', [AnalyticsController::class, 'clearCache'])->name('clear-cache');
+            Route::get('/reports', [AnalyticsController::class, 'reports'])->name('reports');
+        });
+
+        // Posts Management
+        Route::prefix('posts')->name('posts.')->group(function () {
+            Route::get('/', [PostController::class, 'adminIndex'])->name('index');
+            Route::get('/pending', [PostController::class, 'pending'])->name('pending');
+            Route::post('/{id}/approve', [PostController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [PostController::class, 'reject'])->name('reject');
+            Route::post('/{id}/pin', [PostController::class, 'togglePin'])->name('pin');
+            Route::delete('/{id}/force-delete', [PostController::class, 'forceDelete'])->name('force-delete');
+            Route::get('/reports', [PostController::class, 'reports'])->name('reports');
+        });
+
+        // Reports
+        Route::post('/reports/{id}/resolve', [PostController::class, 'resolveReport'])->name('reports.resolve');
+
+        // Settings
+        Route::get('/settings', [AdminController::class, 'settings'])->name('settings.index');
+        Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+
+        // Email Management
+        Route::prefix('emails')->name('emails.')->group(function () {
+            Route::post('/send', [AdminEmailController::class, 'sendEmail'])->name('send');
+            Route::get('/history', [AdminEmailController::class, 'history'])->name('history');
+            Route::get('/templates', [AdminEmailController::class, 'getTemplates'])->name('templates');
+        });
     });
-    
-    Route::post('/organizations/{id}/approve', [AdminController::class, 'approveOrganization'])->name('organizations.approve');
-    Route::post('/organizations/{id}/reject', [AdminController::class, 'rejectOrganization'])->name('organizations.reject');
-    
-    Route::post('/users/{id}/activate', [AdminController::class, 'activateUser'])->name('users.activate');
-    Route::post('/users/{id}/deactivate', [AdminController::class, 'deactivateUser'])->name('users.deactivate');
-    
-    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
-    
-    Route::get('/posts', [PostController::class, 'adminIndex'])->name('posts.index');
-    Route::get('/posts/pending', [PostController::class, 'pending'])->name('posts.pending');
-    Route::post('/posts/{id}/approve', [PostController::class, 'approve'])->name('posts.approve');
-    Route::post('/posts/{id}/reject', [PostController::class, 'reject'])->name('posts.reject');
-    Route::post('/posts/{id}/pin', [PostController::class, 'togglePin'])->name('posts.pin');
-    Route::delete('/posts/{id}/force-delete', [PostController::class, 'forceDelete'])->name('posts.force-delete');
-    
-    Route::get('/posts/reports', [PostController::class, 'reports'])->name('posts.reports');
-    Route::post('/reports/{id}/resolve', [PostController::class, 'resolveReport'])->name('reports.resolve');
-});
 
 /*
 |--------------------------------------------------------------------------
-| Shared Routes (Applications & Activities)
-|--------------------------------------------------------------------------
-*/
-Route::middleware('auth')->group(function () {
-    Route::get('/applications/{id}', [ApplicationController::class, 'show'])->name('applications.show');
-    Route::post('/posts/{id}/bookmark', [PostController::class, 'bookmark'])->name('posts.bookmark');
-    Route::get('/bookmarks', [PostController::class, 'bookmarks'])->name('posts.bookmarks');
-    Route::put('/bookmarks/{id}/notes', [PostController::class, 'updateBookmarkNotes'])->name('bookmarks.update-notes');
-    
-    Route::get('/volunteer-activities', [VolunteerActivityController::class, 'index'])->name('volunteer-activities.index');
-    Route::get('/volunteer-activities/create', [VolunteerActivityController::class, 'create'])->name('volunteer-activities.create');
-    Route::post('/volunteer-activities', [VolunteerActivityController::class, 'store'])->name('volunteer-activities.store');
-    Route::get('/volunteer-activities/{id}', [VolunteerActivityController::class, 'show'])->name('volunteer-activities.show');
-    Route::post('/volunteer-activities/{id}/verify', [VolunteerActivityController::class, 'verify'])->name('volunteer-activities.verify');
-    Route::get('/volunteer-activities/export', [VolunteerActivityController::class, 'export'])->name('volunteer-activities.export');
-});
-
-/*
-|--------------------------------------------------------------------------
-| API-like Routes (for AJAX calls)
+| API Routes (AJAX Calls)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
-    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
-    Route::get('/favorites/check/{opportunityId}', [FavoriteController::class, 'check'])->name('favorites.check');
-    Route::get('/favorites/count', [FavoriteController::class, 'count'])->name('favorites.count');
-    
-    Route::get('/messages/unread-count', [MessageController::class, 'getUnreadCount'])->name('messages.unread-count');
-    Route::post('/messages/typing', [MessageController::class, 'typing'])->name('messages.typing');
-    Route::get('/conversations/{conversationId}/messages/search', [MessageController::class, 'search'])->name('messages.search');
-    
+
+    // Video Calls API
+    Route::prefix('video-calls')->name('video-calls.')->group(function () {
+        Route::post('/initiate', [VideoCallController::class, 'initiate'])->name('initiate');
+        Route::post('/accept', [VideoCallController::class, 'accept'])->name('accept');
+        Route::post('/decline', [VideoCallController::class, 'decline'])->name('decline');
+        Route::post('/end', [VideoCallController::class, 'end'])->name('end');
+        Route::post('/token', [VideoCallController::class, 'token'])->name('token');
+        Route::get('/{call_id}/status', [VideoCallController::class, 'status'])->name('status');
+    });
+
+    // Favorites API
+    Route::prefix('favorites')->name('favorites.')->group(function () {
+        Route::post('/toggle', [FavoriteController::class, 'toggle'])->name('toggle');
+        Route::get('/check/{opportunityId}', [FavoriteController::class, 'check'])->name('check');
+        Route::get('/count', [FavoriteController::class, 'count'])->name('count');
+    });
+
+    // Messages API
+    Route::prefix('messages')->name('messages.')->group(function () {
+        Route::get('/unread-count', [MessageController::class, 'getUnreadCount'])->name('unread-count');
+        Route::post('/typing', [MessageController::class, 'typing'])->name('typing');
+        Route::get('/conversations/{conversationId}/search', [MessageController::class, 'search'])->name('search');
+    });
+
+    // Notifications API
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
-    
-    Route::get('/search/suggestions', [SearchController::class, 'suggestions'])->name('search.suggestions');
-    Route::get('/search/popular', [SearchController::class, 'popularSearches'])->name('search.popular');
-    Route::get('/search/trending', [SearchController::class, 'trendingOpportunities'])->name('search.trending');
-    
+
+    // Search API
+    Route::prefix('search')->name('search.')->group(function () {
+        Route::get('/suggestions', [SearchController::class, 'suggestions'])->name('suggestions');
+        Route::get('/popular', [SearchController::class, 'popularSearches'])->name('popular');
+        Route::get('/trending', [SearchController::class, 'trendingOpportunities'])->name('trending');
+    });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Test Routes (Development Only)
+|--------------------------------------------------------------------------
+*/
+if (config('app.debug')) {
+    Route::get('/test-agora-config', function () {
+        return response()->json([
+            'app_id' => config('services.agora.app_id'),
+            'has_certificate' => !empty(config('services.agora.certificate')),
+            'certificate_length' => strlen(config('services.agora.certificate') ?? ''),
+            'token_expire' => config('services.agora.token_expire'),
+        ]);
+    })->middleware('auth');
+
+    Route::get('/test-agora-token', function () {
+        $appId = config('services.agora.app_id');
+        $appCertificate = config('services.agora.certificate');
+        $channelName = 'test_' . time();
+        $uid = Auth::id() ?? rand(1, 999999);
+        $expireTime = 3600;
+        $expireTimestamp = time() + $expireTime;
+
+        try {
+            $token = AgoraTokenBuilder::generateToken(
+                $appId,
+                $appCertificate,
+                $channelName,
+                $uid,
+                $expireTimestamp
+            );
+
+            return response()->json([
+                'success' => true,
+                'app_id' => $appId,
+                'channel' => $channelName,
+                'uid' => $uid,
+                'token' => $token,
+                'expires_at' => date('Y-m-d H:i:s', $expireTimestamp)
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    });
+}
+
+/*
+|--------------------------------------------------------------------------
+| Shared Routes (Accessible by multiple roles)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+    // Applications - Both volunteer and organization
+    Route::get('/applications/{id}', [ApplicationController::class, 'show'])->name('applications.show');
+
+    // Volunteer Activities
+    Route::prefix('volunteer-activities')->name('volunteer-activities.')->group(function () {
+        Route::get('/', [VolunteerActivityController::class, 'index'])->name('index');
+        Route::get('/create', [VolunteerActivityController::class, 'create'])->name('create');
+        Route::post('/', [VolunteerActivityController::class, 'store'])->name('store');
+        Route::get('/{id}', [VolunteerActivityController::class, 'show'])->name('show');
+        Route::post('/{id}/verify', [VolunteerActivityController::class, 'verify'])->name('verify');
+        Route::get('/export', [VolunteerActivityController::class, 'export'])->name('export');
+    });
+});
+
 /*
 |--------------------------------------------------------------------------
 | Fallback Route (404 Page)
@@ -482,36 +625,4 @@ Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
 */
 Route::fallback(function () {
     return view('errors.404');
-});
-Route::get('/test-agora-token', function () {
-    $appId = config('services.agora.app_id');
-    $appCertificate = config('services.agora.certificate');
-    $channelName = 'test_' . time();
-    $uid = Auth::id() ?? rand(1, 999999);
-    $expireTime = 3600; // 1h
-    $expireTimestamp = time() + $expireTime;
-
-    try {
-        $token = AgoraTokenBuilder::generateToken(
-            $appId,
-            $appCertificate,
-            $channelName,
-            $uid,
-            $expireTimestamp
-        );
-
-        return response()->json([
-            'success' => true,
-            'app_id' => $appId,
-            'channel' => $channelName,
-            'uid' => $uid,
-            'token' => $token,
-            'expires_at' => date('Y-m-d H:i:s', $expireTimestamp)
-        ]);
-    } catch (Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
 });

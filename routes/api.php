@@ -80,6 +80,33 @@ Route::get('/search/category/{id}', [SearchController::class, 'searchByCategory'
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->name('reviews.user');
 
+Route::prefix('search')->name('api.search.')->group(function () {
+    
+    // Search suggestions API
+    Route::get('/suggestions', [SearchController::class, 'suggestions'])->name('suggestions');
+    
+    // Quick search API
+    Route::get('/quick', [SearchController::class, 'quickSearch'])->name('quick');
+    
+    // Filter opportunities API
+    Route::get('/filter', [SearchController::class, 'filterOpportunities'])->name('filter');
+    
+    // Location-based search API
+    Route::get('/nearby', [SearchController::class, 'searchByLocation'])->name('nearby');
+    
+    // Search statistics API
+    Route::get('/statistics', [SearchController::class, 'searchStatistics'])->name('statistics');
+    
+    // Trending opportunities API
+    Route::get('/trending', [SearchController::class, 'trendingOpportunities'])->name('trending');
+    
+    // Popular searches API
+    Route::get('/popular', [SearchController::class, 'popularSearches'])->name('popular');
+    
+    // Save search query (for analytics)
+    Route::post('/save', [SearchController::class, 'saveSearch'])->name('save');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
@@ -151,31 +178,31 @@ Route::middleware('auth')->group(function () {
 
 
     Route::middleware('auth:web')->group(function () {
-    
-    // ============================================
-    // CONNECTIONS API
-    // ============================================
-    Route::prefix('connections')->group(function () {
-        Route::get('/search', [ConnectionController::class, 'searchUsers']);
-        Route::post('/send-request', [ConnectionController::class, 'sendRequest']);
-        Route::post('/{id}/accept', [ConnectionController::class, 'acceptRequest']);
-        Route::post('/{id}/decline', [ConnectionController::class, 'declineRequest']);
-        Route::delete('/{id}/remove', [ConnectionController::class, 'removeFriend']);
-        Route::post('/{id}/block', [ConnectionController::class, 'blockUser']);
-        Route::post('/{id}/unblock', [ConnectionController::class, 'unblockUser']);
-        Route::get('/{userId}/status', [ConnectionController::class, 'getConnectionStatus']);
+
+        // ============================================
+        // CONNECTIONS API
+        // ============================================
+        Route::prefix('connections')->group(function () {
+            Route::get('/search', [ConnectionController::class, 'searchUsers']);
+            Route::post('/send-request', [ConnectionController::class, 'sendRequest']);
+            Route::post('/{id}/accept', [ConnectionController::class, 'acceptRequest']);
+            Route::post('/{id}/decline', [ConnectionController::class, 'declineRequest']);
+            Route::delete('/{id}/remove', [ConnectionController::class, 'removeFriend']);
+            Route::post('/{id}/block', [ConnectionController::class, 'blockUser']);
+            Route::post('/{id}/unblock', [ConnectionController::class, 'unblockUser']);
+            Route::get('/{userId}/status', [ConnectionController::class, 'getConnectionStatus']);
+        });
+
+        // ============================================
+        // VIDEO CALLS API
+        // ============================================
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/call/token', [VideoCallController::class, 'token'])->name('call.token');
+            Route::post('/call/accept', [VideoCallController::class, 'accept']);
+            Route::post('/call/decline', [VideoCallController::class, 'decline']);
+            Route::post('/call/end', [VideoCallController::class, 'end']);
+        });
     });
-    
-    // ============================================
-    // VIDEO CALLS API
-    // ============================================
-    Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/call/token', [VideoCallController::class, 'token'])->name('call.token');
-    Route::post('/call/accept', [VideoCallController::class, 'accept']);
-    Route::post('/call/decline', [VideoCallController::class, 'decline']);
-    Route::post('/call/end', [VideoCallController::class, 'end']);
-});
-});
     /*
     |--------------------------------------------------------------------------
     | CONVERSATIONS & MESSAGING
@@ -188,7 +215,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{id}', [ConversationController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/archive', [ConversationController::class, 'archive'])->name('archive');
         Route::post('/{id}/unarchive', [ConversationController::class, 'unarchive'])->name('unarchive');
-        
+
         // NEW: Start conversation with a friend
         Route::get('/user/{userId}', [ConversationController::class, 'getOrCreateWithUser'])->name('with-user');
     });
@@ -204,7 +231,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/mark-read/{conversationId}', [MessageController::class, 'markAsRead'])->name('mark-read');
     });
 
-    
+
 
     // Favorites
     Route::prefix('favorites')->name('favorites.')->group(function () {
@@ -530,6 +557,8 @@ Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
 | Fallback Route (404 Page)
 |--------------------------------------------------------------------------
 */
+
+
 
 Route::fallback(function () {
     return view('errors.404');

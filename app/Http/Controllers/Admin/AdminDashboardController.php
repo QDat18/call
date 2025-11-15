@@ -15,9 +15,9 @@ use Illuminate\Auth\Events\Verified;
 
 class AdminDashboardController extends Controller
 {
-    public function __construct(){
-        $this->middleware(['auth', 'role:Admin']);
-    }
+    // public function __construct(){
+    //     $this->middleware(['auth', 'role:Admin']);
+    // }
 
     public function index(){
         $stats = [

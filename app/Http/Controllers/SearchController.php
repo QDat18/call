@@ -11,15 +11,43 @@ use Illuminate\Support\Facades\DB;
 class SearchController extends Controller
 {
     /**
+     * Main search page
+     */
+    public function index(Request $request)
+    {
+        $categories = Category::where('is_active', true)
+            ->orderBy('display_order')
+            ->get();
+
+        // Get trending opportunities
+        $trendingOpportunities = VolunteerOpportunity::with(['organization', 'category'])
+            ->where('status', 'Active')
+            ->orderBy('view_count', 'desc')
+            ->orderBy('application_count', 'desc')
+            ->limit(6)
+            ->get();
+
+        // Get search statistics
+        $stats = [
+            'total_opportunities' => VolunteerOpportunity::where('status', 'Active')->count(),
+            'total_organizations' => Organization::where('verification_status', 'Verified')->count(),
+            'total_categories' => Category::where('is_active', true)->count(),
+            'total_locations' => VolunteerOpportunity::where('status', 'Active')->distinct('location')->count(),
+        ];
+
+        return view('search.index', compact('categories', 'trendingOpportunities', 'stats'));
+    }
+
+    /**
      * General search (simple search from home page)
      */
     public function search(Request $request)
     {
         $query = $request->get('q');
         
-        // If no query, redirect to advanced search
+        // If no query and no filters, redirect to search index
         if (!$query && !$request->hasAny(['category', 'location', 'time_commitment'])) {
-            return redirect()->route('search.advanced');
+            return redirect()->route('search.index');
         }
 
         // Build opportunities query
@@ -29,7 +57,7 @@ class SearchController extends Controller
             ->orderBy('display_order')
             ->get();
 
-        return view('opportunities.index', compact('opportunities', 'categories'));
+        return view('search.results', compact('opportunities', 'categories'));
     }
 
     /**
@@ -42,7 +70,7 @@ class SearchController extends Controller
             ->get();
 
         // If search parameters exist, perform search
-        if ($request->hasAny(['q', 'category', 'location', 'time_commitment', 'schedule_type', 'experience_needed', 'skills', 'start_date_from', 'start_date_to'])) {
+        if ($request->hasAny(['q', 'category', 'location', 'time_commitment', 'schedule_type', 'experience_needed', 'skills', 'start_date_from', 'start_date_to', 'opportunity_type', 'age_group'])) {
             $opportunities = $this->buildSearchQuery($request)->paginate(12)->withQueryString();
             
             return view('search.advanced', compact('opportunities', 'categories'));
@@ -67,7 +95,10 @@ class SearchController extends Controller
                 $q->where('title', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
                   ->orWhere('location', 'LIKE', '%' . $searchTerm . '%')
-                  ->orWhere('required_skills', 'LIKE', '%' . $searchTerm . '%');
+                  ->orWhere('required_skills', 'LIKE', '%' . $searchTerm . '%')
+                  ->orWhereHas('organization', function($orgQuery) use ($searchTerm) {
+                      $orgQuery->where('organization_name', 'LIKE', '%' . $searchTerm . '%');
+                  });
             });
         }
 
@@ -98,8 +129,22 @@ class SearchController extends Controller
 
         // Skills filter
         if ($request->filled('skills')) {
-            $skills = $request->skills;
-            $query->where('required_skills', 'LIKE', '%' . $skills . '%');
+            $skills = is_array($request->skills) ? $request->skills : [$request->skills];
+            $query->where(function($q) use ($skills) {
+                foreach ($skills as $skill) {
+                    $q->orWhere('required_skills', 'LIKE', '%' . $skill . '%');
+                }
+            });
+        }
+
+        // Opportunity type filter
+        if ($request->filled('opportunity_type')) {
+            $query->whereIn('opportunity_type', $request->opportunity_type);
+        }
+
+        // Age group filter
+        if ($request->filled('age_group')) {
+            $query->where('suitable_age_group', $request->age_group);
         }
 
         // Date range filter
@@ -116,6 +161,9 @@ class SearchController extends Controller
             $query->whereIn('status', $request->status);
         }
 
+        // Per page setting
+        $perPage = $request->get('per_page', 12);
+
         // Sorting
         switch ($request->get('sort', 'latest')) {
             case 'popular':
@@ -126,6 +174,9 @@ class SearchController extends Controller
                 break;
             case 'nearest':
                 $query->orderBy('start_date', 'asc');
+                break;
+            case 'most_applied':
+                $query->orderBy('application_count', 'desc');
                 break;
             case 'latest':
             default:
@@ -188,7 +239,7 @@ class SearchController extends Controller
                 return [
                     'type' => 'category',
                     'title' => $cat->category_name,
-                    'url' => route('opportunities.index', ['category' => $cat->category_id])
+                    'url' => route('search.by.category', $cat->category_id)
                 ];
             });
 
@@ -214,7 +265,7 @@ class SearchController extends Controller
             ->orderBy('display_order')
             ->get();
 
-        return view('opportunities.index', compact('opportunities', 'categories', 'category'));
+        return view('search.results', compact('opportunities', 'categories', 'category'));
     }
 
     /**
@@ -230,6 +281,9 @@ class SearchController extends Controller
             ['keyword' => 'trẻ em', 'count' => 156],
             ['keyword' => 'y tế', 'count' => 134],
             ['keyword' => 'người cao tuổi', 'count' => 98],
+            ['keyword' => 'dạy học', 'count' => 87],
+            ['keyword' => 'từ thiện', 'count' => 76],
+            ['keyword' => 'cộng đồng', 'count' => 65],
         ];
 
         return response()->json($popularSearches);
@@ -254,6 +308,7 @@ class SearchController extends Controller
                     'category' => $opp->category->category_name ?? 'General',
                     'location' => $opp->location,
                     'view_count' => $opp->view_count,
+                    'application_count' => $opp->application_count,
                     'url' => route('opportunities.show', $opp->opportunity_id)
                 ];
             });
