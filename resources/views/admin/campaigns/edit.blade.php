@@ -1,101 +1,249 @@
-@extends('layouts.admin') {{-- Giả sử bạn có layout admin --}}
+@extends('layouts.admin')
 @section('title', 'Chỉnh sửa Chiến dịch')
 
 @section('content')
-    <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-bold">Chỉnh sửa: {{ $campaign->title }}</h1>
-        <a href="{{ route('admin.campaigns.index') }}" class="btn bg-gray-200 text-gray-700 px-4 py-2 rounded">
-            <i class="fas fa-arrow-left mr-2"></i>Quay lại
-        </a>
+<div class="p-6 max-w-4xl mx-auto">
+    {{-- Header --}}
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-4">
+                <a href="{{ route('admin.campaigns.index') }}" 
+                   class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <svg class="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Chỉnh sửa Chiến dịch</h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-1">{{ $campaign->title }}</p>
+                </div>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold {{ $campaign->status == 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                {{ $campaign->status }}
+            </span>
+        </div>
     </div>
 
-    {{-- Hiển thị lỗi validation nếu có --}}
+    {{-- Errors --}}
     @if ($errors->any())
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong class="font-bold">Có lỗi xảy ra!</strong>
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+        <div class="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="flex-1">
+                    <h3 class="font-semibold text-red-800 dark:text-red-400 mb-2">Có lỗi xảy ra!</h3>
+                    <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
         </div>
     @endif
 
-    <form action="{{ route('admin.campaigns.update', $campaign->id) }}" method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow">
+    {{-- Form --}}
+    <form action="{{ route('admin.campaigns.update', $campaign->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
-        @method('PUT') {{-- Bắt buộc cho việc update --}}
+        @method('PUT')
         
-        <div class="space-y-4">
-            <div>
-                <label for="title" class="block text-sm font-medium text-gray-700">Tiêu đề <span class="text-red-500">*</span></label>
-                <input type="text" name="title" id="title" value="{{ old('title', $campaign->title) }}" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-            </div>
-
-            <div>
-                <label for="description" class="block text-sm font-medium text-gray-700">Nội dung <span class="text-red-500">*</span></label>
-                <textarea name="description" id="description" rows="5" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('description', $campaign->description) }}</textarea>
-                {{-- (Nên thay bằng Rich Text Editor) --}}
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Thông tin cơ bản</h2>
+            
+            <div class="space-y-5">
+                {{-- Title --}}
                 <div>
-                    <label for="target_amount" class="block text-sm font-medium text-gray-700">Mục tiêu (VNĐ) <span class="text-red-500">*</span></label>
-                    <input type="number" name="target_amount" id="target_amount" value="{{ old('target_amount', $campaign->target_amount) }}" min="1000000" step="100000" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Tiêu đề chiến dịch <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           name="title" 
+                           id="title" 
+                           value="{{ old('title', $campaign->title) }}" 
+                           required 
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white transition">
                 </div>
-                <div>
-                    <label for="end_date" class="block text-sm font-medium text-gray-700">Ngày kết thúc <span class="text-red-500">*</span></label>
-                    {{-- Định dạng Y-m-d\TH:i cho datetime-local input --}}
-                    <input type="datetime-local" name="end_date" id="end_date" value="{{ old('end_date', $campaign->end_date->format('Y-m-d\TH:i')) }}" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                </div>
-            </div>
 
-            <div>
-                <label for="banner_image" class="block text-sm font-medium text-gray-700">Ảnh bìa (Banner)</label>
-                <input type="file" name="banner_image" id="banner_image" accept="image/*" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                <p class="text-xs text-gray-500 mt-1">Bỏ trống nếu không muốn thay ảnh mới.</p>
-                
-                @if($campaign->banner_image_url)
-                    <div class="mt-2">
-                        <span class="block text-sm font-medium text-gray-700 mb-1">Ảnh hiện tại:</span>
-                        <img src="{{ asset('storage/' . $campaign->banner_image_url) }}" alt="Banner" class="w-64 h-auto rounded-md shadow">
+                {{-- Description --}}
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Mô tả chi tiết <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="description" 
+                              id="description" 
+                              rows="6" 
+                              required 
+                              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white transition">{{ old('description', $campaign->description) }}</textarea>
+                </div>
+
+                {{-- Amount & Date --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label for="target_amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Mục tiêu (VNĐ) <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" 
+                               name="target_amount" 
+                               id="target_amount" 
+                               value="{{ old('target_amount', $campaign->target_amount) }}" 
+                               min="1000000" 
+                               step="100000" 
+                               required 
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white transition">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Đã quyên góp: <span class="font-semibold text-green-600">{{ number_format($campaign->current_amount) }}đ</span>
+                        </p>
                     </div>
-                @endif
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700">Trạng thái</label>
-                    <select name="status" id="status" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                        <option value="Active" {{ old('status', $campaign->status) == 'Active' ? 'selected' : '' }}>Đang hoạt động (Active)</option>
-                        <option value="Paused" {{ old('status', $campaign->status) == 'Paused' ? 'selected' : '' }}>Tạm dừng (Paused)</option>
-                        <option value="Ended" {{ old('status', $campaign->status) == 'Ended' ? 'selected' : '' }}>Đã kết thúc (Ended)</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center pt-6">
-                    <input type="checkbox" name="is_pinned" id="is_pinned" value="1" {{ old('is_pinned', $campaign->is_pinned) ? 'checked' : '' }} class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                    <label for="is_pinned" class="ml-2 block text-sm font-medium text-gray-900">Ghim lên Slider đầu trang?</label>
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Ngày kết thúc <span class="text-red-500">*</span>
+                        </label>
+                        <input type="datetime-local" 
+                               name="end_date" 
+                               id="end_date" 
+                               value="{{ old('end_date', $campaign->end_date->format('Y-m-d\TH:i')) }}" 
+                               required 
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white transition">
+                    </div>
                 </div>
             </div>
-            <p class="text-xs text-gray-500 -mt-2">Lưu ý: Nếu bạn ghim chiến dịch này, các chiến dịch đang ghim khác sẽ tự động bị hủy ghim.</p>
         </div>
 
-        <div class="mt-6 flex justify-between">
-            {{-- Form Xóa --}}
-            <form action="{{ route('admin.campaigns.destroy', $campaign->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa chiến dịch này vĩnh viễn không?');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-                    <i class="fas fa-trash mr-2"></i>Xóa Chiến dịch
-                </button>
-            </form>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Hình ảnh & Cài đặt</h2>
+            
+            <div class="space-y-5">
+                {{-- Banner --}}
+                <div>
+                    <label for="banner_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Ảnh bìa (Banner)
+                    </label>
+                    
+                    @if($campaign->banner_image_url)
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Ảnh hiện tại:</p>
+                            <img src="{{ asset('storage/' . $campaign->banner_image_url) }}" 
+                                 alt="Banner" 
+                                 id="current-banner"
+                                 class="max-h-64 rounded-lg shadow-md">
+                        </div>
+                    @endif
+                    
+                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition">
+                        <input type="file" 
+                               name="banner_image" 
+                               id="banner_image" 
+                               accept="image/*" 
+                               class="hidden"
+                               onchange="previewImage(event)">
+                        <label for="banner_image" class="cursor-pointer">
+                            <div id="preview-container" class="hidden mb-4">
+                                <img id="preview-image" class="max-h-64 mx-auto rounded-lg shadow-md">
+                            </div>
+                            <div id="upload-prompt">
+                                <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 font-medium">Click để thay đổi ảnh</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">Bỏ trống nếu không muốn thay đổi</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
 
-            <div class="flex justify-end">
-                <a href="{{ route('admin.campaigns.index') }}" class="btn bg-gray-200 text-gray-700 px-4 py-2 rounded mr-2">Hủy</a>
-                <button type="submit" class="btn bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                    <i class="fas fa-save mr-2"></i>Cập nhật
+                {{-- Status & Pin --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Trạng thái
+                        </label>
+                        <select name="status" 
+                                id="status" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white transition">
+                            <option value="Active" {{ old('status', $campaign->status) == 'Active' ? 'selected' : '' }}>Đang hoạt động</option>
+                            <option value="Paused" {{ old('status', $campaign->status) == 'Paused' ? 'selected' : '' }}>Tạm dừng</option>
+                            <option value="Ended" {{ old('status', $campaign->status) == 'Ended' ? 'selected' : '' }}>Đã kết thúc</option>
+                        </select>
+                    </div>
+
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <input type="checkbox" 
+                                   name="is_pinned" 
+                                   id="is_pinned" 
+                                   value="1" 
+                                   {{ old('is_pinned', $campaign->is_pinned) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <div class="ml-3">
+                                <label for="is_pinned" class="font-medium text-gray-900 dark:text-white cursor-pointer text-sm">
+                                    Ghim lên Slider
+                                </label>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                    Hiển thị nổi bật trên trang chủ
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Actions --}}
+        <div class="flex justify-between items-center">
+            {{-- Delete --}}
+            <button type="button" 
+                    onclick="confirmDelete()"
+                    class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Xóa Chiến dịch
+            </button>
+
+            <div class="flex space-x-4">
+                <a href="{{ route('admin.campaigns.index') }}" 
+                   class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                    Hủy
+                </a>
+                <button type="submit" 
+                        class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Cập nhật
                 </button>
             </div>
         </div>
     </form>
+
+    {{-- Hidden Delete Form --}}
+    <form id="delete-form" action="{{ route('admin.campaigns.destroy', $campaign->id) }}" method="POST" class="hidden">
+        @csrf
+        @method('DELETE')
+    </form>
+</div>
+
+<script>
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-image').src = e.target.result;
+            document.getElementById('preview-container').classList.remove('hidden');
+            document.getElementById('upload-prompt').classList.add('hidden');
+            const currentBanner = document.getElementById('current-banner');
+            if (currentBanner) currentBanner.style.display = 'none';
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function confirmDelete() {
+    if (confirm('Bạn có chắc chắn muốn xóa chiến dịch này?\n\nLưu ý: Tất cả dữ liệu quyên góp liên quan cũng sẽ bị xóa!')) {
+        document.getElementById('delete-form').submit();
+    }
+}
+</script>
 @endsection
