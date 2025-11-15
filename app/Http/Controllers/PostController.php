@@ -54,7 +54,13 @@ class PostController extends Controller
             ->take(3)
             ->get();
 
-        return view('posts.index', compact('posts', 'pinnedPosts'));
+        $pinnedCampaigns = \App\Models\DonationCampaign::where('is_pinned', true)
+            ->where('status', 'Active')
+            ->where('end_date', '>', now()) // Chỉ lấy chiến dịch còn hạn
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('posts.index', compact('posts', 'pinnedPosts', 'pinnedCampaigns'));
     }
 
     /**

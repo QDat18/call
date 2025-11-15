@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" 
-      :class="{ 'dark': darkMode }">
+<html lang="en" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{ 'dark': darkMode }">
 
 <head>
     <meta charset="UTF-8">
@@ -26,15 +25,31 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <style>
-        [x-cloak] { display: none !important; }
-        
-        .sidebar-scrollbar::-webkit-scrollbar { width: 6px; }
-        .sidebar-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
-        .sidebar-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-        .sidebar-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .sidebar-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .sidebar-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
         /* Dark mode transitions */
-        * { transition: background-color 0.3s ease, color 0.3s ease; }
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
     </style>
 
     @stack('styles')
@@ -50,7 +65,8 @@
         <!-- Logo -->
         <div class="flex items-center justify-between h-16 px-6 border-b border-slate-700 dark:border-slate-800">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div
+                    class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <i class="fas fa-hands-helping text-white text-xl"></i>
                 </div>
                 <div>
@@ -64,7 +80,8 @@
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto sidebar-scrollbar" style="max-height: calc(100vh - 64px);">
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto sidebar-scrollbar"
+            style="max-height: calc(100vh - 64px);">
 
             <!-- Dashboard -->
             <a href="{{ route('admin.dashboard') }}"
@@ -119,6 +136,12 @@
                 <span>Categories</span>
             </a>
 
+            {{-- Campaigns --}}
+            <a href="{{ route('admin.campaigns.index') }}"
+                class="flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->routeIs('admin.campaigns.*') ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+                <i class="fas fa-hand-holding-heart w-5"></i>
+                <span>Campaigns</span>
+            </a>
             <!-- Activities -->
             <a href="{{ route('admin.activities.index') }}"
                 class="flex items-center space-x-3 px-4 py-3 rounded-lg transition {{ request()->routeIs('admin.activities.*') ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
@@ -169,20 +192,24 @@
 
                 <!-- Left side -->
                 <div class="flex items-center space-x-4">
-                    <button @click="sidebarOpen = !sidebarOpen" class="hidden lg:block text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <button @click="sidebarOpen = !sidebarOpen"
+                        class="hidden lg:block text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
-                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen"
+                        class="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
 
                     <!-- Breadcrumb -->
                     <nav class="hidden md:flex items-center space-x-2 text-sm">
-                        <a href="{{ route('admin.dashboard') }}" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                        <a href="{{ route('admin.dashboard') }}"
+                            class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                             <i class="fas fa-home"></i>
                         </a>
                         <i class="fas fa-chevron-right text-gray-400 dark:text-gray-600 text-xs"></i>
-                        <span class="text-gray-700 dark:text-gray-300 font-medium">@yield('breadcrumb', 'Dashboard')</span>
+                        <span
+                            class="text-gray-700 dark:text-gray-300 font-medium">@yield('breadcrumb', 'Dashboard')</span>
                     </nav>
                 </div>
 
@@ -191,7 +218,7 @@
 
                     <!-- Dark Mode Toggle -->
                     <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
-                            class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                        class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'" class="text-xl"></i>
                     </button>
 
@@ -213,41 +240,39 @@
                                 console.error('Error loading notifications:', error);
                             }
                         }
-                    }" 
-                    x-init="loadNotifications(); setInterval(() => loadNotifications(), 30000)" 
-                    class="relative">
+                    }" x-init="loadNotifications(); setInterval(() => loadNotifications(), 30000)" class="relative">
                         <button @click="open = !open"
                             class="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                             <i class="fas fa-bell text-xl"></i>
-                            <span x-show="unreadCount > 0" 
-                                  x-text="unreadCount" 
-                                  class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"></span>
+                            <span x-show="unreadCount > 0" x-text="unreadCount"
+                                class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"></span>
                         </button>
 
                         <div x-show="open" @click.away="open = false" x-cloak
                             class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
-                            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <div
+                                class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                                 <h3 class="font-semibold text-gray-800 dark:text-gray-200">Notifications</h3>
-                                <button @click="markAllAsRead()" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                                <button @click="markAllAsRead()"
+                                    class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                                     Mark all read
                                 </button>
                             </div>
                             <div class="max-h-96 overflow-y-auto">
                                 <template x-for="notif in notifications" :key="notif.id">
-                                    <a :href="notif.action_url || '#'" 
-                                       class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700"
-                                       :class="{ 'bg-blue-50 dark:bg-blue-900/20': !notif.is_read }">
+                                    <a :href="notif.action_url || '#'"
+                                        class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700"
+                                        :class="{ 'bg-blue-50 dark:bg-blue-900/20': !notif.is_read }">
                                         <div class="flex items-start">
                                             <div class="flex-shrink-0">
                                                 <div class="w-10 h-10 rounded-full flex items-center justify-center"
-                                                     :class="{
+                                                    :class="{
                                                         'bg-blue-100 dark:bg-blue-900': notif.notification_type === 'Application',
                                                         'bg-green-100 dark:bg-green-900': notif.notification_type === 'System',
                                                         'bg-yellow-100 dark:bg-yellow-900': notif.notification_type === 'Message',
                                                         'bg-purple-100 dark:bg-purple-900': notif.notification_type === 'Review'
                                                      }">
-                                                    <i class="fas" 
-                                                       :class="{
+                                                    <i class="fas" :class="{
                                                           'fa-file-alt text-blue-600': notif.notification_type === 'Application',
                                                           'fa-bell text-green-600': notif.notification_type === 'System',
                                                           'fa-envelope text-yellow-600': notif.notification_type === 'Message',
@@ -256,21 +281,26 @@
                                                 </div>
                                             </div>
                                             <div class="ml-3 flex-1">
-                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="notif.title"></p>
-                                                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="notif.content"></p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1" x-text="notif.created_at"></p>
+                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200"
+                                                    x-text="notif.title"></p>
+                                                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1"
+                                                    x-text="notif.content"></p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1"
+                                                    x-text="notif.created_at"></p>
                                             </div>
                                         </div>
                                     </a>
                                 </template>
-                                
-                                <div x-show="notifications.length === 0" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+
+                                <div x-show="notifications.length === 0"
+                                    class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                     <i class="fas fa-bell-slash text-3xl mb-2"></i>
                                     <p class="text-sm">No notifications</p>
                                 </div>
                             </div>
                             <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-                                <a href="{{ route('notifications.index') }}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+                                <a href="{{ route('notifications.index') }}"
+                                    class="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
                                     View all notifications
                                 </a>
                             </div>
@@ -284,7 +314,9 @@
                             <img src="https://ui-avatars.com/api/?name={{ auth()->user()->first_name }}+{{ auth()->user()->last_name }}&background=6366f1&color=fff"
                                 alt="Avatar" class="w-8 h-8 rounded-full">
                             <div class="hidden md:block text-left">
-                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
+                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                    {{ auth()->user()->first_name }} {{ auth()->user()->last_name }}
+                                </p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
                             </div>
                             <i class="fas fa-chevron-down text-gray-500 dark:text-gray-400 text-xs"></i>
@@ -328,11 +360,10 @@
     <script>
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
-            toast.className = `px-6 py-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ${
-                type === 'success' ? 'bg-green-500' :
+            toast.className = `px-6 py-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ${type === 'success' ? 'bg-green-500' :
                 type === 'error' ? 'bg-red-500' :
-                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-            }`;
+                    type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                }`;
             toast.innerHTML = `
                 <div class="flex items-center space-x-3">
                     <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} text-xl"></i>
@@ -370,4 +401,5 @@
 
     @stack('scripts')
 </body>
+
 </html>

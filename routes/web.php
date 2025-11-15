@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Broadcast;
 use App\Services\AgoraTokenBuilder;
 use App\Http\Controllers\Admin\OrganizationVerificationController;
 use App\Http\Controllers\Admin\DonationCampaignController;
+use App\Http\Controllers\DonationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,6 +100,15 @@ Route::prefix('search')->name('search.')->group(function () {
 // Reviews (Public)
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->name('reviews.user');
+
+// Reviews (Public)
+Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->name('reviews.user');
+
+// === BẮT ĐẦU: THÊM ROUTE CHIẾN DỊCH QUYÊN GÓP ===
+// Trang chi tiết chiến dịch (Public)
+Route::get('/campaigns/{id}', [DonationController::class, 'show'])->name('campaign.show');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -499,6 +509,17 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings.index');
         Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
 
+        // Campaigns
+        Route::prefix('campaigns')->name('campaigns.')->group(function () {
+            Route::get('/', [DonationCampaignController::class, 'index'])->name('index');
+            Route::get('/create', [DonationCampaignController::class, 'create'])->name('create');
+            Route::post('/', [DonationCampaignController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [DonationCampaignController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [DonationCampaignController::class, 'update'])->name('update');
+            Route::delete('/{id}', [DonationCampaignController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}/donations', [DonationCampaignController::class, 'showDonations'])->name('showDonations');
+        });
+
         // Email Management
         Route::prefix('emails')->name('emails.')->group(function () {
             Route::post('/send', [AdminEmailController::class, 'sendEmail'])->name('send');
@@ -617,6 +638,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/export', [VolunteerActivityController::class, 'export'])->name('export');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| THANH TOÁN ROUTES (VNPAY)
+|--------------------------------------------------------------------------
+*/
+// Bắt buộc login để tạo thanh toán
+Route::middleware('auth')->post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createPayment');
+// Các route VNPay gọi về, không cần login
+Route::get('/donation/vnpay-return', [DonationController::class, 'vnpayReturn'])->name('donation.vnpayReturn');
+Route::get('/donation/vnpay-ipn', [DonationController::class, 'vnpayIpn'])->name('donation.vnpayIpn');
 
 /*
 |--------------------------------------------------------------------------

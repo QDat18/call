@@ -6,11 +6,14 @@ use App\Models\User;
 use App\Models\VolunteerProfile;
 use App\Models\Organization;
 use App\Models\Review;
+use App\Models\Donation;
+use App\Models\DonationCampaign;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+
 
 class UserController extends Controller
 {
@@ -419,5 +422,16 @@ class UserController extends Controller
             'notifications' => $notifications,
             'unread_count' => $unreadCount
         ]);
+    }
+
+    public function donationCampaigns()
+    {
+        return $this->hasMany(DonationCampaign::class, 'admin_user_id', 'user_id');
+    }
+
+    public function donations()
+    {
+        // Các khoản đã quyên góp
+        return $this->hasMany(Donation::class, 'user_id', 'user_id');
     }
 }

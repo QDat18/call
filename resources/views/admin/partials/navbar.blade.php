@@ -12,13 +12,18 @@
                 <a href="{{ route('admin.users.index') }}" class="hover:text-indigo-200 transition">
                     <i class="fas fa-users mr-2"></i>Users
                 </a>
-                <a href="{{ route('admin.organizations.verification') }}" class="hover:text-indigo-200 transition relative">
+                <a href="{{ route('admin.organizations.verification') }}"
+                    class="hover:text-indigo-200 transition relative">
                     <i class="fas fa-building mr-2"></i>Organizations
                     @if(isset($pendingVerifications) && $pendingVerifications > 0)
-                    <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {{ $pendingVerifications }}
-                    </span>
+                        <span
+                            class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {{ $pendingVerifications }}
+                        </span>
                     @endif
+                </a>
+                <a href="{{ route('admin.campaigns.index') }}" class="hover:text-indigo-200 transition">
+                    <i class="fas fa-hand-holding-heart mr-2"></i>Campaigns
                 </a>
                 <a href="{{ route('admin.activities.pending') }}" class="hover:text-indigo-200 transition">
                     <i class="fas fa-clock mr-2"></i>Activities
