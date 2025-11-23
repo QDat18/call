@@ -59,6 +59,15 @@ class User extends Authenticatable
         return $this->hasOne(VolunteerProfile::class, 'user_id', 'user_id');
     }
 
+    /**
+     * Alias for volunteerProfile to fix "Call to undefined method" error
+     * This allows usages like User::with('volunteer') or $user->volunteer
+     */
+    public function volunteer(): HasOne
+    {
+        return $this->hasOne(VolunteerProfile::class, 'user_id', 'user_id');
+    }
+
     public function organization(): HasOne
     {
         return $this->hasOne(Organization::class, 'user_id', 'user_id');

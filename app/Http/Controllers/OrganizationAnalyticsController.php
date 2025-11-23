@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -25,13 +26,14 @@ class OrganizationAnalyticsController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $organization = $user->organization;
         
-        if (!$organization) {
+        // Ensure user is an organization
+        if (!$user->isOrganization() || !$user->organization) {
             return redirect()->route('organization.profile.edit')
                 ->with('error', 'Please complete your organization profile first.');
         }
 
+        $organization = $user->organization;
         $period = $request->get('period', '30days');
         $dateRange = $request->get('range', '30');
         
@@ -47,21 +49,18 @@ class OrganizationAnalyticsController extends Controller
      */
     public function getData(Request $request)
     {
-        $user = Auth::user();
-        $organization = $user->organization;
-        
-        if (!$organization) {
-            return response()->json(['success' => false, 'message' => 'Organization not found'], 404);
-        }
+        try {
+            $user = Auth::user();
+            $organization = $user->organization;
+            
+            if (!$organization) {
+                return response()->json(['success' => false, 'message' => 'Organization not found'], 404);
+            }
 
-        $dateRange = $request->get('range', '30');
-        $startDate = $this->getStartDate($dateRange);
-        $orgId = $organization->org_id;
+            $dateRange = $request->get('range', '30');
+            $startDate = $this->getStartDate($dateRange);
+            $orgId = $organization->org_id;
 
-        // Cache key
-        $cacheKey = "org_analytics_{$orgId}_{$dateRange}";
-
-        $data = Cache::remember($cacheKey, 900, function () use ($orgId, $startDate) {
             // Basic stats
             $stats = [
                 'total_opportunities' => VolunteerOpportunity::where('org_id', $orgId)->count(),
@@ -118,13 +117,14 @@ class OrganizationAnalyticsController extends Controller
             // Top opportunities
             $topOpportunities = VolunteerOpportunity::where('org_id', $orgId)
                 ->withCount('applications')
+                ->with('category') // Eager load to prevent N+1
                 ->orderBy('applications_count', 'desc')
                 ->limit(5)
                 ->get()
                 ->map(function ($opp) {
                     return [
                         'title' => $opp->title,
-                        'category' => $opp->category->category_name ?? 'N/A',
+                        'category' => $opp->category->category_name ?? 'General',
                         'applications' => $opp->applications_count
                     ];
                 });
@@ -139,16 +139,24 @@ class OrganizationAnalyticsController extends Controller
                 'categoryPerformance' => $this->getCategoryPerformance($orgId)
             ];
 
-            return [
+            return response()->json([
                 'success' => true,
                 'stats' => $stats,
                 'topOpportunities' => $topOpportunities,
                 'recentActivities' => $recentActivities,
                 'chartData' => $chartData
-            ];
-        });
+            ]);
 
-        return response()->json($data);
+        } catch (\Exception $e) {
+            // Log error for debugging
+            Log::error('Analytics Data Error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -339,48 +347,55 @@ class OrganizationAnalyticsController extends Controller
 
     private function getApplicationsOverTime($orgId, $startDate)
     {
+        // Fix: Use raw expression in both select and groupBy to avoid SQL Strict Mode errors
         $applications = Application::whereHas('opportunity', fn($q) => $q->where('org_id', $orgId))
             ->where('applied_date', '>=', $startDate)
-            ->select(DB::raw('DATE(applied_date) as date'), DB::raw('COUNT(*) as count'))
-            ->groupBy('date')
-            ->orderBy('date')
+            ->select(DB::raw('DATE(applied_date) as date_val'), DB::raw('COUNT(*) as total'))
+            ->groupBy(DB::raw('DATE(applied_date)'))
+            ->orderBy('date_val')
             ->get();
         
         return [
-            'labels' => $applications->pluck('date')->map(fn($d) => Carbon::parse($d)->format('M d')),
-            'data' => $applications->pluck('count')
+            'labels' => $applications->pluck('date_val')->map(fn($d) => Carbon::parse($d)->format('M d')),
+            'data' => $applications->pluck('total')
         ];
     }
 
     private function getEngagementData($orgId, $startDate)
     {
+        // Fix: Use raw expression in both select and groupBy
         $engagement = VolunteerActivity::where('org_id', $orgId)
             ->where('activity_date', '>=', $startDate)
-            ->select(DB::raw('DATE(activity_date) as date'), DB::raw('COUNT(DISTINCT volunteer_id) as count'))
-            ->groupBy('date')
-            ->orderBy('date')
+            ->select(DB::raw('DATE(activity_date) as date_val'), DB::raw('COUNT(DISTINCT volunteer_id) as total'))
+            ->groupBy(DB::raw('DATE(activity_date)'))
+            ->orderBy('date_val')
             ->get();
         
         return [
-            'labels' => $engagement->pluck('date')->map(fn($d) => Carbon::parse($d)->format('M d')),
-            'data' => $engagement->pluck('count')
+            'labels' => $engagement->pluck('date_val')->map(fn($d) => Carbon::parse($d)->format('M d')),
+            'data' => $engagement->pluck('total')
         ];
     }
 
     private function getCategoryPerformance($orgId)
     {
-        $categories = VolunteerOpportunity::where('org_id', $orgId)
+        // Fix: Use DB::table for safer grouping in strict mode
+        $data = DB::table('volunteer_opportunities')
             ->join('categories', 'volunteer_opportunities.category_id', '=', 'categories.category_id')
-            ->select('categories.category_name')
-            ->selectRaw('COUNT(volunteer_opportunities.opportunity_id) as opp_count')
-            ->selectRaw('(SELECT COUNT(*) FROM applications WHERE applications.opportunity_id = volunteer_opportunities.opportunity_id) as app_count')
+            ->leftJoin('applications', 'volunteer_opportunities.opportunity_id', '=', 'applications.opportunity_id')
+            ->where('volunteer_opportunities.org_id', $orgId)
+            ->select(
+                'categories.category_name',
+                DB::raw('COUNT(DISTINCT volunteer_opportunities.opportunity_id) as opp_count'),
+                DB::raw('COUNT(applications.application_id) as app_count')
+            )
             ->groupBy('categories.category_id', 'categories.category_name')
             ->get();
         
         return [
-            'labels' => $categories->pluck('category_name'),
-            'opportunities' => $categories->pluck('opp_count'),
-            'applications' => $categories->pluck('app_count')
+            'labels' => $data->pluck('category_name'),
+            'opportunities' => $data->pluck('opp_count'),
+            'applications' => $data->pluck('app_count')
         ];
     }
 
@@ -399,7 +414,7 @@ class OrganizationAnalyticsController extends Controller
             $activities[] = [
                 'title' => 'New Application',
                 'description' => ($app->volunteer->first_name ?? 'Volunteer') . ' applied for ' . ($app->opportunity->title ?? 'opportunity'),
-                'time' => $app->applied_date->diffForHumans(),
+                'time' => $app->applied_date ? $app->applied_date->diffForHumans() : 'Just now',
                 'icon' => 'fas fa-file-alt',
                 'iconBg' => 'bg-blue-100 dark:bg-blue-900/30',
                 'iconColor' => 'text-blue-600 dark:text-blue-400'

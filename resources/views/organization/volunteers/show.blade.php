@@ -4,7 +4,6 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-6">
-    <!-- Back Button -->
     <div class="mb-6">
         <a href="{{ route('organization.volunteers.index') }}" 
            class="inline-flex items-center gap-2 text-green-600 hover:text-green-700">
@@ -16,13 +15,11 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
-            <!-- Profile Header -->
             <div class="bg-white rounded-lg shadow p-6">
                 <div class="flex items-start gap-6">
-                    <img src="{{ $volunteer->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($volunteer->full_name) }}" 
-                         alt="{{ $volunteer->full_name }}"
+                    <img src="{{ $volunteer->avatar_url ? asset('storage/' . $volunteer->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($volunteer->first_name . ' ' . $volunteer->last_name) }}" 
+                         alt="{{ $volunteer->first_name }}"
                          class="w-24 h-24 rounded-full object-cover">
                     <div class="flex-1">
                         <h1 class="text-3xl font-bold text-gray-800 mb-2">
@@ -32,13 +29,12 @@
                         <p class="text-lg text-gray-600 mb-3">{{ $volunteer->volunteerProfile->occupation }}</p>
                         @endif
                         
-                        <!-- Contact Info -->
                         <div class="flex flex-wrap gap-4 text-sm text-gray-600">
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
-                                {{ $volunteer->email }}
+                                <a href="mailto:{{ $volunteer->email }}" class="hover:text-green-600">{{ $volunteer->email }}</a>
                             </div>
                             @if($volunteer->phone)
                             <div class="flex items-center gap-2">
@@ -59,10 +55,9 @@
                             @endif
                         </div>
 
-                        <!-- Rating -->
                         @if($volunteer->volunteerProfile)
                         <div class="flex items-center gap-3 mt-4">
-                            <div class="flex">
+                            <div class="flex text-yellow-400">
                                 @for($i = 1; $i <= 5; $i++)
                                 <svg class="w-5 h-5 {{ $i <= ($volunteer->volunteerProfile->volunteer_rating ?? 0) ? 'text-yellow-400' : 'text-gray-300' }}" 
                                      fill="currentColor" viewBox="0 0 20 20">
@@ -80,7 +75,6 @@
                 </div>
             </div>
 
-            <!-- About / Bio -->
             @if($volunteer->volunteerProfile && $volunteer->volunteerProfile->bio)
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">About</h2>
@@ -88,7 +82,6 @@
             </div>
             @endif
 
-            <!-- Skills & Interests -->
             @if($volunteer->volunteerProfile)
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Skills & Interests</h2>
@@ -97,7 +90,16 @@
                 <div class="mb-4">
                     <p class="text-sm font-medium text-gray-700 mb-2">Skills</p>
                     <div class="flex flex-wrap gap-2">
-                        @foreach(explode(',', $volunteer->volunteerProfile->skills) as $skill)
+                        @php
+                            $skills = $volunteer->volunteerProfile->skills;
+                            if (is_string($skills)) {
+                                $skills = explode(',', $skills);
+                            } elseif (!is_array($skills)) {
+                                $skills = [];
+                            }
+                        @endphp
+
+                        @foreach($skills as $skill)
                         <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                             {{ trim($skill) }}
                         </span>
@@ -110,7 +112,16 @@
                 <div>
                     <p class="text-sm font-medium text-gray-700 mb-2">Interests</p>
                     <div class="flex flex-wrap gap-2">
-                        @foreach(explode(',', $volunteer->volunteerProfile->interests) as $interest)
+                        @php
+                            $interests = $volunteer->volunteerProfile->interests;
+                            if (is_string($interests)) {
+                                $interests = explode(',', $interests);
+                            } elseif (!is_array($interests)) {
+                                $interests = [];
+                            }
+                        @endphp
+
+                        @foreach($interests as $interest)
                         <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                             {{ trim($interest) }}
                         </span>
@@ -121,7 +132,6 @@
             </div>
             @endif
 
-            <!-- Volunteer Experience -->
             @if($volunteer->volunteerProfile && $volunteer->volunteerProfile->volunteer_experience)
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Volunteer Experience</h2>
@@ -129,7 +139,6 @@
             </div>
             @endif
 
-            <!-- Activities with Organization -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Activities with Your Organization</h2>
                 
@@ -164,7 +173,6 @@
                 @endif
             </div>
 
-            <!-- Applications History -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Application History</h2>
                 
@@ -193,9 +201,7 @@
             </div>
         </div>
 
-        <!-- Sidebar -->
         <div class="space-y-6">
-            <!-- Quick Stats -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Stats</h3>
                 <div class="space-y-3">
@@ -224,7 +230,6 @@
                 </div>
             </div>
 
-            <!-- Profile Details -->
             @if($volunteer->volunteerProfile)
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Profile Details</h3>
@@ -267,7 +272,6 @@
             </div>
             @endif
 
-            <!-- Actions -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Actions</h3>
                 <div class="space-y-2">
@@ -295,7 +299,6 @@
                 </div>
             </div>
 
-            <!-- Recent Activity Timeline -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
                 <div class="space-y-4">

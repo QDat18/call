@@ -1,14 +1,17 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany; // <--- Thêm dòng này
 use App\Models\User;
 
 class VolunteerProfile extends Model
 {
     use HasFactory;
+
     protected $table = 'volunteer_profiles';
     protected $primaryKey = 'profile_id';
 
@@ -40,6 +43,24 @@ class VolunteerProfile extends Model
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
+
+    /**
+     * Định nghĩa mối quan hệ Applications.
+     * Dùng 'user_id' của bảng này để so khớp với 'volunteer_id' của bảng applications.
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class, 'volunteer_id', 'user_id');
+    }
+
+    /**
+     * Định nghĩa mối quan hệ Activities (nếu cần dùng).
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(VolunteerActivity::class, 'volunteer_id', 'user_id');
+    }
+
     public function getCompletionPercentageAttribute(): int
     {
         $fields = [
@@ -93,5 +114,5 @@ class VolunteerProfile extends Model
             $this->skills = array_values($skills);
             $this->save();
         }
-    }    
+    }
 }

@@ -3,15 +3,58 @@
 @section('title', 'Manage Volunteers')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <!-- Header -->
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">My Volunteers</h1>
-        <p class="text-gray-600 mt-1">Manage volunteers who have joined your opportunities</p>
+{{-- Thêm viewMode vào x-data --}}
+<div id="volunteers-manager-area" class="container mx-auto px-4 py-6" 
+     x-data="{ 
+        contactModalOpen: false, 
+        contactId: null, 
+        contactName: '', 
+        subject: '', 
+        message: '',
+        viewMode: localStorage.getItem('volunteersViewMode') || 'grid' 
+     }"
+     x-init="$watch('viewMode', val => localStorage.setItem('volunteersViewMode', val))">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">My Volunteers</h1>
+            <p class="text-gray-600 mt-1">Manage volunteers who have joined your opportunities</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="bg-white border border-gray-300 rounded-lg p-1 flex items-center shadow-sm">
+                <button @click="viewMode = 'grid'" 
+                        :class="{ 'bg-gray-100 text-green-600': viewMode === 'grid', 'text-gray-500 hover:text-gray-700': viewMode !== 'grid' }"
+                        class="p-2 rounded transition-colors" title="Grid View">
+                    <i class="fas fa-th-large"></i>
+                </button>
+                <button @click="viewMode = 'list'" 
+                        :class="{ 'bg-gray-100 text-green-600': viewMode === 'list', 'text-gray-500 hover:text-gray-700': viewMode !== 'list' }"
+                        class="p-2 rounded transition-colors" title="List View">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" @click.away="open = false" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-2 shadow-sm h-full">
+                    <i class="fas fa-download text-gray-500"></i>
+                    <span class="hidden sm:inline">Export</span>
+                    <i class="fas fa-chevron-down text-xs ml-1"></i>
+                </button>
+                <div x-show="open" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1" style="display: none;" x-cloak>
+                    <a href="{{ route('organization.volunteers.export', array_merge(request()->all(), ['type' => 'top100'])) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600">
+                        <i class="fas fa-file-excel w-5 text-green-600"></i> Top 100 Volunteers
+                    </a>
+                    <a href="{{ route('organization.volunteers.export', array_merge(request()->all(), ['type' => 'all'])) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600">
+                        <i class="fas fa-database w-5 text-blue-600"></i> All Volunteers
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {{-- Stats Total --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -19,13 +62,11 @@
                     <p class="text-2xl font-bold text-gray-800">{{ $stats['total'] }}</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-full">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
+                    <i class="fas fa-users text-blue-600 text-xl"></i>
                 </div>
             </div>
         </div>
-
+        {{-- Stats Active --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -33,13 +74,11 @@
                     <p class="text-2xl font-bold text-green-600">{{ $stats['active'] }}</p>
                 </div>
                 <div class="bg-green-100 p-3 rounded-full">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <i class="fas fa-user-check text-green-600 text-xl"></i>
                 </div>
             </div>
         </div>
-
+        {{-- Stats Hours --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -47,13 +86,11 @@
                     <p class="text-2xl font-bold text-purple-600">{{ number_format($stats['total_hours']) }}</p>
                 </div>
                 <div class="bg-purple-100 p-3 rounded-full">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <i class="fas fa-clock text-purple-600 text-xl"></i>
                 </div>
             </div>
         </div>
-
+        {{-- Stats Rating --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -61,183 +98,330 @@
                     <p class="text-2xl font-bold text-yellow-600">{{ number_format($stats['avg_rating'], 1) }}</p>
                 </div>
                 <div class="bg-yellow-100 p-3 rounded-full">
-                    <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                    </svg>
+                    <i class="fas fa-star text-yellow-600 text-xl"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filters -->
     <div class="bg-white rounded-lg shadow mb-6">
         <form method="GET" class="p-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <!-- Search -->
                 <div>
-                    <input type="text" 
-                           name="search" 
-                           value="{{ request('search') }}"
-                           placeholder="Search by name or email..."
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name, email..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                 </div>
-
-                <!-- Opportunity Filter -->
                 <div>
-                    <select name="opportunity" 
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <select name="opportunity" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                         <option value="">All Opportunities</option>
                         @foreach($opportunities as $opp)
                         <option value="{{ $opp->opportunity_id }}" {{ request('opportunity') == $opp->opportunity_id ? 'selected' : '' }}>
-                            {{ Str::limit($opp->title, 40) }}
+                            {{ Str::limit($opp->title, 30) }}
                         </option>
                         @endforeach
                     </select>
                 </div>
-
-                <!-- Status Filter -->
                 <div>
-                    <select name="status" 
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                         <option value="">All Status</option>
                         <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
                         <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
                     </select>
                 </div>
-
-                <!-- Actions -->
                 <div class="flex gap-2">
-                    <button type="submit" 
-                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
-                        Filter
-                    </button>
-                    <a href="{{ route('organization.volunteers.index') }}" 
-                       class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                        Reset
-                    </a>
+                    <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">Filter</button>
+                    <a href="{{ route('organization.volunteers.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-center">Reset</a>
                 </div>
             </div>
         </form>
     </div>
 
-    <!-- Volunteers List -->
-    <div class="bg-white rounded-lg shadow">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
         @if($volunteers->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+            
+            {{-- === VIEW 1: GRID VIEW (CARD) === --}}
+            <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
                 @foreach($volunteers as $volunteer)
-                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
-                    <!-- Volunteer Header -->
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition relative flex flex-col">
+                    {{-- Header --}}
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="{{ $volunteer->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($volunteer->first_name) }}" 
-                             alt="{{ $volunteer->first_name }}"
-                             class="w-16 h-16 rounded-full object-cover">
-                        <div class="flex-1">
-                            <h3 class="font-semibold text-gray-800 text-lg">
+                        <img src="{{ $volunteer->avatar_url ? asset('storage/' . $volunteer->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($volunteer->first_name) }}" 
+                             class="w-16 h-16 rounded-full object-cover border border-gray-100">
+                        <div class="flex-1 overflow-hidden">
+                            <h3 class="font-semibold text-gray-800 text-lg truncate" title="{{ $volunteer->first_name }} {{ $volunteer->last_name }}">
                                 {{ $volunteer->first_name }} {{ $volunteer->last_name }}
                             </h3>
                             @if($volunteer->volunteerProfile && $volunteer->volunteerProfile->occupation)
-                            <p class="text-sm text-gray-600">{{ $volunteer->volunteerProfile->occupation }}</p>
+                            <p class="text-sm text-gray-600 truncate">{{ $volunteer->volunteerProfile->occupation }}</p>
                             @endif
                         </div>
                     </div>
 
-                    <!-- Stats -->
+                    {{-- Mini Stats --}}
                     <div class="grid grid-cols-2 gap-3 mb-4">
                         <div class="bg-blue-50 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-blue-600">{{ $volunteer->opportunities_count ?? 0 }}</p>
-                            <p class="text-xs text-gray-600">Opportunities</p>
+                            <p class="text-xl font-bold text-blue-600">{{ $volunteer->opportunities_count ?? 0 }}</p>
+                            <p class="text-xs text-gray-600">Opps</p>
                         </div>
                         <div class="bg-purple-50 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-purple-600">
+                            <p class="text-xl font-bold text-purple-600">
                                 {{ $volunteer->volunteerProfile->total_volunteer_hours ?? 0 }}
                             </p>
                             <p class="text-xs text-gray-600">Hours</p>
                         </div>
                     </div>
 
-                    <!-- Rating -->
+                    {{-- Rating --}}
                     @if($volunteer->volunteerProfile)
                     <div class="flex items-center justify-center gap-2 mb-4 pb-4 border-b border-gray-200">
-                        <div class="flex">
+                        <div class="flex text-yellow-400">
                             @for($i = 1; $i <= 5; $i++)
-                            <svg class="w-4 h-4 {{ $i <= ($volunteer->volunteerProfile->volunteer_rating ?? 0) ? 'text-yellow-400' : 'text-gray-300' }}" 
-                                 fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                            </svg>
+                                <i class="fas fa-star text-xs {{ $i <= ($volunteer->volunteerProfile->volunteer_rating ?? 0) ? '' : 'text-gray-300' }}"></i>
                             @endfor
                         </div>
-                        <span class="text-sm text-gray-600">
+                        <span class="text-sm text-gray-600 font-medium">
                             {{ number_format($volunteer->volunteerProfile->volunteer_rating ?? 0, 1) }}
                         </span>
                     </div>
                     @endif
 
-                    <!-- Skills -->
-                    @if($volunteer->volunteerProfile && $volunteer->volunteerProfile->skills)
-                    <div class="mb-4">
-                        <p class="text-xs text-gray-600 mb-2">Skills</p>
+                    {{-- Skills --}}
+                    @if($volunteer->volunteerProfile && !empty($volunteer->volunteerProfile->skills))
+                    <div class="mb-4 h-8 overflow-hidden">
                         <div class="flex flex-wrap gap-1">
-                            @foreach(array_slice(explode(',', $volunteer->volunteerProfile->skills), 0, 3) as $skill)
-                            <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                            @php
+                                $skills = $volunteer->volunteerProfile->skills;
+                                if (is_string($skills)) $skills = explode(',', $skills);
+                                elseif (!is_array($skills)) $skills = [];
+                            @endphp
+                            
+                            @foreach(array_slice($skills, 0, 3) as $skill)
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full border border-gray-200">
                                 {{ trim($skill) }}
                             </span>
                             @endforeach
+                            @if(count($skills) > 3)
+                            <span class="px-2 py-0.5 bg-gray-50 text-gray-400 text-xs rounded-full border border-gray-200">
+                                +{{ count($skills) - 3 }}
+                            </span>
+                            @endif
                         </div>
                     </div>
                     @endif
 
-                    <!-- Actions -->
-                    <div class="flex gap-2">
+                    {{-- Actions --}}
+                    <div class="flex gap-2 mt-auto pt-2">
                         <a href="{{ route('organization.volunteers.show', $volunteer->user_id) }}" 
-                           class="flex-1 px-4 py-2 text-center bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition">
-                            View Profile
+                           class="flex-1 py-2 text-center bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm rounded-lg transition font-medium">
+                            Profile
                         </a>
-                        <button onclick="contactVolunteer({{ $volunteer->user_id }})"
-                                class="px-4 py-2 border border-green-600 text-green-600 hover:bg-green-50 text-sm rounded-lg transition">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                            </svg>
+                        <button @click="contactModalOpen = true; contactId = {{ $volunteer->user_id }}; contactName = '{{ $volunteer->first_name }} {{ $volunteer->last_name }}'"
+                                class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition"
+                                title="Send Email">
+                            <i class="fas fa-envelope"></i>
                         </button>
                     </div>
                 </div>
                 @endforeach
             </div>
 
-            <!-- Pagination -->
+            {{-- === VIEW 2: LIST VIEW (TABLE) === --}}
+            <div x-show="viewMode === 'list'" class="overflow-x-auto" x-cloak>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volunteer</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach($volunteers as $volunteer)
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <img class="h-10 w-10 rounded-full object-cover border border-gray-200" 
+                                         src="{{ $volunteer->avatar_url ? asset('storage/' . $volunteer->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($volunteer->first_name) }}">
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ $volunteer->first_name }} {{ $volunteer->last_name }}</div>
+                                        <div class="text-sm text-gray-500">{{ $volunteer->volunteerProfile->occupation ?? 'N/A' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $volunteer->email }}</div>
+                                <div class="text-sm text-gray-500">{{ $volunteer->phone ?? '' }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                    {{ $volunteer->volunteerProfile->total_volunteer_hours ?? 0 }}h
+                                </span>
+                                <span class="ml-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    {{ $volunteer->opportunities_count ?? 0 }} ops
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center text-yellow-400 text-xs">
+                                    <span class="text-gray-600 mr-1 text-sm">{{ number_format($volunteer->volunteerProfile->volunteer_rating ?? 0, 1) }}</span>
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap gap-1 max-w-xs">
+                                    @php
+                                        $skills = $volunteer->volunteerProfile->skills ?? [];
+                                        if (is_string($skills)) $skills = explode(',', $skills);
+                                        elseif (!is_array($skills)) $skills = [];
+                                    @endphp
+                                    @foreach(array_slice($skills, 0, 2) as $skill)
+                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full border">{{ trim($skill) }}</span>
+                                    @endforeach
+                                    @if(count($skills) > 2)
+                                        <span class="text-xs text-gray-400">+{{ count($skills) - 2 }}</span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="{{ route('organization.volunteers.show', $volunteer->user_id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3" title="View Profile">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button @click="contactModalOpen = true; contactId = {{ $volunteer->user_id }}; contactName = '{{ $volunteer->first_name }} {{ $volunteer->last_name }}'" 
+                                        class="text-green-600 hover:text-green-900" title="Send Email">
+                                    <i class="fas fa-envelope"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
             <div class="px-6 py-4 border-t border-gray-200">
-                {{ $volunteers->links() }}
+                {{ $volunteers->withQueryString()->links() }}
             </div>
         @else
             <div class="p-12 text-center">
-                <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                </svg>
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users-slash text-3xl text-gray-400"></i>
+                </div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No volunteers yet</h3>
-                <p class="text-gray-600 mb-4">
-                    @if(request('search') || request('opportunity') || request('status'))
-                        Try adjusting your filters
-                    @else
-                        Volunteers will appear here once they join your opportunities
-                    @endif
-                </p>
-                @if(request('search') || request('opportunity') || request('status'))
-                <a href="{{ route('organization.volunteers.index') }}" 
-                   class="inline-flex items-center gap-2 text-green-600 hover:text-green-700">
-                    Clear all filters
-                </a>
-                @endif
+                <p class="text-gray-600 mb-4">Volunteers will appear here once they join your opportunities</p>
             </div>
         @endif
     </div>
-</div>
 
+    <div x-show="contactModalOpen" 
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;"
+         x-cloak>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" @click="contactModalOpen = false">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fas fa-envelope text-green-600"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                Contact <span x-text="contactName"></span>
+                            </h3>
+                            <div class="mt-2">
+                                <form id="contactForm" class="space-y-4" @submit.prevent="sendEmail">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Subject</label>
+                                        <input type="text" x-model="subject" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="Interview Invitation...">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Message</label>
+                                        <textarea x-model="message" rows="4" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="Write your message here..."></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" 
+                            @click="sendEmail()"
+                            id="btn-send-email"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                        Send Email
+                    </button>
+                    <button type="button" 
+                            @click="contactModalOpen = false" 
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
 @endsection
 
 @push('scripts')
 <script>
-function contactVolunteer(volunteerId) {
-    // TODO: Implement contact functionality
-    alert('Contact feature coming soon!');
-}
+    function sendEmail() {
+        // Lấy đúng container
+        const container = document.getElementById('volunteers-manager-area');
+        
+        if (!container) {
+            console.error('Không tìm thấy container dữ liệu!');
+            return;
+        }
+
+        const data = Alpine.$data(container);
+
+        if(!data.subject || !data.subject.trim() || !data.message || !data.message.trim()) {
+            showToast('Please fill in all fields', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-email');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+        fetch('{{ route("organization.volunteers.contact") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                volunteer_id: data.contactId,
+                subject: data.subject,
+                message: data.message
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if(result.success) {
+                showToast(result.message, 'success');
+                data.contactModalOpen = false;
+                data.subject = '';
+                data.message = '';
+            } else {
+                showToast(result.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error(error);
+            showToast('Something went wrong', 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    }
 </script>
 @endpush

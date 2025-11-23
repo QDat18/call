@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    
     public function index()
     {
         $user = Auth::user();
@@ -89,75 +90,80 @@ class DashboardController extends Controller
         $user = Auth::user();
         $organization = $user->organization;
 
-        // Statistics
+        if (!$organization) {
+            return redirect()->route('organization.profile.edit');
+        }
+
+        $orgId = $organization->org_id;
+
+        // 1. Thống kê cơ bản (Statistics Cards)
         $stats = [
-            'total_opportunities' => $organization->total_opportunities,
             'active_opportunities' => $organization->opportunities()->where('status', 'Active')->count(),
-            'volunteer_count' => $organization->volunteer_count,
-            'rating' => $organization->rating,
-            'pending_applications' => Application::whereHas('opportunity', function ($q) use ($organization) {
-                $q->where('org_id', $organization->org_id);
+            'total_opportunities' => $organization->opportunities()->count(),
+
+            'pending_applications' => Application::whereHas('opportunity', function ($q) use ($orgId) {
+                $q->where('org_id', $orgId);
             })->where('status', 'Pending')->count(),
-            'total_applications' => Application::whereHas('opportunity', function ($q) use ($organization) {
-                $q->where('org_id', $organization->org_id);
-            })->count(),
+
+            // Đếm số tình nguyện viên duy nhất đã được chấp nhận
+            'volunteer_count' => Application::whereHas('opportunity', function ($q) use ($orgId) {
+                $q->where('org_id', $orgId);
+            })->where('status', 'Accepted')->distinct('volunteer_id')->count(),
+
+            'rating' => $organization->rating ?? 0,
         ];
 
-        // Recent opportunities
+        // 2. Danh sách cơ hội gần đây (Recent Opportunities)
         $recentOpportunities = $organization->opportunities()
-            ->withCount('applications')
+            ->withCount('applications') // Đếm số lượng đơn
             ->latest()
             ->take(5)
             ->get();
 
-        // Pending applications
-        $pendingApplications = Application::whereHas('opportunity', function ($q) use ($organization) {
-            $q->where('org_id', $organization->org_id);
+        // 3. Danh sách đơn chờ duyệt (Pending Applications List)
+        $pendingApplications = Application::whereHas('opportunity', function ($q) use ($orgId) {
+            $q->where('org_id', $orgId);
         })
             ->where('status', 'Pending')
-            ->with(['volunteer', 'opportunity'])
-            ->latest()
+            ->with(['volunteer', 'opportunity']) // Eager load để tránh N+1 query
+            ->orderBy('applied_date', 'desc')
             ->take(10)
             ->get();
 
-        // Top volunteers
-        $topVolunteers = VolunteerActivity::where('org_id', $organization->org_id)
-            ->where('status', 'Verified')
-            ->select('volunteer_id', DB::raw('SUM(hours_worked) as total_hours'))
-            ->groupBy('volunteer_id')
-            ->orderByDesc('total_hours')
-            ->take(5)
-            ->with('volunteer')
-            ->get();
+        // 4. Dữ liệu biểu đồ (Activity Chart - 7 ngày qua)
+        $dates = collect(range(6, 0))->map(function ($i) {
+            return now()->subDays($i)->format('Y-m-d');
+        });
 
-        // Upcoming opportunities
-        $upcomingOpportunities = $organization->opportunities()
-            ->where('status', 'Active')
-            ->where('start_date', '>=', now())
-            ->orderBy('start_date')
-            ->take(5)
-            ->get();
+        $chartLabels = $dates->map(fn($date) => \Carbon\Carbon::parse($date)->format('D')); // Mon, Tue...
 
-        // Chart data - Applications by status
+        // Dữ liệu: Số đơn ứng tuyển theo ngày
+        $applicationsData = $dates->map(function ($date) use ($orgId) {
+            return Application::whereHas('opportunity', function ($q) use ($orgId) {
+                $q->where('org_id', $orgId);
+            })->whereDate('applied_date', $date)->count();
+        });
+
+        // Dữ liệu: Số hoạt động mới (Activities) theo ngày
+        $activitiesData = $dates->map(function ($date) use ($orgId) {
+            return \App\Models\VolunteerActivity::where('org_id', $orgId)
+                ->whereDate('created_at', $date)
+                ->count();
+        });
+
         $chartData = [
-            'labels' => ['Pending', 'Accepted', 'Rejected', 'Under Review'],
-            'data' => [
-                Application::whereHas('opportunity', function ($q) use ($organization) {
-                    $q->where('org_id', $organization->org_id);
-                })->where('status', 'Pending')->count(),
-                Application::whereHas('opportunity', function ($q) use ($organization) {
-                    $q->where('org_id', $organization->org_id);
-                })->where('status', 'Accepted')->count(),
-                Application::whereHas('opportunity', function ($q) use ($organization) {
-                    $q->where('org_id', $organization->org_id);
-                })->where('status', 'Rejected')->count(),
-                Application::whereHas('opportunity', function ($q) use ($organization) {
-                    $q->where('org_id', $organization->org_id);
-                })->where('status', 'Under Review')->count(),
-            ]
+            'labels' => $chartLabels,
+            'applications' => $applicationsData,
+            'activities' => $activitiesData
         ];
 
-        return view('organization.dashboard', compact('organization', 'stats', 'recentOpportunities', 'pendingApplications', 'topVolunteers', 'upcomingOpportunities', 'chartData'));
+        return view('organization.dashboard', compact(
+            'organization',
+            'stats',
+            'recentOpportunities',
+            'pendingApplications',
+            'chartData'
+        ));
     }
 
     public function statistics()

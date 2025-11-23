@@ -24,6 +24,7 @@ class Organization extends Model
         'mission_statement',
         'website',
         'contact_person',
+        'certificates',
         'registration_number',
         'verification_status',
         'founded_year',
@@ -35,6 +36,7 @@ class Organization extends Model
     protected $casts = [
         'verification_status' => 'string',
         'founded_year' => 'integer',
+        'certificates' => 'array',
         'volunteer_count' => 'integer',
         'rating' => 'decimal:2',
         'total_opportunities' => 'integer',

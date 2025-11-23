@@ -138,25 +138,31 @@
                                         <h3 class="font-semibold text-gray-800 dark:text-white">
                                             {{ $opportunity->title }}
                                         </h3>
-                                    <span class="px-2 py-1 text-xs rounded-full
-                                        {{
-                                            $opportunity->status === 'Active'
-                                                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                                                : (
-                                                    $opportunity->status === 'Paused'
-                                                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                                                )
-                                        }}">
-                                        {{ $opportunity->status }}
-                                    </span>
-
+                                        <span class="px-2 py-1 text-xs rounded-full
+                                            @if($opportunity->status === 'Active')
+                                                bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300
+                                            @elseif($opportunity->status === 'Paused')
+                                                bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300
+                                            @else
+                                                bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
+                                            @endif">
+                                            {{ $opportunity->status }}
+                                        </span>
                                     </div>
                                     
                                     <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                                        <span><i class="fas fa-calendar mr-1"></i>{{ $opportunity->start_date ? \Carbon\Carbon::parse($opportunity->start_date)->format('M d, Y') : 'Not set' }}</span>
-                                        <span><i class="fas fa-users mr-1"></i>{{ $opportunity->volunteers_registered }}/{{ $opportunity->volunteers_needed }}</span>
-                                        <span><i class="fas fa-file-alt mr-1"></i>{{ $opportunity->applications->count() }} applications</span>
+                                        <span>
+                                            <i class="fas fa-calendar mr-1"></i>
+                                            {{ $opportunity->start_date ? \Carbon\Carbon::parse($opportunity->start_date)->format('M d, Y') : 'Not set' }}
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-users mr-1"></i>
+                                            {{ $opportunity->volunteers_registered ?? 0 }}/{{ $opportunity->volunteers_needed }}
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-file-alt mr-1"></i>
+                                            {{ $opportunity->applications_count }} applications
+                                        </span>
                                     </div>
                                 </div>
                                 
@@ -334,61 +340,87 @@
 
 @push('scripts')
 <script>
-// Activity Chart
-const ctx = document.getElementById('activityChart');
-if (ctx) {
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            datasets: [
-                {
-                    label: 'Applications',
-                    data: [12, 19, 15, 25, 22, 30, 28],
-                    borderColor: 'rgb(34, 197, 94)',
-                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Views',
-                    data: [45, 52, 48, 65, 58, 70, 68],
-                    borderColor: 'rgb(59, 130, 246)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                },
-                tooltip: {
+document.addEventListener('DOMContentLoaded', function () {
+    // Get data from controller
+    const chartData = @json($chartData);
+
+    const ctx = document.getElementById('activityChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'New Applications',
+                        data: chartData.applications,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'New Activities',
+                        data: chartData.activities,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2,
+                        pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
                     mode: 'index',
                     intersect: false,
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
                     }
                 },
-                x: {
-                    grid: {
-                        display: false
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            stepSize: 1,
+                            font: { family: "'Inter', sans-serif", size: 11 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { family: "'Inter', sans-serif", size: 11 }
+                        }
                     }
                 }
             }
-        }
-    });
-}
+        });
+    }
+});
 </script>
 @endpush
 @endsection

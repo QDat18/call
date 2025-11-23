@@ -275,7 +275,7 @@
 
                                         @elseif(Auth::user()->user_type === 'Organization')
                                             {{-- Nếu là Tổ chức, trỏ đến hồ sơ tổ chức --}}
-                                            <a href="{{ route('organization.profile') }}"
+                                            <a href="{{ route('organization.profile.show') }}"
                                                 class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                                                 <i class="fas fa-building w-5 text-blue-600 dark:text-blue-400"></i><span>Hồ Sơ
                                                     Tổ Chức</span>

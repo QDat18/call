@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
@@ -30,6 +31,9 @@ use App\Services\AgoraTokenBuilder;
 use App\Http\Controllers\Admin\OrganizationVerificationController;
 use App\Http\Controllers\Admin\DonationCampaignController;
 use App\Http\Controllers\DonationController;
+use App\Http\Controllers\ActivityController;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ContactFormMail;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +59,28 @@ Route::get('/about', function () {
 Route::get('/contact', function () {
     return view('pages.contact');
 })->name('contact');
+
+Route::post('/contact', function (Request $request) {
+    // 1. Validate dữ liệu
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|email',
+        'subject' => 'required|string',
+        'message' => 'required|string',
+    ]);
+
+    // 2. Gửi email thực sự (Admin Email nhận tin)
+    // Thay 'admin@volunteerconnect.vn' bằng email quản trị viên của bạn
+    try {
+        Mail::to('hoangquangdat182005@gmail.com')->send(new ContactFormMail($validated));
+    } catch (\Exception $e) {
+        // Log lỗi nếu gửi mail thất bại (tùy chọn)
+        \Log::error('Contact mail error: ' . $e->getMessage());
+    }
+
+    // 3. Redirect về trang cũ kèm thông báo
+    return back()->with('success', 'Tin nhắn của bạn đã được gửi thành công! Chúng tôi sẽ phản hồi sớm nhất.');
+})->name('contact.submit');
 
 Route::get('/privacy', function () {
     return view('pages.privacy');
@@ -332,43 +358,85 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
 | ORGANIZATION ROUTES
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->prefix('organization')->name('organization.')->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\OrganizationMiddleware::class])
+    ->prefix('organization')
+    ->name('organization.')
+    ->group(function () {
 
-    // Profile
-    Route::get('/profile', [OrganizationController::class, 'show'])->name('profile');
-    Route::get('/profile/edit', [OrganizationController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [OrganizationController::class, 'update'])->name('profile.update');
+        // Dashboard & Stats
+        Route::get('/dashboard', [DashboardController::class, 'organizationDashboard'])->name('dashboard');
+        Route::get('/statistics', [DashboardController::class, 'statistics'])->name('statistics');
+        Route::get('/activity-feed', [DashboardController::class, 'activityFeed'])->name('activity-feed');
+        Route::get('/quick-stats', [DashboardController::class, 'quickStats'])->name('quick-stats');
 
-    // Opportunities
-    Route::prefix('opportunities')->name('opportunities.')->group(function () {
-        Route::get('/', [VolunteerOpportunityController::class, 'organizationIndex'])->name('index');
-        Route::get('/create', [VolunteerOpportunityController::class, 'create'])->name('create');
-        Route::post('/', [VolunteerOpportunityController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [VolunteerOpportunityController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [VolunteerOpportunityController::class, 'update'])->name('update');
-        Route::delete('/{id}', [VolunteerOpportunityController::class, 'destroy'])->name('destroy');
-        Route::post('/{id}/pause', [VolunteerOpportunityController::class, 'pause'])->name('pause');
-        Route::post('/{id}/resume', [VolunteerOpportunityController::class, 'resume'])->name('resume');
+        // Profile & Verification
+        Route::get('/profile', [OrganizationController::class, 'profile'])->name('profile.show');
+        Route::get('/profile/edit', [OrganizationController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [OrganizationController::class, 'update'])->name('profile.update');
+        Route::post('/profile/certificate/delete', [OrganizationController::class, 'deleteCertificate'])->name('profile.certificate.delete');
+
+        Route::get('/verification', [OrganizationController::class, 'showVerification'])->name('verification.request');
+        Route::post('/verification', [OrganizationController::class, 'submitVerification'])->name('verification.submit');
+
+        // Opportunities (Cơ hội)
+        Route::prefix('opportunities')->name('opportunities.')->group(function () {
+            Route::get('/', [OpportunityController::class, 'index'])->name('index');
+            Route::get('/create', [OpportunityController::class, 'create'])->name('create');
+            Route::post('/', [OpportunityController::class, 'store'])->name('store');
+            Route::get('/{id}', [OpportunityController::class, 'show'])->name('show');
+            Route::get('/{id}/edit', [OpportunityController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [OpportunityController::class, 'update'])->name('update');
+            Route::delete('/{id}', [OpportunityController::class, 'destroy'])->name('destroy');
+
+            // Các action đặc biệt
+            Route::post('/{id}/pause', [OpportunityController::class, 'pause'])->name('pause');
+            Route::post('/{id}/resume', [OpportunityController::class, 'activate'])->name('resume'); // Hàm activate trong controller
+            Route::post('/{id}/complete', [OpportunityController::class, 'complete'])->name('complete');
+            Route::post('/{id}/cancel', [OpportunityController::class, 'cancel'])->name('cancel');
+        });
+
+        // Applications (Đơn đăng ký)
+        Route::prefix('applications')->name('applications.')->group(function () {
+            Route::get('/', [ApplicationController::class, 'organizationIndex'])->name('index');
+            Route::get('/received', [ApplicationController::class, 'organizationIndex'])->name('received');
+            Route::get('/{id}', [ApplicationController::class, 'show'])->name('show');
+
+            // Xử lý đơn
+            Route::put('/{id}/review', [ApplicationController::class, 'review'])->name('review');
+            Route::put('/{id}/accept', [ApplicationController::class, 'accept'])->name('accept');
+            Route::put('/{id}/reject', [ApplicationController::class, 'reject'])->name('reject');
+            Route::post('/{id}/interview', [ApplicationController::class, 'scheduleInterview'])->name('interview');
+            Route::post('/{id}/notes', [ApplicationController::class, 'saveNotes'])->name('notes');
+        });
+
+        // Activities (Hoạt động/Giờ làm)
+        Route::prefix('activities')->name('activities.')->group(function () {
+            Route::get('/', [ActivityController::class, 'organizationIndex'])->name('index');
+            Route::get('/{id}', [ActivityController::class, 'show'])->name('show');
+
+            // Xác minh
+            Route::post('/{id}/verify', [ActivityController::class, 'verify'])->name('verify');
+            Route::post('/{id}/dispute', [ActivityController::class, 'dispute'])->name('dispute');
+            Route::post('/bulk-verify', [ActivityController::class, 'bulkVerify'])->name('bulk-verify');
+            Route::get('/export', [ActivityController::class, 'export'])->name('export');
+            Route::get('/stats', [ActivityController::class, 'statistics'])->name('stats');
+        });
+
+        // Volunteers List
+        Route::get('/volunteers', [OrganizationController::class, 'volunteers'])->name('volunteers.index');
+        Route::get('/volunteers/export', [OrganizationController::class, 'exportVolunteers'])->name('volunteers.export');
+        Route::get('/volunteers/{id}', [OrganizationController::class, 'showVolunteer'])->name('volunteers.show');
+
+
+        // Route Contact
+        Route::post('/volunteers/contact', [OrganizationController::class, 'contactVolunteer'])->name('volunteers.contact');
+        // Analytics (Báo cáo)
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('/', [OrganizationAnalyticsController::class, 'index'])->name('index');
+            Route::get('/data', [OrganizationAnalyticsController::class, 'getData'])->name('data');
+            Route::get('/export', [OrganizationAnalyticsController::class, 'export'])->name('export');
+        });
     });
-
-    // Applications
-    Route::prefix('applications')->name('applications.')->group(function () {
-        Route::get('/', [ApplicationController::class, 'organizationIndex'])->name('index');
-        Route::put('/{id}/review', [ApplicationController::class, 'review'])->name('review');
-    });
-
-    // Volunteers
-    Route::get('/volunteers', [OrganizationController::class, 'volunteers'])->name('volunteers.index');
-
-    // Activities
-    Route::prefix('activities')->name('activities.')->group(function () {
-        Route::get('/', [VolunteerActivityController::class, 'organizationIndex'])->name('index');
-        Route::post('/{id}/verify', [VolunteerActivityController::class, 'verify'])->name('verify');
-    });
-
-    // Analytics
-    Route::get('/analytics', [OrganizationAnalyticsController::class, 'index'])->name('analytics');
-});
 
 /*
 |--------------------------------------------------------------------------

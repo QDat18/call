@@ -25,7 +25,7 @@
                 
                 @if($notifications->count() > 0)
                 <div class="flex items-center space-x-2">
-                    <form method="POST" action="{{ route('user.notifications.mark-all-read') }}">
+                    <form method="POST" action="{{ route('notifications.read-all') }}">
                         @csrf
                         <button type="submit" 
                                 class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition">
@@ -56,7 +56,7 @@
                                     'default' => ['icon' => 'fa-bell', 'color' => 'text-indigo-500']
                                 ];
                                 
-                                $type = strtolower($notification->type ?? 'default');
+                                $type = strtolower($notification->notification_type ?? 'default');
                                 $config = $iconConfig[$type] ?? $iconConfig['default'];
                             @endphp
                             <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center">
@@ -72,7 +72,7 @@
                                         {{ $notification->title }}
                                     </p>
                                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        {{ $notification->message }}
+                                        {{ $notification->content }}
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                         <i class="far fa-clock mr-1"></i>
@@ -99,11 +99,11 @@
                             </div>
                             
                             <!-- Action Buttons if any -->
-                            @if($notification->action_url)
+                            @if(isset($notification->data['action_url']))
                                 <div class="mt-3">
-                                    <a href="{{ $notification->action_url }}" 
+                                    <a href="{{ $notification->data['action_url'] }}" 
                                        class="inline-flex items-center px-3 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition">
-                                        {{ $notification->action_text ?? 'Xem chi tiết' }}
+                                        Xem chi tiết
                                         <i class="fas fa-arrow-right ml-1 text-xs"></i>
                                     </a>
                                 </div>
@@ -143,11 +143,13 @@
 
 <script>
 function markAsRead(notificationId) {
-    fetch(`/user/notifications/${notificationId}/mark-read`, {
+    // Sửa URL: bỏ /user ở đầu
+    fetch(`/notifications/${notificationId}/read`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
         },
     })
     .then(response => response.json())
@@ -168,11 +170,12 @@ function deleteNotification(notificationId) {
         return;
     }
 
-    fetch(`/user/notifications/${notificationId}/delete`, {
+    fetch(`/notifications/${notificationId}`, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
         },
     })
     .then(response => response.json())
@@ -181,7 +184,6 @@ function deleteNotification(notificationId) {
             document.getElementById(`notification-${notificationId}`).remove();
             updateUnreadCount();
             
-            // Show success message
             showFlashMessage('Thông báo đã được xóa', 'success');
         }
     })
@@ -189,8 +191,7 @@ function deleteNotification(notificationId) {
 }
 
 function updateUnreadCount() {
-    // This would typically refresh the unread count in the navbar
-    // For now, we'll just reload the page to get updated counts
+    // Tự động refresh trang sau 1s để cập nhật số đếm trên header
     setTimeout(() => {
         window.location.reload();
     }, 1000);
@@ -222,12 +223,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const notifications = document.querySelectorAll('[id^="notification-"]');
     notifications.forEach(notification => {
         notification.addEventListener('click', function(e) {
-            if (!e.target.closest('button')) {
+            // Nếu click vào nút action (đã đọc/xóa) thì không làm gì thêm
+            if (!e.target.closest('button') && !e.target.closest('a')) {
                 const notificationId = this.id.replace('notification-', '');
-                if (!this.classList.contains('bg-blue-50') && !this.classList.contains('dark:bg-blue-900/20')) {
-                    return;
+                if (this.classList.contains('bg-blue-50')) {
+                    markAsRead(notificationId);
                 }
-                markAsRead(notificationId);
             }
         });
     });
@@ -237,11 +238,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
 [id^="notification-"] {
     cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-[id^="notification-"]:hover {
-    transform: translateX(2px);
 }
 </style>
 @endsection
