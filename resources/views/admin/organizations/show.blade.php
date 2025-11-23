@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Organization Details')
+@section('title', 'Chi Tiết Tổ Chức')
 @section('breadcrumb', 'Organizations / Details')
 
 @section('content')
@@ -10,7 +10,7 @@
     <div>
         <a href="{{ route('admin.organizations.index') }}" 
            class="inline-flex items-center text-gray-600 hover:text-gray-900">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Organizations
+            <i class="fas fa-arrow-left mr-2"></i>Quay lại danh sách
         </a>
     </div>
     
@@ -23,8 +23,8 @@
         <div class="px-8 pb-8">
             <div class="flex items-end justify-between -mt-16 mb-6">
                 <div class="flex items-end space-x-4">
-                    <img src="{{ $organization->logo_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($organization->organization_name) }}" 
-                         class="w-32 h-32 rounded-lg border-4 border-white shadow-lg bg-white" alt="Logo">
+                    <img src="{{ $organization->logo_url ? asset('storage/' . $organization->logo_url) : 'https://ui-avatars.com/api/?name=' . urlencode($organization->organization_name) }}" 
+                         class="w-32 h-32 rounded-lg border-4 border-white shadow-lg bg-white object-cover" alt="Logo">
                     <div class="pb-2">
                         <h1 class="text-3xl font-bold text-gray-900">{{ $organization->organization_name }}</h1>
                         <div class="flex items-center space-x-4 mt-2">
@@ -45,18 +45,23 @@
                 <!-- Action Buttons -->
                 <div class="flex space-x-2">
                     @if($organization->verification_status == 'Pending')
-                    <button onclick="approveOrg({{ $organization->org_id }})" 
-                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                    {{-- Nút Duyệt --}}
+                    <button type="button" onclick="openApproveModal('{{ $organization->org_id }}')" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm flex items-center">
                         <i class="fas fa-check mr-2"></i>Approve
                     </button>
-                    <button onclick="rejectOrg({{ $organization->org_id }})" 
-                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                    
+                    {{-- Nút Từ chối --}}
+                    <button type="button" onclick="openRejectModal('{{ $organization->org_id }}')" 
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-sm flex items-center">
                         <i class="fas fa-times mr-2"></i>Reject
                     </button>
                     @endif
-                    <button onclick="deleteOrg({{ $organization->org_id }})" 
-                            class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition">
-                        <i class="fas fa-trash mr-2"></i>Delete
+                    
+                    {{-- Nút Xóa --}}
+                    <button type="button" onclick="openDeleteModal('{{ $organization->org_id }}')" 
+                            class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition flex items-center">
+                        <i class="fas fa-trash-alt mr-2"></i>Delete
                     </button>
                 </div>
             </div>
@@ -86,14 +91,14 @@
     <!-- Details Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Left Column - Main Info -->
+        <!-- LEFT COLUMN - Main Info -->
         <div class="lg:col-span-2 space-y-6">
             
             <!-- About -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">About</h3>
                 @if($organization->description)
-                <p class="text-gray-700 leading-relaxed mb-4">{{ $organization->description }}</p>
+                <p class="text-gray-700 leading-relaxed mb-4 whitespace-pre-line">{{ $organization->description }}</p>
                 @else
                 <p class="text-gray-500 italic">No description provided</p>
                 @endif
@@ -103,6 +108,58 @@
                     <h4 class="text-sm font-semibold text-gray-700 mb-2">Mission Statement</h4>
                     <p class="text-gray-700 italic">{{ $organization->mission_statement }}</p>
                 </div>
+                @endif
+            </div>
+
+            <!-- === VERIFICATION DOCUMENT (Tài liệu xác thực) === -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                    <i class="fas fa-file-contract text-indigo-600 mr-2"></i>Verification Document
+                </h3>
+                
+                @if($organization->registration_document)
+                    @php
+                        $docPath = $organization->registration_document;
+                        // Nếu đường dẫn trong DB chưa có 'storage/' thì thêm vào
+                        $docUrl = Str::startsWith($docPath, 'storage/') ? asset($docPath) : asset('storage/' . $docPath);
+                        $extension = pathinfo($docPath, PATHINFO_EXTENSION);
+                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                    @endphp
+
+                    <div class="border rounded-lg p-4 bg-gray-50">
+                        @if($isImage)
+                            {{-- Hiển thị ảnh preview --}}
+                            <div class="mb-4 text-center">
+                                <a href="{{ $docUrl }}" target="_blank">
+                                    <img src="{{ $docUrl }}" alt="Verification Document" 
+                                         class="max-w-full h-auto max-h-96 rounded border border-gray-200 shadow-sm hover:opacity-95 transition cursor-zoom-in mx-auto">
+                                </a>
+                            </div>
+                        @else
+                            {{-- Hiển thị icon cho PDF/Doc --}}
+                            <div class="flex items-center justify-center p-6 bg-white rounded border border-gray-200 mb-4">
+                                <i class="fas fa-file-pdf text-5xl text-red-500 mr-4"></i>
+                                <div>
+                                    <p class="font-medium text-gray-900">Document File</p>
+                                    <p class="text-sm text-gray-500">{{ strtoupper($extension) }} File</p>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="flex justify-center space-x-3">
+                            <a href="{{ $docUrl }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                                <i class="fas fa-external-link-alt mr-2"></i>View Full Size
+                            </a>
+                            <a href="{{ $docUrl }}" download class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm">
+                                <i class="fas fa-download mr-2"></i>Download
+                            </a>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <i class="fas fa-file-excel text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-500 italic">No verification document uploaded.</p>
+                    </div>
                 @endif
             </div>
             
@@ -122,7 +179,7 @@
                         <div class="flex-1">
                             <h4 class="font-medium text-gray-900">{{ Str::limit($opp->title, 50) }}</h4>
                             <div class="flex items-center space-x-3 mt-1 text-xs text-gray-500">
-                                <span><i class="fas fa-calendar mr-1"></i>{{ $opp->start_date->format('M d, Y') }}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>{{ $opp->start_date ? $opp->start_date->format('M d, Y') : 'N/A' }}</span>
                                 <span><i class="fas fa-users mr-1"></i>{{ $opp->application_count }} applications</span>
                                 <span class="px-2 py-0.5 rounded-full text-xs
                                     {{ $opp->status == 'Active' ? 'bg-green-100 text-green-800' : '' }}
@@ -142,39 +199,13 @@
                     @endforelse
                 </div>
             </div>
-            
-            <!-- Activity Log -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Activity Log</h3>
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <div class="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></div>
-                        <div class="flex-1">
-                            <p class="text-sm text-gray-900">Organization registered</p>
-                            <p class="text-xs text-gray-500">{{ $organization->created_at->format('M d, Y H:i') }}</p>
-                        </div>
-                    </div>
-                    @if($organization->verification_status == 'Verified')
-                    <div class="flex items-start">
-                        <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
-                        <div class="flex-1">
-                            <p class="text-sm text-gray-900">Organization verified</p>
-                            <p class="text-xs text-gray-500">{{ $organization->updated_at->format('M d, Y H:i') }}</p>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
-            
         </div>
         
-        <!-- Right Column - Additional Info -->
+        <!-- RIGHT COLUMN - Additional Info -->
         <div class="space-y-6">
-            
             <!-- Contact Information -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-                
                 <div class="space-y-3">
                     @if($organization->contact_person)
                     <div class="flex items-center text-gray-700">
@@ -190,7 +221,7 @@
                         <i class="fas fa-envelope w-5 mr-3 text-gray-400"></i>
                         <div>
                             <p class="text-xs text-gray-500">Email</p>
-                            <p class="text-sm font-medium">{{ $organization->user->email }}</p>
+                            <p class="text-sm font-medium break-all">{{ $organization->user->email }}</p>
                         </div>
                     </div>
                     
@@ -203,14 +234,14 @@
                         </div>
                     </div>
                     @endif
-                    
+
                     @if($organization->website)
                     <div class="flex items-center text-gray-700">
                         <i class="fas fa-globe w-5 mr-3 text-gray-400"></i>
                         <div>
                             <p class="text-xs text-gray-500">Website</p>
                             <a href="{{ $organization->website }}" target="_blank" 
-                               class="text-sm font-medium text-indigo-600 hover:underline">
+                               class="text-sm font-medium text-indigo-600 hover:underline break-all">
                                 {{ $organization->website }}
                             </a>
                         </div>
@@ -233,7 +264,6 @@
             <!-- Organization Details -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Organization Details</h3>
-                
                 <div class="space-y-3">
                     @if($organization->registration_number)
                     <div>
@@ -258,21 +288,15 @@
                         <p class="text-xs text-gray-500">Member Since</p>
                         <p class="text-sm font-medium text-gray-900">{{ $organization->created_at->format('M d, Y') }}</p>
                     </div>
-                    
-                    <div>
-                        <p class="text-xs text-gray-500">Last Updated</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $organization->updated_at->diffForHumans() }}</p>
-                    </div>
                 </div>
             </div>
             
             <!-- Account Status -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Status</h3>
-                
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-700">Account Status</span>
+                        <span class="text-sm text-gray-700">Status</span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full
                             {{ $organization->user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                             {{ $organization->user->is_active ? 'Active' : 'Inactive' }}
@@ -280,20 +304,10 @@
                     </div>
                     
                     <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-700">Verification</span>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                            {{ $organization->verification_status == 'Verified' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $organization->verification_status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                            {{ $organization->verification_status == 'Rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                            {{ $organization->verification_status }}
-                        </span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-700">Email Verified</span>
                         <span class="px-2 py-1 text-xs font-medium rounded-full
                             {{ $organization->user->is_verified ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                            {{ $organization->user->is_verified ? 'Verified' : 'Not Verified' }}
+                            {{ $organization->user->is_verified ? 'Yes' : 'No' }}
                         </span>
                     </div>
                     
@@ -305,79 +319,143 @@
                     @endif
                 </div>
             </div>
-            
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS (HỘP THOẠI) ================= -->
+
+<!-- 1. Approve Modal -->
+<div id="approveModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="backdrop-filter: blur(2px);">
+    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-check-circle text-green-600 mr-2"></i> Approve Organization
+        </h3>
+        <p class="text-gray-600 mb-6">Are you sure you want to approve <strong>{{ $organization->organization_name }}</strong>?</p>
+        <p class="text-sm text-gray-500 mb-6">An email notification will be sent to the organization.</p>
+        
+        <form id="approveForm" method="POST" action="">
+            @csrf
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('approveModal')" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="submit" 
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow-lg transition">Confirm Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Reject Modal -->
+<div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="backdrop-filter: blur(2px);">
+    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-times-circle text-red-600 mr-2"></i> Reject Organization
+        </h3>
+        <p class="text-gray-600 mb-4">Please provide a reason for rejecting this organization.</p>
+        
+        <form id="rejectForm" method="POST" action="">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason <span class="text-red-500">*</span></label>
+                <textarea name="rejection_reason" rows="4" required
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition"
+                          placeholder="e.g., Incomplete documentation, invalid registration number..."></textarea>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('rejectModal')" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="submit" 
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-lg transition">Confirm Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. Delete Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" style="backdrop-filter: blur(2px);">
+    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-trash-alt text-red-600 mr-2"></i> Delete Organization
+        </h3>
+        <p class="text-gray-600 mb-2">Are you sure you want to delete <strong>{{ $organization->organization_name }}</strong>?</p>
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-red-500"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700 font-medium">
+                        Warning: This action cannot be undone. All related data (opportunities, activities) will also be deleted.
+                    </p>
+                </div>
+            </div>
         </div>
         
+        <form id="deleteForm" method="POST" action="">
+            @csrf
+            @method('DELETE')
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeModal('deleteModal')" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">Cancel</button>
+                <button type="submit" 
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-lg transition">Delete Permanently</button>
+            </div>
+        </form>
     </div>
-    
 </div>
 
 @push('scripts')
 <script>
-function approveOrg(orgId) {
-    if (confirm('Are you sure you want to approve this organization?')) {
-        fetch(`/admin/organizations/${orgId}/approve`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Organization approved successfully', 'success');
-                setTimeout(() => location.reload(), 1000);
-            }
-        })
-        .catch(() => showToast('An error occurred', 'error'));
-    }
-}
+    // === JAVASCRIPT XỬ LÝ MODAL ===
 
-function rejectOrg(orgId) {
-    if (confirm('Are you sure you want to reject this organization?')) {
-        fetch(`/admin/organizations/${orgId}/reject`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Organization rejected', 'success');
-                setTimeout(() => location.reload(), 1000);
-            }
-        })
-        .catch(() => showToast('An error occurred', 'error'));
+    // Mở Modal Duyệt
+    function openApproveModal(orgId) {
+        const form = document.getElementById('approveForm');
+        form.action = `/admin/organizations/${orgId}/approve`;
+        
+        const modal = document.getElementById('approveModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex'); // Thêm flex để căn giữa
     }
-}
 
-function deleteOrg(orgId) {
-    if (confirm('Are you sure you want to delete this organization? This action cannot be undone.')) {
-        fetch(`/admin/organizations/${orgId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Organization deleted successfully', 'success');
-                setTimeout(() => window.location.href = '/admin/organizations', 1000);
-            }
-        })
-        .catch(() => showToast('An error occurred', 'error'));
+    // Mở Modal Từ chối
+    function openRejectModal(orgId) {
+        const form = document.getElementById('rejectForm');
+        form.action = `/admin/organizations/${orgId}/reject`;
+        
+        const modal = document.getElementById('rejectModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
     }
-}
 
-function showToast(message, type) {
-    // Simple alert for now - you can replace with a proper toast notification
-    alert(message);
-}
+    // Mở Modal Xóa
+    function openDeleteModal(orgId) {
+        const form = document.getElementById('deleteForm');
+        form.action = `/admin/organizations/${orgId}`; // Route delete
+        
+        const modal = document.getElementById('deleteModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    // Đóng Modal
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    // Đóng khi click ra ngoài vùng modal (overlay)
+    window.onclick = function(event) {
+        const modals = ['approveModal', 'rejectModal', 'deleteModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (event.target == modal) {
+                closeModal(modalId);
+            }
+        });
+    }
 </script>
 @endpush
 @endsection

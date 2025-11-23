@@ -60,8 +60,27 @@
             <div class="bg-white rounded-2xl shadow-xl p-8">
 
                 <form method="POST" action="{{ route('register.organization.submit') }}" id="organizationForm"
-                    class="space-y-6" enctype="multipart/form-data">
+                    enctype="multipart/form-data" class="space-y-6" enctype="multipart/form-data">
                     @csrf
+                    @if ($errors->any())
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-circle text-red-500"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">Có lỗi xảy ra khi đăng ký:</h3>
+                                    <div class="mt-2 text-sm text-red-700">
+                                        <ul class="list-disc pl-5 space-y-1">
+                                            @foreach ($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                     <input type="hidden" name="user_type" value="Organization">
 
                     <!-- Progress Indicator -->

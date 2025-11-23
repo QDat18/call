@@ -251,7 +251,7 @@
                 </div>
 
                 <!-- Applications -->
-                <a href="{{ route('organization.applications.received') }}"
+                <a href="{{ route('organization.applications.index') }}"
                    class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group {{ request()->routeIs('organization.applications.*') ? 'bg-org-600 text-white shadow-lg' : 'text-org-100 hover:bg-org-700/50 hover:text-white' }}">
                     <i class="fas fa-file-alt w-5 {{ request()->routeIs('organization.applications.*') ? 'text-white' : 'text-org-300 group-hover:text-white' }}"></i>
                     <span class="font-medium">Applications</span>

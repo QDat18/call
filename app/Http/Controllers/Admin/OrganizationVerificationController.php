@@ -8,12 +8,13 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail; // Import Mail
+use App\Mail\OrganizationApproved;     // Import Mail Class
+use App\Mail\OrganizationRejected;     // Import Mail Class
 
 class OrganizationVerificationController extends Controller
 {
-    // public function __construct(){
-    //     $this->middleware(['auth', 'role: Admin']);
-    // }
+    // ... (giữ nguyên phần index và construct) ...
     public function index(Request $request)
     {
         $query = Organization::with('user');
@@ -45,15 +46,33 @@ class OrganizationVerificationController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $organization = Organization::findOrFail($id);
+        $organization = Organization::with('user')->findOrFail($id);
 
         $organization->verification_status = 'Verified';
         $organization->save();
 
-        $user = $organization->user;
-        $user->is_verified = true;
-        $user->save();
-        return redirect()->back()->with('success', 'Organization approved successfully.');
+        if ($organization->user) {
+            $organization->user->is_verified = true;
+            $organization->user->save();
+
+            // Gửi mail
+            if ($organization->user->email) {
+                try {
+                    Mail::to($organization->user->email)->send(new OrganizationApproved($organization));
+                } catch (\Exception $e) {
+                }
+            }
+        }
+
+        $message = 'Organization approved successfully.';
+
+        // Nếu là Ajax/Fetch (từ trang show), trả về JSON
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        // Nếu là Form thường, redirect
+        return redirect()->back()->with('success', $message);
     }
 
     public function reject(Request $request, $id)
@@ -63,18 +82,61 @@ class OrganizationVerificationController extends Controller
         ]);
 
         if ($validator->fails()) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+            }
             return redirect()->back()->withErrors($validator)->withInput();
         }
-        $organization = Organization::findOrFail($id);
+
+        $organization = Organization::with('user')->findOrFail($id);
 
         $organization->verification_status = 'Rejected';
         $organization->rejection_reason = $request->rejection_reason;
         $organization->save();
-        return redirect()->back()->with('success', 'Organization verification has been rejected.');
+
+        if ($organization->user && $organization->user->email) {
+            try {
+                Mail::to($organization->user->email)->send(new OrganizationRejected($organization, $request->rejection_reason));
+            } catch (\Exception $e) {
+            }
+        }
+
+        $message = 'Organization rejected successfully.';
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return redirect()->back()->with('success', $message);
     }
+
+    public function destroy(Request $request, $id)
+    {
+        try {
+            $organization = Organization::findOrFail($id);
+
+            // Xóa tổ chức (Cascade sẽ tự xóa các quan hệ nếu bạn đã cài đặt trong migration)
+            $organization->delete();
+
+            $message = 'Organization deleted successfully.';
+
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+
+            return redirect()->route('admin.organizations.index')->with('success', $message);
+        } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Failed to delete: ' . $e->getMessage()], 500);
+            }
+            return redirect()->back()->with('error', 'Failed to delete organization.');
+        }
+    }
+
 
     public function requestDocuments(Request $request, $id)
     {
+        // ... (Giữ nguyên logic request documents) ...
         $validator = Validator::make($request->all(), [
             'document_request' => 'required|string|max:1000',
         ]);
@@ -85,14 +147,8 @@ class OrganizationVerificationController extends Controller
 
         $organization = Organization::findOrFail($id);
 
-        // TODO: Create notification for organization
-
-        // TODO: Send email requesting additional documents
+        // Có thể thêm gửi mail yêu cầu tài liệu ở đây tương tự như trên
 
         return redirect()->back()->with('success', 'Document request has been sent to the organization.');
     }
 }
-
-
-// Continue with more controllers...
-// Next: ReviewModerationController, ReportGenerationController, etc.

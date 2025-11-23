@@ -9,7 +9,11 @@ return new class extends Migration
     {
         Schema::create('volunteer_opportunities', function (Blueprint $table) {
             $table->id('opportunity_id');
-            $table->foreignId('org_id')->constrained('organizations', 'org_id')->onDelete('cascade');
+            
+            // SỬA Ở ĐÂY: Khai báo cột string và tạo khóa ngoại thủ công
+            $table->string('org_id', 50);
+            $table->foreign('org_id')->references('org_id')->on('organizations')->onDelete('cascade');
+
             $table->foreignId('category_id')->nullable()->constrained('categories', 'category_id')->onDelete('set null');
             $table->string('title', 200);
             $table->text('description');

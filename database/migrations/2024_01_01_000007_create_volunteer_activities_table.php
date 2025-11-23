@@ -11,7 +11,11 @@ return new class extends Migration
             $table->id('activity_id');
             $table->foreignId('volunteer_id')->constrained('users', 'user_id')->onDelete('cascade');
             $table->foreignId('opportunity_id')->constrained('volunteer_opportunities', 'opportunity_id')->onDelete('cascade');
-            $table->foreignId('org_id')->constrained('organizations', 'org_id')->onDelete('cascade');
+            
+            // SỬA Ở ĐÂY: Khai báo cột string và tạo khóa ngoại thủ công
+            $table->string('org_id', 50);
+            $table->foreign('org_id')->references('org_id')->on('organizations')->onDelete('cascade');
+
             $table->date('activity_date');
             $table->decimal('hours_worked', 4, 2);
             $table->text('activity_description')->nullable();

@@ -424,6 +424,9 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             // Trỏ 'reject' đến controller mới
             Route::post('/{id}/reject', [OrganizationVerificationController::class, 'reject'])->name('reject');
 
+            // === THÊM DÒNG NÀY ĐỂ CÓ THỂ XÓA ===
+            Route::delete('/{id}', [OrganizationVerificationController::class, 'destroy'])->name('destroy');
+
             // Thêm route cho việc yêu cầu tài liệu
             Route::post('/{id}/request-documents', [OrganizationVerificationController::class, 'requestDocuments'])->name('request-documents');
 

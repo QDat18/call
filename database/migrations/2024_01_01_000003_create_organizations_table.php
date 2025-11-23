@@ -8,7 +8,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('organizations', function (Blueprint $table) {
-            $table->id('org_id');
+            // $table->id('org_id');
+            $table->string('org_id', 50)->primary();
             $table->foreignId('user_id')->constrained('users', 'user_id')->onDelete('cascade');
             $table->string('organization_name', 150);
             $table->enum('organization_type', ['NGO', 'NPO', 'Charity', 'School', 'Hospital', 'Community Group']);

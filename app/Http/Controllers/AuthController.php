@@ -49,6 +49,19 @@ class AuthController extends Controller
      */
     public function registerVolunteer(Request $request)
     {
+        $existingUser = User::where('email', $request->email)->first();
+        if ($existingUser) {
+            if ($existingUser->user_type === 'Organization') {
+                return redirect()->back()->withInput()->withErrors([
+                    'email' => 'Email này đã được đăng ký tài khoản Tổ chức. Vui lòng sử dụng email khác hoặc đăng nhập.'
+                ]);
+            }
+            if ($existingUser->user_type === 'Admin') {
+                return redirect()->back()->withInput()->withErrors([
+                    'email' => 'Email này đã được đăng ký tài khoản Quản trị viên.'
+                ]);
+            }
+        }
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
@@ -140,6 +153,21 @@ class AuthController extends Controller
      */
     public function registerOrganization(Request $request)
     {
+        // dd($request->all());
+        $existingUser = User::where('email', $request->email)->first();
+        if ($existingUser) {
+            if ($existingUser->user_type === 'Volunteer') {
+                return redirect()->back()->withInput()->withErrors([
+                    'email' => 'Email này đã được đăng ký tài khoản Tình nguyện viên. Vui lòng sử dụng email khác hoặc đăng nhập.'
+                ]);
+            }
+            if ($existingUser->user_type === 'Admin') {
+                return redirect()->back()->withInput()->withErrors([
+                    'email' => 'Email này đã được đăng ký tài khoản Quản trị viên.'
+                ]);
+            }
+            // Nếu là Organization thì để validator bên dưới xử lý
+        }
         $validator = Validator::make($request->all(), [
             // User information
             'first_name' => 'required|string|max:50',
@@ -192,6 +220,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+            dd($validator->errors());
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
@@ -217,13 +246,26 @@ class AuthController extends Controller
 
             $logoPath = null;
             if ($request->hasFile('logo')) {
-                $logoPath = $request->file('logo')->store('logos', 'public');
-            }
-            $documentPath = null;
-            if ($request->hasFile('registration_document')) {
-                $documentPath = $request->file('registration_document')->store('documents', 'public');
+                $file = $request->file('logo');
+                // Tạo tên file an toàn từ tên tổ chức
+                $safeName = Str::slug($request->organization_name);
+                $fileName = $safeName . '_logo.' . $file->getClientOriginalExtension();
+
+                // Dùng storeAs để đặt tên theo ý mình
+                $logoPath = $file->storeAs('logos', $fileName, 'public');
             }
 
+            // Xử lý Tài liệu xác thực (Đặt tên: ten-to-chuc_xacthuc.pdf)
+            $documentPath = null;
+            if ($request->hasFile('registration_document')) {
+                $file = $request->file('registration_document');
+                // Tạo tên file an toàn
+                $safeName = Str::slug($request->organization_name);
+                $fileName = $safeName . '_xacthuc.' . $file->getClientOriginalExtension();
+
+                // Dùng storeAs
+                $documentPath = $file->storeAs('documents', $fileName, 'public');
+            }
             // Create organization
             Organization::create([
                 'user_id' => $user->user_id,
@@ -271,6 +313,10 @@ class AuthController extends Controller
             //     ->with('success', 'Welcome to VolunteerConnect! Your organization has been registered. Please submit verification documents to get verified badge.');
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // === THÊM DÒNG NÀY VÀO ĐÂY ĐỂ XEM LỖI ===
+            dd($e->getMessage());
+            // ========================================
 
             return redirect()->back()
                 ->with('error', 'Registration failed. Please try again.')
