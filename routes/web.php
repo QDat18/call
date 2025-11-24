@@ -99,7 +99,7 @@ Route::get('/user/{id}/profile', [UserController::class, 'publicProfile'])->name
 
 // Posts (Public)
 Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
-Route::get('/posts/{id}', [PostController::class, 'show'])->name('posts.show');
+Route::get('/posts/{id}', [PostController::class, 'show'])->name('posts.show')->whereNumber('id');
 
 // Opportunities (Public)
 Route::get('/opportunities', [VolunteerOpportunityController::class, 'index'])->name('opportunities.index');
@@ -270,20 +270,21 @@ Route::middleware('auth')->group(function () {
     });
 
     // Posts
-    Route::prefix('posts')->name('posts.')->group(function () {
-        Route::get('/create', [PostController::class, 'create'])->name('create');
+    Route::middleware(['auth'])->prefix('posts')->name('posts.')->group(function () {
+        Route::get('/create', [PostController::class, 'create'])->name('create'); // /posts/create
         Route::post('/', [PostController::class, 'store'])->name('store');
         Route::get('/my-posts', [PostController::class, 'myPosts'])->name('my-posts');
-        Route::get('/{id}/edit', [PostController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [PostController::class, 'update'])->name('update');
-        Route::delete('/{id}', [PostController::class, 'destroy'])->name('destroy');
 
-        // Post Interactions
-        Route::post('/{id}/like', [PostController::class, 'toggleLike'])->name('like');
-        Route::post('/{id}/comment', [PostController::class, 'addCommentFromForm'])->name('comment');
-        Route::post('/{id}/share', [PostController::class, 'share'])->name('share');
-        Route::post('/{id}/bookmark', [PostController::class, 'bookmark'])->name('bookmark');
-        Route::post('/{id}/report', [PostController::class, 'report'])->name('report');
+        Route::get('/{id}/edit', [PostController::class, 'edit'])->name('edit')->whereNumber('id');
+        Route::put('/{id}', [PostController::class, 'update'])->name('update')->whereNumber('id');
+        Route::delete('/{id}', [PostController::class, 'destroy'])->name('destroy')->whereNumber('id');
+
+        // Interactions
+        Route::post('/{id}/like', [PostController::class, 'toggleLike'])->name('like')->whereNumber('id');
+        Route::post('/{id}/comment', [PostController::class, 'addCommentFromForm'])->name('comment')->whereNumber('id');
+        Route::post('/{id}/share', [PostController::class, 'share'])->name('share')->whereNumber('id');
+        Route::post('/{id}/bookmark', [PostController::class, 'bookmark'])->name('bookmark')->whereNumber('id');
+        Route::post('/{id}/report', [PostController::class, 'report'])->name('report')->whereNumber('id');
     });
 
     // Comments
