@@ -26,7 +26,6 @@
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
-    <!-- Hero Welcome -->
     <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white py-16">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex items-center justify-between">
@@ -47,7 +46,6 @@
     </div>
 
     <div class="max-w-7xl mx-auto px-6 py-12">
-        <!-- Stats Cards - Tím Gradient -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
             <div class="bg-white rounded-2xl shadow-xl p-6 text-center card-hover border border-purple-100">
                 <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center text-white text-2xl">
@@ -80,9 +78,7 @@
         </div>
 
         <div class="grid lg:grid-cols-3 gap-8">
-            <!-- Main Content -->
             <div class="lg:col-span-2 space-y-8">
-                <!-- Recommended Opportunities -->
                 <div class="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden">
                     <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6">
                         <div class="flex items-center justify-between">
@@ -118,7 +114,8 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <a href="{{ route('volunteer.applications.create', ['opportunity_id' => $opportunity->opportunity_id]) }}" 
+                                    {{-- SỬA LỖI 1 & 2: Tên route đúng là volunteer.applications.create và truyền ID trực tiếp --}}
+                                    <a href="{{ route('volunteer.applications.create', $opportunity->opportunity_id) }}" 
                                        class="btn-gradient text-sm">Ứng Tuyển Ngay</a>
                                 </div>
                             </div>
@@ -134,7 +131,6 @@
                     </div>
                 </div>
 
-                <!-- Recent Applications -->
                 <div class="bg-white rounded-2xl shadow-xl border border-purple-100">
                     <div class="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6">
                         <h3 class="text-2xl font-bold">Đơn Ứng Tuyển Gần Đây</h3>
@@ -176,7 +172,8 @@
                                                 </span>
                                             </td>
                                             <td class="py-4 text-right">
-                                                <a href="{{ route('applications.show', $app->application_id) }}" class="text-purple-600 hover:text-purple-800">
+                                                {{-- SỬA LỖI TÊN ROUTE: volunteer.applications.show --}}
+                                                <a href="{{ route('volunteer.applications.show', $app->application_id) }}" class="text-purple-600 hover:text-purple-800">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             </td>
@@ -196,15 +193,12 @@
                 </div>
             </div>
 
-            <!-- Right Sidebar -->
             <div class="space-y-8">
-                <!-- Activity Chart -->
                 <div class="bg-white rounded-2xl shadow-xl p-6 border border-purple-100">
                     <h3 class="text-xl font-bold text-purple-800 mb-6">Hoạt Động Gần Đây</h3>
                     <canvas id="activityChart" height="240"></canvas>
                 </div>
 
-                <!-- Quick Actions -->
                 <div class="bg-white rounded-2xl shadow-xl p-6 border border-purple-100">
                     <h3 class="text-xl font-bold text-purple-800 mb-6">Hành Động Nhanh</h3>
                     <div class="grid grid-cols-2 gap-4">
@@ -212,7 +206,7 @@
                             <i class="fas fa-search text-2xl mb-2"></i>
                             <span class="block font-semibold">Tìm Cơ Hội</span>
                         </a>
-                        <a href="{{ route('volunteer-activities.create') }}" class="bg-gradient-to-br from-green-500 to-emerald-600 text-white p-4 rounded-xl text-center hover:shadow-xl transition card-hover">
+                        <a href="{{ route('volunteer.activities.create') }}" class="bg-gradient-to-br from-green-500 to-emerald-600 text-white p-4 rounded-xl text-center hover:shadow-xl transition card-hover">
                             <i class="fas fa-plus text-2xl mb-2"></i>
                             <span class="block font-semibold">Log Giờ</span>
                         </a>
@@ -227,7 +221,6 @@
                     </div>
                 </div>
 
-                <!-- Achievements -->
                 <div class="bg-white rounded-2xl shadow-xl p-6 border border-purple-100">
                     <h3 class="text-xl font-bold text-purple-800 mb-6">Thành Tích Nổi Bật</h3>
                     <div class="space-y-4">
@@ -255,33 +248,39 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // SỬA LỖI 3: Lấy dữ liệu từ biến $chartData của Controller
+    // Vì $chartData là mảng ['labels' => ..., 'data' => ...], ta cần lấy đúng key
+    const chartConfig = {!! json_encode($chartData ?? ['labels' => [], 'data' => []]) !!};
+
     // Activity Chart
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: {!! json_encode($chartLabels ?? ['Th1','Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8','Th9','Th11','Th12']) !!},
-            datasets: [{
-                label: 'Giờ tình nguyện',
-                data: {!! json_encode($chartData ?? [5, 15, 10, 25, 30, 40]) !!},
-                borderColor: '#8b5cf6',
-                backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: '#8b5cf6',
-                pointRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false }
+    const ctx = document.getElementById('activityChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: chartConfig.labels, // Lấy labels từ mảng
+                datasets: [{
+                    label: 'Giờ tình nguyện',
+                    data: chartConfig.data, // Lấy data từ mảng
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#8b5cf6',
+                    pointRadius: 6
+                }]
             },
-            scales: {
-                y: { beginAtZero: true }
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
             }
-        }
-    });
+        });
+    }
 </script>
 @endpush
 @endsection

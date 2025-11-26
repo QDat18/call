@@ -303,10 +303,10 @@ Route::middleware('auth')->group(function () {
 */
 Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.')->group(function () {
 
-    // Dashboard
+    // Volunteer Dashboard
     Route::get('/dashboard', [DashboardController::class, 'volunteerDashboard'])->name('dashboard');
 
-    // Profile
+    // Volunteer Profile
     Route::get('/profile', [VolunteerProfileController::class, 'show'])->name('profile.profile');
     Route::get('/profile/edit', [VolunteerProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [VolunteerProfileController::class, 'update'])->name('profile.update');
@@ -314,47 +314,44 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
     Route::put('/profile/availability', [VolunteerProfileController::class, 'updateAvailability'])->name('profile.availability');
 
     // Applications
-    Route::prefix('applications')->name('applications.')->group(function () {
-        Route::get('/', [ApplicationController::class, 'myApplications'])->name('my');
-        Route::get('/create', [ApplicationController::class, 'create'])->name('create');
-        Route::post('/', [ApplicationController::class, 'store'])->name('store');
-        Route::get('/{id}', [ApplicationController::class, 'show'])->name('show');
-        Route::post('/{id}/withdraw', [ApplicationController::class, 'withdraw'])->name('withdraw');
-    });
+    // Danh sách đơn của tôi
+    Route::get('/applications', [ApplicationController::class, 'myApplications'])
+        ->name('applications.my');
 
-    // Activities
-    Route::prefix('activities')->name('activities.')->group(function () {
-        Route::get('/', [VolunteerActivityController::class, 'index'])->name('index');
-        Route::get('/create', [VolunteerActivityController::class, 'create'])->name('create');
-        Route::post('/', [VolunteerActivityController::class, 'store'])->name('store');
-        Route::get('/{id}', [VolunteerActivityController::class, 'show'])->name('show');
-        Route::post('/{id}/dispute', [VolunteerActivityController::class, 'dispute'])->name('dispute');
-        Route::get('/export', [VolunteerActivityController::class, 'export'])->name('export');
-    });
+    // Form ứng tuyển (có ID cơ hội)
+    Route::get('/create/{opportunity}', [ApplicationController::class, 'create'])->name('create');
+
+    // Gửi đơn
+    Route::post('/applications', [ApplicationController::class, 'store'])
+        ->name('applications.store');
+
+    // Xem chi tiết đơn
+    Route::get('/applications/{application}', [ApplicationController::class, 'show'])
+        ->name('applications.show');
+
+    // Rút đơn
+    Route::post('/applications/{application}/withdraw', [ApplicationController::class, 'withdraw'])
+        ->name('applications.withdraw');
+
+    // Volunteer Activities
+    Route::get('/activities', [VolunteerActivityController::class, 'index'])->name('activities.index');
+    Route::get('/activities/create', [VolunteerActivityController::class, 'create'])->name('activities.create');
+    Route::post('/activities', [VolunteerActivityController::class, 'store'])->name('activities.store');
+    Route::get('/activities/{id}', [VolunteerActivityController::class, 'show'])->name('activities.show');
+    Route::post('/activities/{id}/dispute', [VolunteerActivityController::class, 'dispute'])->name('activities.dispute');
+    Route::get('/activities/export', [VolunteerActivityController::class, 'export'])->name('activities.export');
 
     // Favorites
-    Route::prefix('favorites')->name('favorites.')->group(function () {
-        Route::get('/', [FavoriteController::class, 'index'])->name('index');
-        Route::post('/toggle', [FavoriteController::class, 'toggle'])->name('toggle');
-        Route::put('/{id}/notes', [FavoriteController::class, 'updateNotes'])->name('notes');
-        Route::delete('/{id}', [FavoriteController::class, 'destroy'])->name('destroy');
-        Route::post('/bulk-destroy', [FavoriteController::class, 'bulkDestroy'])->name('bulk-destroy');
-        Route::get('/export', [FavoriteController::class, 'export'])->name('export');
-    });
-
-    // xac thuc TOP
-    Route::post('/profile/send-verification-otp', [VolunteerProfileController::class, 'sendVerificationOtp'])
-        ->name('profile.sendOtp');
-    Route::get('/profile/verify-otp', [VolunteerProfileController::class, 'showOtpForm'])
-        ->name('profile.showOtp');
-    Route::post('/profile/verify-otp', [VolunteerProfileController::class, 'verifyOtp'])
-        ->name('profile.verifyOtp');
+    Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
+    Route::put('/favorites/{id}/notes', [FavoriteController::class, 'updateNotes'])->name('favorites.notes');
+    Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
+    Route::post('/favorites/bulk-destroy', [FavoriteController::class, 'bulkDestroy'])->name('favorites.bulk-destroy');
+    Route::get('/favorites/export', [FavoriteController::class, 'export'])->name('favorites.export');
 
     // Analytics
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics');
-});
-
-/*
+});/*
 |--------------------------------------------------------------------------
 | ORGANIZATION ROUTES
 |--------------------------------------------------------------------------

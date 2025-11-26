@@ -5,7 +5,6 @@
 @section('content')
 <div class="container py-4">
     
-    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('home') }}">Trang chủ</a></li>
@@ -15,14 +14,11 @@
     </nav>
 
     <div class="row">
-        <!-- Main Content -->
         <div class="col-lg-8">
             
-            <!-- Header Card -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
                     
-                    <!-- Category & Status -->
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div class="d-flex gap-2">
                             <span class="badge rounded-pill px-3 py-2" 
@@ -41,7 +37,6 @@
                             @endif
                         </div>
                         
-                        <!-- Favorite Button -->
                         @auth
                             @if(auth()->user()->user_type === 'Volunteer')
                             <button class="btn btn-outline-danger btn-sm favorite-btn {{ $isFavorited ?? false ? 'active' : '' }}" 
@@ -55,12 +50,10 @@
                         @endauth
                     </div>
 
-                    <!-- Title -->
                     <h1 class="display-5 fw-bold mb-3">{{ $opportunity->title }}</h1>
 
-                    <!-- Organization Info -->
                     <div class="d-flex align-items-center mb-3">
-                        <img src="{{ $opportunity->organization->user->avatar_url ?? 'https://ui-avatars.com/api/?name='.urlencode($opportunity->organization->organization_name).'&background=10B981&color=fff' }}" 
+                        <img src="{{ $opportunity->organization->user->avatar_url ? asset('storage/' . $opportunity->organization->user->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode($opportunity->organization->organization_name).'&background=10B981&color=fff' }}" 
                              alt="{{ $opportunity->organization->organization_name }}"
                              class="rounded-circle me-3"
                              style="width: 48px; height: 48px; object-fit: cover;">
@@ -82,7 +75,6 @@
                         </div>
                     </div>
 
-                    <!-- Key Stats -->
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-md-3">
                             <div class="bg-light rounded p-3 text-center">
@@ -114,7 +106,6 @@
                         </div>
                     </div>
 
-                    <!-- Progress Bar -->
                     @php
                         $percentage = $opportunity->volunteers_needed > 0 
                             ? ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100 
@@ -136,7 +127,6 @@
                         </div>
                     </div>
 
-                    <!-- Apply Button -->
                     @auth
                         @if(auth()->user()->user_type === 'Volunteer')
                             @if($hasApplied ?? false)
@@ -146,12 +136,15 @@
                                 <a href="{{ route('volunteer.applications.my') }}" class="alert-link">Xem đơn ứng tuyển</a>
                             </div>
                             @elseif($opportunity->status === 'Active' && $opportunity->volunteers_registered < $opportunity->volunteers_needed)
+                            
+                            {{-- SỬA LỖI Ở ĐÂY: Truyền tham số 'opportunity' (là ID) vào route --}}
                             <div class="d-grid">
-                                <a href="{{ route('volunteer.applications.create') }}?opportunity_id={{ $opportunity->opportunity_id }}" 
-                                   class="btn btn-primary btn-lg">
+                                <a href="{{ route('volunteer.applications.create', ['opportunity' => $opportunity->opportunity_id]) }}" 
+                                   class="btn btn-primary btn-lg d-grid gap-2">
                                     <i class="fas fa-paper-plane"></i> Nộp Đơn Ứng Tuyển
                                 </a>
                             </div>
+
                             @else
                             <div class="alert alert-warning mb-0">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -169,7 +162,6 @@
                 </div>
             </div>
 
-            <!-- Description -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
                     <h4 class="mb-3">
@@ -181,7 +173,6 @@
                 </div>
             </div>
 
-            <!-- Requirements -->
             @if($opportunity->requirements)
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
@@ -197,17 +188,16 @@
                         <h6 class="text-muted mb-2">Kỹ năng cần thiết:</h6>
                         <div class="d-flex flex-wrap gap-2">
                             @php
-    $skills = is_array($opportunity->required_skills)
-        ? $opportunity->required_skills
-        : explode(',', $opportunity->required_skills ?? '');
-@endphp
+                                $skills = is_array($opportunity->required_skills)
+                                    ? $opportunity->required_skills
+                                    : explode(',', $opportunity->required_skills ?? '');
+                            @endphp
 
-@foreach($skills as $skill)
-    <span class="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full mr-2 mb-2">
-        {{ trim($skill) }}
-    </span>
-@endforeach
-
+                            @foreach($skills as $skill)
+                                <span class="inline-block bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full mr-2 mb-2">
+                                    {{ trim($skill) }}
+                                </span>
+                            @endforeach
                         </div>
                     </div>
                     @endif
@@ -226,7 +216,6 @@
             </div>
             @endif
 
-            <!-- Benefits -->
             @if($opportunity->benefits)
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
@@ -240,7 +229,6 @@
             </div>
             @endif
 
-            <!-- Location Map -->
             @if($opportunity->latitude && $opportunity->longitude)
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
@@ -252,7 +240,6 @@
             </div>
             @endif
 
-            <!-- Reviews Section -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
                     <h4 class="mb-3">
@@ -269,7 +256,7 @@
                         @foreach($reviews as $review)
                         <div class="review-item border-bottom pb-3 mb-3">
                             <div class="d-flex align-items-start">
-                                <img src="{{ $review->reviewer->avatar_url ?? 'https://ui-avatars.com/api/?name='.urlencode($review->reviewer->first_name).'&background=3B82F6&color=fff' }}" 
+                                <img src="{{ $review->reviewer->avatar_url ? asset('storage/' . $review->reviewer->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode($review->reviewer->first_name).'&background=3B82F6&color=fff' }}" 
                                      alt="{{ $review->reviewer->first_name }}"
                                      class="rounded-circle me-3"
                                      style="width: 40px; height: 40px;">
@@ -300,17 +287,14 @@
 
         </div>
 
-        <!-- Sidebar -->
         <div class="col-lg-4">
             
-            <!-- Important Info Card -->
             <div class="card border-0 shadow-sm mb-4 sticky-top" style="top: 20px;">
                 <div class="card-body p-4">
                     <h5 class="mb-3">
                         <i class="fas fa-info-circle text-primary"></i> Thông tin quan trọng
                     </h5>
 
-                    <!-- Schedule -->
                     <div class="mb-3">
                         <h6 class="text-muted small mb-2">
                             <i class="fas fa-calendar-alt"></i> Lịch trình
@@ -329,7 +313,6 @@
 
                     <hr>
 
-                    <!-- Deadline -->
                     @if($opportunity->application_deadline)
                     <div class="mb-3">
                         <h6 class="text-muted small mb-2">
@@ -348,7 +331,6 @@
                     <hr>
                     @endif
 
-                    <!-- Schedule Type -->
                     <div class="mb-3">
                         <h6 class="text-muted small mb-2">
                             <i class="fas fa-sync-alt"></i> Loại lịch
@@ -358,7 +340,6 @@
 
                     <hr>
 
-                    <!-- Location -->
                     <div class="mb-3">
                         <h6 class="text-muted small mb-2">
                             <i class="fas fa-map-marker-alt"></i> Địa điểm
@@ -368,7 +349,6 @@
 
                     <hr>
 
-                    <!-- Contact -->
                     <div class="mb-3">
                         <h6 class="text-muted small mb-2">
                             <i class="fas fa-phone"></i> Liên hệ
@@ -385,7 +365,6 @@
                         </p>
                     </div>
 
-                    <!-- Share Buttons -->
                     <hr>
                     <div>
                         <h6 class="text-muted small mb-2">
@@ -408,7 +387,6 @@
                         </div>
                     </div>
 
-                    <!-- View Count -->
                     <hr>
                     <div class="text-center small text-muted">
                         <i class="fas fa-eye"></i> {{ $opportunity->view_count }} lượt xem
@@ -417,7 +395,6 @@
                 </div>
             </div>
 
-            <!-- Similar Opportunities -->
             @if($similarOpportunities->isNotEmpty())
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">

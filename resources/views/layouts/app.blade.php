@@ -6,8 +6,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'VolunteerConnect Platform')</title>
-
+    <title>@yield('title', 'Volunteer Connect Pro')</title>
+    <link rel="icon" href="{{ asset('local.jpg') }}" type="image/jpeg">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -163,8 +163,8 @@
                                 <div
                                     class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition">
                                 </div>
-                                <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-lg">
-                                    <i class="fas fa-hands-helping text-white text-xl"></i>
+                                <div class="relative rounded-lg overflow-hidden shadow-md">
+                                    <img src="{{ asset('local.jpg') }}" alt="Logo" class="w-10 h-10 object-cover">
                                 </div>
                             </div>
                             <span class="font-bold text-xl gradient-text hidden sm:block">VolunteerConnect</span>
