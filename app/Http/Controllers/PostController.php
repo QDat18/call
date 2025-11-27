@@ -12,6 +12,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use App\Models\PostMedia;
 
 class PostController extends Controller
 {
@@ -119,9 +121,10 @@ class PostController extends Controller
             'title' => 'nullable|string|max:200',
             'content' => 'required|string|min:10|max:5000',
             'post_type' => 'required|in:announcement,success_story,event,impact_update,question,general',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'status' => 'nullable|in:draft,published',
-            'allow_comments' => 'nullable'
+            'allow_comments' => 'nullable',
+            // Validate nhiều file: ảnh hoặc video, tối đa 20MB mỗi file
+            'media.*' => 'mimes:jpeg,png,jpg,gif,mp4,mov,avi,webm|max:20480'
         ]);
 
         if ($validator->fails()) {
@@ -129,40 +132,54 @@ class PostController extends Controller
         }
 
         try {
-            // Handle image upload
-            $imageUrl = null;
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-
-                // Create directory if not exists
-                $uploadPath = public_path('uploads/posts');
-                if (!file_exists($uploadPath)) {
-                    mkdir($uploadPath, 0777, true);
-                }
-
-                $image->move($uploadPath, $imageName);
-                $imageUrl = '/uploads/posts/' . $imageName;
-            }
+            // Bắt đầu Transaction: Đảm bảo cả Post và Media cùng được tạo thành công
+            DB::beginTransaction();
 
             $status = $request->status ?? 'published';
 
+            // 1. Tạo bài viết (Post)
+            // Lưu ý: Chúng ta không lưu 'image_url' vào bảng posts nữa vì đã có bảng riêng
             $post = Post::create([
                 'user_id' => Auth::id(),
                 'title' => $request->title,
                 'content' => $request->content,
                 'post_type' => $request->post_type,
-                'image_url' => $imageUrl,
                 'status' => $status,
                 'allow_comments' => $request->has('allow_comments'),
                 'published_at' => $status === 'published' ? now() : null
             ]);
+
+            // 2. Xử lý upload nhiều file (Media)
+            if ($request->hasFile('media')) {
+                foreach ($request->file('media') as $file) {
+                    // Lưu file vào thư mục 'storage/app/public/posts'
+                    // Hàm store() sẽ trả về đường dẫn dạng: posts/filename.jpg
+                    $path = $file->store('posts', 'public');
+
+                    // Xác định loại file dựa trên mime type
+                    $mimeType = $file->getMimeType();
+                    $fileType = str_starts_with($mimeType, 'video') ? 'video' : 'image';
+
+                    // Tạo bản ghi trong bảng post_media
+                    \App\Models\PostMedia::create([
+                        'post_id' => $post->post_id,
+                        'file_path' => $path,
+                        'file_type' => $fileType
+                    ]);
+                }
+            }
+
+            // Nếu mọi thứ ok thì lưu vào DB
+            DB::commit();
 
             $message = $status === 'draft' ? 'Post saved as draft' : 'Post published successfully!';
 
             return redirect()->route('posts.my-posts')
                 ->with('success', $message);
         } catch (\Exception $e) {
+            // Nếu có lỗi thì hoàn tác tất cả (không tạo rác trong DB)
+            DB::rollBack();
+
             return back()
                 ->with('error', 'Failed to create post: ' . $e->getMessage())
                 ->withInput();

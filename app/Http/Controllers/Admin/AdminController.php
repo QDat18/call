@@ -14,47 +14,61 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class AdminController extends Controller
 {
+    // public function __construct()
+    // {
+    //     $this->middleware(['auth', 'role:Admin']);
+    // }
     /**
      * Display admin dashboard
      */
     public function dashboard()
     {
-        // Statistics
+        // 1. Statistics Cards (Dữ liệu thực từ DB)
         $stats = [
-            'total_users' => User::count(),
-            'new_users_this_month' => User::whereMonth('created_at', now()->month)->count(),
-            'total_orgs' => Organization::count(),
+            'total_users'           => User::count(),
+            'new_users_this_month'  => User::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+
+            'total_orgs'            => Organization::count(),
             'pending_verifications' => Organization::where('verification_status', 'Pending')->count(),
-            'active_opportunities' => VolunteerOpportunity::where('status', 'Active')->count(),
-            'upcoming' => VolunteerOpportunity::where('status', 'Active')
-                ->where('start_date', '>', now())
-                ->count(),
-            'total_applications' => Application::count(),
-            'pending_applications' => Application::where('status', 'Pending')->count(),
+
+            'active_opportunities'  => VolunteerOpportunity::where('status', 'Active')->count(),
+            'upcoming'              => VolunteerOpportunity::where('status', 'Active')->where('start_date', '>', now())->count(),
+
+            'total_applications'    => Application::count(),
+            'pending_applications'  => Application::where('status', 'Pending')->count(),
+
+            // Thống kê thêm cho phần Email Management
+            'total_volunteers'      => User::where('user_type', 'Volunteer')->count(),
+            'active_users'          => User::where('is_active', true)->count(),
         ];
 
-        // Recent Users
+        // 2. Recent Users (5 người dùng mới nhất)
         $recentUsers = User::latest()->take(5)->get();
 
-        // Pending Organizations
+        // 3. Pending Organizations (5 tổ chức chờ duyệt mới nhất)
         $pendingOrgs = Organization::where('verification_status', 'Pending')
             ->with('user')
             ->latest()
             ->take(5)
             ->get();
 
-        // Chart Data
+        // 4. Chart Data (Biểu đồ tăng trưởng User & Trạng thái đơn)
         $chartData = [
             'userGrowth' => [
                 'labels' => collect(range(6, 0))->map(function ($days) {
-                    return now()->subDays($days)->format('M d');
-                })->toArray(),
+                    return now()->subDays($days)->format('D, M d');
+                })->values()->toArray(),
                 'data' => collect(range(6, 0))->map(function ($days) {
                     return User::whereDate('created_at', now()->subDays($days))->count();
-                })->toArray(),
+                })->values()->toArray(),
             ],
             'applicationStatus' => [
                 Application::where('status', 'Pending')->count(),
@@ -64,33 +78,56 @@ class AdminController extends Controller
             ],
         ];
 
-        // Recent Activities
-        $recentActivities = [
-            [
-                'description' => 'New user registered: John Doe',
-                'time' => '5 minutes ago',
-                'icon' => 'user-plus',
-                'color' => 'blue'
-            ],
-            [
-                'description' => 'Organization verified: Green Earth',
-                'time' => '1 hour ago',
-                'icon' => 'check-circle',
-                'color' => 'green'
-            ],
-            [
-                'description' => 'New opportunity posted',
-                'time' => '2 hours ago',
-                'icon' => 'clipboard-list',
-                'color' => 'purple'
-            ],
-            [
-                'description' => 'Application approved',
-                'time' => '3 hours ago',
-                'icon' => 'file-alt',
-                'color' => 'indigo'
-            ],
-        ];
+        // 5. Recent Activities (Kết hợp từ nhiều nguồn: User mới, Org mới, Opportunity mới)
+        // Lấy 5 hoạt động mới nhất từ 3 bảng khác nhau
+        $newUsers = User::select('created_at', 'first_name', 'last_name')
+            ->latest()
+            ->take(3)
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'description' => "New user registered: {$user->first_name} {$user->last_name}",
+                    'time'        => $user->created_at, // Giữ nguyên object Carbon để sort sau
+                    'time_diff'   => $user->created_at->diffForHumans(),
+                    'icon'        => 'user-plus',
+                    'color'       => 'blue'
+                ];
+            });
+
+        $verifiedOrgs = Organization::where('verification_status', 'Verified')
+            ->select('updated_at', 'organization_name')
+            ->latest('updated_at')
+            ->take(3)
+            ->get()
+            ->map(function ($org) {
+                return [
+                    'description' => "Organization verified: {$org->organization_name}",
+                    'time'        => $org->updated_at,
+                    'time_diff'   => $org->updated_at->diffForHumans(),
+                    'icon'        => 'check-circle',
+                    'color'       => 'green'
+                ];
+            });
+
+        $newOpps = VolunteerOpportunity::select('created_at', 'title')
+            ->latest()
+            ->take(3)
+            ->get()
+            ->map(function ($opp) {
+                return [
+                    'description' => "New opportunity: " . \Str::limit($opp->title, 20),
+                    'time'        => $opp->created_at,
+                    'time_diff'   => $opp->created_at->diffForHumans(),
+                    'icon'        => 'clipboard-list',
+                    'color'       => 'purple'
+                ];
+            });
+
+        // Gộp và sắp xếp theo thời gian mới nhất
+        $recentActivities = $newUsers->concat($verifiedOrgs)->concat($newOpps)
+            ->sortByDesc('time')
+            ->take(6) // Lấy 6 hoạt động mới nhất
+            ->values(); // Reset key
 
         return view('admin.dashboard', compact('stats', 'recentUsers', 'pendingOrgs', 'chartData', 'recentActivities'));
     }
@@ -123,10 +160,16 @@ class AdminController extends Controller
 
         // Filter by status
         if ($request->filled('status')) {
-            $query->where('is_active', $request->status === 'active');
+            $isActive = $request->status === 'active';
+            $query->where('is_active', $isActive);
         }
 
-        $users = $query->latest()->paginate(15);
+        // Sorting (Mới thêm để UX tốt hơn)
+        $sortField = $request->get('sort', 'created_at');
+        $sortOrder = $request->get('order', 'desc');
+        $query->orderBy($sortField, $sortOrder);
+
+        $users = $query->paginate(15)->withQueryString();
 
         return view('admin.users.index', compact('users'));
     }
@@ -146,71 +189,70 @@ class AdminController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'required|string|max:15|unique:users,phone',
-            'user_type' => 'required|in:Volunteer,Organization,Admin',
-            'city' => 'required|string',
-            'password' => 'required|string|min:8',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Thêm validation cho avatar
-
+            'last_name'  => 'required|string|max:50',
+            'email'      => 'required|email|unique:users,email',
+            'phone'      => 'nullable|string|max:15|unique:users,phone', // Phone có thể null
+            'user_type'  => 'required|in:Volunteer,Organization,Admin',
+            'city'       => 'required|string',
+            'password'   => 'required|string|min:8',
+            'avatar'     => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first()
-            ], 422);
+            // Nếu là AJAX request
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
         try {
             DB::beginTransaction();
+
             $avatarUrl = null;
             if ($request->hasFile('avatar')) {
                 $avatar = $request->file('avatar');
-                $avatarName = time() . '_' . $avatar->getClientOriginalName();
-                $avatar->move(public_path('uploads/avatars'), $avatarName);
-                $avatarUrl = '/uploads/avatars/' . $avatarName;
+                $avatarName = time() . '_' . uniqid() . '.' . $avatar->getClientOriginalExtension();
+                $avatar->storeAs('public/avatars', $avatarName); // Dùng Storage chuẩn
+                $avatarUrl = 'avatars/' . $avatarName;
             }
 
             $user = User::create([
                 'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'user_type' => $request->user_type,
-                'city' => $request->city,
-                'password' => Hash::make($request->password),
+                'last_name'  => $request->last_name,
+                'email'      => $request->email,
+                'phone'      => $request->phone,
+                'user_type'  => $request->user_type,
+                'city'       => $request->city,
+                'password'   => Hash::make($request->password),
                 'avatar_url' => $avatarUrl,
-                'is_active' => true,
-                'is_verified' => true,
+                'is_active'  => true,
+                'is_verified' => true, // Admin tạo thì auto verify
             ]);
 
-            // Create profile based on type
+            // Create related profile
             if ($request->user_type === 'Volunteer') {
-                \App\Models\VolunteerProfile::create([
-                    'user_id' => $user->user_id,
-                ]);
+                \App\Models\VolunteerProfile::create(['user_id' => $user->user_id]);
             } elseif ($request->user_type === 'Organization') {
                 \App\Models\Organization::create([
                     'user_id' => $user->user_id,
-                    'organization_name' => $request->first_name . ' ' . $request->last_name,
-                    'verification_status' => 'Verified',
+                    'organization_name' => $request->organization_name ?? ($user->first_name . ' ' . $user->last_name),
+                    'verification_status' => 'Verified', // Admin tạo thì verified luôn
                 ]);
             }
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'User created successfully'
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'User created successfully']);
+            }
+            return redirect()->route('admin.users.index')->with('success', 'User created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create user: ' . $e->getMessage()
-            ], 500);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+            return redirect()->back()->with('error', 'Failed: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -221,43 +263,38 @@ class AdminController extends Controller
     {
         $query = User::query();
 
-        // Apply filters
-        if ($request->filled('user_type')) {
-            $query->where('user_type', $request->user_type);
-        }
+        if ($request->filled('user_type')) $query->where('user_type', $request->user_type);
+        if ($request->filled('status')) $query->where('is_active', $request->status === 'active');
 
-        if ($request->filled('status')) {
-            $query->where('is_active', $request->status === 'active');
-        }
-
-        $users = $query->get();
-
-        $filename = 'users_' . date('Y-m-d_His') . '.csv';
+        $filename = 'users_export_' . date('Y-m-d_H-i') . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
         ];
 
-        $callback = function () use ($users) {
+        $callback = function () use ($query) {
             $file = fopen('php://output', 'w');
+            fputcsv($file, ['ID', 'Full Name', 'Email', 'Phone', 'Type', 'City', 'Status', 'Joined Date']);
 
-            fputcsv($file, ['ID', 'Name', 'Email', 'Phone', 'Type', 'City', 'Status', 'Verified', 'Created']);
-
-            foreach ($users as $user) {
-                fputcsv($file, [
-                    $user->user_id,
-                    $user->first_name . ' ' . $user->last_name,
-                    $user->email,
-                    $user->phone ?? 'N/A',
-                    $user->user_type,
-                    $user->city ?? 'N/A',
-                    $user->is_active ? 'Active' : 'Inactive',
-                    $user->is_verified ? 'Yes' : 'No',
-                    $user->created_at->format('Y-m-d'),
-                ]);
-            }
-
+            // Dùng chunk để tránh memory leak khi export dữ liệu lớn
+            $query->chunk(100, function ($users) use ($file) {
+                foreach ($users as $user) {
+                    fputcsv($file, [
+                        $user->user_id,
+                        $user->first_name . ' ' . $user->last_name,
+                        $user->email,
+                        $user->phone ?? 'N/A',
+                        $user->user_type,
+                        $user->city ?? 'N/A',
+                        $user->is_active ? 'Active' : 'Inactive',
+                        $user->created_at->format('Y-m-d'),
+                    ]);
+                }
+            });
             fclose($file);
         };
 
@@ -365,7 +402,24 @@ class AdminController extends Controller
             ], 500);
         }
     }
+    public function deactivateUser($id)
+    {
+        $user = User::findOrFail($id);
 
+        if ($user->user_id === auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot deactivate your own account'
+            ], 403);
+        }
+
+        $user->update(['is_active' => false]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User deactivated successfully'
+        ]);
+    }
     /**
      * Suspend user
      */
@@ -574,41 +628,80 @@ class AdminController extends Controller
     /**
      * Export organizations
      */
-    public function organizationsExport()
+    /**
+     * Export organizations
+     */
+    public function organizationsExport(Request $request)
     {
-        $organizations = Organization::with('user')->get();
+        $query = Organization::with('user');
 
-        $filename = 'organizations_' . date('Y-m-d_His') . '.csv';
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function () use ($organizations) {
-            $file = fopen('php://output', 'w');
-
-            fputcsv($file, ['ID', 'Name', 'Type', 'Status', 'Email', 'Phone', 'Founded', 'Opportunities', 'Rating', 'Created']);
-
-            foreach ($organizations as $org) {
-                fputcsv($file, [
-                    $org->org_id,
-                    $org->organization_name,
-                    $org->organization_type,
-                    $org->verification_status,
-                    $org->user->email,
-                    $org->user->phone,
-                    $org->founded_year,
-                    $org->total_opportunities,
-                    $org->rating,
-                    $org->created_at->format('Y-m-d'),
-                ]);
+        // 1. Xử lý lọc theo ID (Nếu chọn checkbox)
+        if ($request->filled('org_ids')) {
+            $ids = is_array($request->org_ids) ? $request->org_ids : explode(',', $request->org_ids);
+            $query->whereIn('org_id', $ids);
+        } else {
+            // 2. Nếu không chọn ID thì dùng bộ lọc tìm kiếm hiện tại
+            if ($request->filled('search')) {
+                $query->where('organization_name', 'LIKE', "%{$request->search}%");
             }
+            if ($request->filled('status')) {
+                $query->where('verification_status', $request->status);
+            }
+            if ($request->filled('type')) {
+                $query->where('organization_type', $request->type);
+            }
+        }
 
-            fclose($file);
-        };
+        $organizations = $query->get();
 
-        return response()->stream($callback, 200, $headers);
+        // === TẠO FILE EXCEL ===
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Organizations List');
+
+        // -- Header --
+        $headers = ['ID', 'Name', 'Type', 'Status', 'Email', 'Phone', 'Founded', 'Opportunities', 'Rating', 'Created At'];
+        $sheet->fromArray($headers, NULL, 'A1');
+
+        // -- Style Header (Màu xanh, chữ đậm) --
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']], // Màu Indigo
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
+        ];
+        $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
+
+        // -- Data --
+        $row = 2;
+        foreach ($organizations as $org) {
+            $sheet->setCellValue('A' . $row, $org->org_id);
+            $sheet->setCellValue('B' . $row, $org->organization_name);
+            $sheet->setCellValue('C' . $row, $org->organization_type);
+            $sheet->setCellValue('D' . $row, $org->verification_status);
+            $sheet->setCellValue('E' . $row, $org->user->email ?? 'N/A');
+            $sheet->setCellValue('F' . $row, $org->user->phone ?? 'N/A');
+            $sheet->setCellValue('G' . $row, $org->founded_year);
+            $sheet->setCellValue('H' . $row, $org->total_opportunities);
+            $sheet->setCellValue('I' . $row, $org->rating);
+            $sheet->setCellValue('J' . $row, $org->created_at->format('Y-m-d'));
+            $row++;
+        }
+
+        // -- Auto Size Columns --
+        foreach (range('A', 'J') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // -- Xuất file --
+        $filename = 'organizations_export_' . date('Y-m-d_H-i') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     /**
@@ -1250,7 +1343,10 @@ class AdminController extends Controller
      */
     public function settings()
     {
-        return view('admin.settings.index');
+        // Lấy toàn bộ settings từ DB và chuyển thành mảng [key => value]
+        $settings = DB::table('settings')->pluck('value', 'key')->toArray();
+
+        return view('admin.settings.index', compact('settings'));
     }
 
     /**
@@ -1258,8 +1354,185 @@ class AdminController extends Controller
      */
     public function updateSettings(Request $request)
     {
-        // Save settings to database or config
+        // Danh sách các key hợp lệ
+        $validKeys = [
+            'site_name',
+            'contact_email',
+            'site_description',
+            'email_notifications',
+            'mail_from_name',
+            'mail_from_address',
+            'allow_registration',
+            'require_email_verification',
+            'maintenance_mode',
+            'maintenance_message'
+        ];
 
-        return redirect()->back()->with('success', 'Settings updated successfully');
+        $data = $request->only($validKeys);
+
+        // Xử lý checkbox (nếu không check thì không gửi lên, cần set false)
+        $checkboxes = ['email_notifications', 'allow_registration', 'require_email_verification', 'maintenance_mode'];
+        foreach ($checkboxes as $key) {
+            $data[$key] = $request->has($key) ? '1' : '0';
+        }
+
+        // Lưu vào DB
+        foreach ($data as $key => $value) {
+            DB::table('settings')->updateOrInsert(
+                ['key' => $key],
+                ['value' => $value, 'updated_at' => now()]
+            );
+        }
+
+        // Cập nhật file .env nếu cần (Nâng cao - cẩn thận quyền ghi file)
+        // ...
+
+        // Kiểm tra chế độ bảo trì
+        if ($data['maintenance_mode'] == '1') {
+            // Có thể gọi Artisan::call('down');
+        } else {
+            // Artisan::call('up');
+        }
+
+        return redirect()->back()->with('success', 'System settings updated successfully.');
+    }
+
+    public function downloadUserTemplate()
+    {
+        $filename = 'users_import_template.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () {
+            $file = fopen('php://output', 'w');
+            // Header columns required for import
+            fputcsv($file, ['first_name', 'last_name', 'email', 'phone', 'user_type', 'city', 'password']);
+            // Example row
+            fputcsv($file, ['John', 'Doe', 'john@example.com', '0123456789', 'Volunteer', 'Hanoi', 'password123']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function importUsers(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt,xlsx',
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getPathname(), 'r');
+
+        // Bỏ qua dòng header
+        fgetcsv($handle);
+
+        $imported = 0;
+        $errors = [];
+        $rowNumber = 1;
+
+        DB::beginTransaction();
+        try {
+            while (($data = fgetcsv($handle)) !== false) {
+                $rowNumber++;
+
+                // Giả sử thứ tự cột: first_name, last_name, email, phone, user_type, city, password
+                if (count($data) < 7) {
+                    $errors[] = "Row $rowNumber: Invalid format";
+                    continue;
+                }
+
+                $email = $data[2];
+
+                // Bỏ qua nếu email đã tồn tại (nếu checkbox skip_duplicates được chọn)
+                if ($request->has('skip_duplicates') && User::where('email', $email)->exists()) {
+                    continue;
+                }
+
+                try {
+                    $user = User::create([
+                        'first_name' => $data[0],
+                        'last_name'  => $data[1],
+                        'email'      => $email,
+                        'phone'      => $data[3] ?: null,
+                        'user_type'  => in_array($data[4], ['Volunteer', 'Organization']) ? $data[4] : 'Volunteer',
+                        'city'       => $data[5],
+                        'password'   => Hash::make($data[6]),
+                        'is_active'  => true,
+                        'is_verified' => true,
+                    ]);
+
+                    // Tạo profile tương ứng
+                    if ($user->user_type === 'Volunteer') {
+                        \App\Models\VolunteerProfile::create(['user_id' => $user->user_id]);
+                    } elseif ($user->user_type === 'Organization') {
+                        \App\Models\Organization::create([
+                            'user_id' => $user->user_id,
+                            'organization_name' => $user->first_name . ' ' . $user->last_name,
+                            'verification_status' => 'Verified'
+                        ]);
+                    }
+
+                    $imported++;
+                } catch (\Exception $e) {
+                    $errors[] = "Row $rowNumber: " . $e->getMessage();
+                }
+            }
+
+            DB::commit();
+            fclose($handle);
+
+            if (count($errors) > 0) {
+                return response()->json([
+                    'success' => true, // Vẫn trả về true để reload, nhưng kèm cảnh báo
+                    'message' => "Imported $imported users with some errors.",
+                    'errors' => $errors
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported $imported users."
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            fclose($handle);
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function pendingActivities(Request $request)
+    {
+        $query = VolunteerActivity::with(['volunteer', 'opportunity', 'organization'])
+            ->where('status', 'Pending');
+
+        // Filter logic (Search, Org, Date...) giống như file pending.blade.php cần
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('volunteer', function ($q) use ($search) {
+                $q->where('first_name', 'LIKE', "%{$search}%")
+                    ->orWhere('last_name', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('org_id')) {
+            $query->where('org_id', $request->org_id);
+        }
+
+        $activities = $query->latest()->paginate(20);
+
+        // Lấy danh sách organization để fill vào dropdown filter
+        $organizations = \App\Models\Organization::select('org_id', 'organization_name')->get();
+
+        return view('admin.activities.pending', compact('activities', 'organizations'));
     }
 }

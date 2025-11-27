@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 23, 2025 at 01:13 PM
+-- Generation Time: Nov 27, 2025 at 12:52 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -296,6 +296,13 @@ CREATE TABLE `connections` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Dumping data for table `connections`
+--
+
+INSERT INTO `connections` (`connection_id`, `user_id`, `friend_id`, `status`, `action_user_id`, `requested_at`, `accepted_at`, `blocked_at`, `created_at`, `updated_at`) VALUES
+(1, 363, 2, 'accepted', 2, '2025-11-23 16:32:59', '2025-11-25 17:04:43', NULL, '2025-11-23 16:32:59', '2025-11-25 17:04:43');
+
+--
 -- Triggers `connections`
 --
 DELIMITER $$
@@ -352,7 +359,8 @@ INSERT INTO `conversations` (`conversation_id`, `conversation_type`, `title`, `o
 (17, 'direct', NULL, NULL, 305, '2025-11-20 16:00:41', 1, '2025-11-22 16:12:57'),
 (18, 'direct', NULL, NULL, 317, '2025-11-20 10:26:24', 1, '2025-11-22 16:13:00'),
 (19, 'direct', NULL, NULL, 332, '2025-11-21 18:14:46', 1, '2025-11-22 16:13:04'),
-(20, 'direct', NULL, NULL, 351, '2025-11-17 11:19:10', 1, '2025-11-22 16:13:09');
+(20, 'direct', NULL, NULL, 351, '2025-11-17 11:19:10', 1, '2025-11-22 16:13:09'),
+(21, 'direct', 'Chat với quý duy', NULL, 2, '2025-11-25 17:04:57', 1, '2025-11-25 17:04:57');
 
 -- --------------------------------------------------------
 
@@ -369,6 +377,14 @@ CREATE TABLE `conversation_participants` (
   `unread_count` int(11) NOT NULL DEFAULT 0,
   `is_active` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `conversation_participants`
+--
+
+INSERT INTO `conversation_participants` (`participant_id`, `conversation_id`, `user_id`, `joined_at`, `last_read_at`, `unread_count`, `is_active`) VALUES
+(1, 21, 2, '2025-11-25 17:04:57', NULL, 0, 1),
+(2, 21, 363, '2025-11-25 17:04:57', NULL, 1, 1);
 
 -- --------------------------------------------------------
 
@@ -387,6 +403,13 @@ CREATE TABLE `donations` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `donations`
+--
+
+INSERT INTO `donations` (`id`, `campaign_id`, `user_id`, `amount`, `message`, `status`, `vnp_TransactionNo`, `created_at`, `updated_at`) VALUES
+(1, 1, 2, 50000, 'oke chúc hsq khỏe mạnh', 'Pending', NULL, '2025-11-24 05:57:30', '2025-11-24 05:57:30');
 
 -- --------------------------------------------------------
 
@@ -409,6 +432,13 @@ CREATE TABLE `donation_campaigns` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `donation_campaigns`
+--
+
+INSERT INTO `donation_campaigns` (`id`, `admin_user_id`, `title`, `description`, `banner_image_url`, `target_amount`, `current_amount`, `end_date`, `status`, `is_pinned`, `created_at`, `updated_at`) VALUES
+(1, 3, 'Ủng hộ Hoa Sơn Quý', 'Quý - là 1 cậu bé tài năng từ béo đến ngậy', 'campaign_banners/JPA2D0nwt3Hw1Xv49f4a7sRNQ4N3fSDXyayPI46F.jpg', 1000000, 0, '2025-11-27 00:00:00', 'Active', 1, '2025-11-24 05:56:04', '2025-11-24 05:56:04');
+
 -- --------------------------------------------------------
 
 --
@@ -416,15 +446,27 @@ CREATE TABLE `donation_campaigns` (
 --
 
 CREATE TABLE `email_logs` (
-  `log_id` bigint(20) UNSIGNED NOT NULL,
-  `recipient_type` enum('all','volunteers','organizations','active','single') NOT NULL,
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `recipient_type` varchar(255) NOT NULL,
   `recipient_count` int(11) NOT NULL DEFAULT 0,
   `subject` varchar(255) NOT NULL,
-  `sent_by` bigint(20) UNSIGNED NOT NULL,
-  `sent_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `sent_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `sent_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `email_logs`
+--
+
+INSERT INTO `email_logs` (`id`, `recipient_type`, `recipient_count`, `subject`, `sent_by`, `sent_at`, `created_at`, `updated_at`) VALUES
+(1, 'single', 1, 'Important Announcement', 3, '2025-11-26 16:03:06', '2025-11-26 16:03:06', NULL),
+(2, 'single', 1, 'ê con chó', 3, '2025-11-27 08:53:48', '2025-11-27 08:53:48', NULL),
+(3, 'single', 1, 'hoa son quy', 3, '2025-11-27 09:22:28', '2025-11-27 09:22:28', NULL),
+(4, 'single', 1, 'Chào mừng {{full_name}} đến với Anh Em Rọt Store', 3, '2025-11-27 09:56:03', '2025-11-27 09:56:03', NULL),
+(5, 'single', 1, 'Important Announcement', 3, '2025-11-27 11:13:10', '2025-11-27 11:13:10', NULL),
+(6, 'single', 1, 'Important Announcement', 3, '2025-11-27 11:13:14', '2025-11-27 11:13:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -558,7 +600,8 @@ INSERT INTO `favorites` (`favorite_id`, `user_id`, `opportunity_id`, `notes`, `c
 (95, 52, 122, 'Quis laborum voluptatem sapiente veritatis.', '2025-11-22 16:13:12'),
 (96, 53, 60, NULL, '2025-11-22 16:13:12'),
 (97, 53, 88, 'Dolor dicta dolores qui fugit delectus.', '2025-11-22 16:13:12'),
-(98, 53, 122, NULL, '2025-11-22 16:13:12');
+(98, 53, 122, NULL, '2025-11-22 16:13:12'),
+(99, 363, 139, NULL, '2025-11-23 16:33:13');
 
 -- --------------------------------------------------------
 
@@ -876,7 +919,8 @@ INSERT INTO `messages` (`message_id`, `conversation_id`, `sender_id`, `message_t
 (256, 20, 358, 'text', 'Iste accusamus provident quo magnam ea. Deserunt dolorum consequuntur veniam qui. A id aut est sit.', NULL, NULL, 0, '2025-11-21 09:12:07'),
 (257, 20, 359, 'text', 'Quia facere illum quae voluptates. Eius est esse ut deleniti harum. Molestiae corporis explicabo repellendus blanditiis ut eos. At sint dolorem odio ex recusandae error.', NULL, NULL, 0, '2025-11-17 12:27:39'),
 (258, 20, 360, 'file', NULL, 'https://via.placeholder.com/640x480.png/00ff11?text=eveniet', 'cumque.dpg', 0, '2025-11-19 21:20:13'),
-(259, 20, 361, 'image', NULL, 'https://via.placeholder.com/640x480.png/006600?text=molestias', 'ex.xlsm', 0, '2025-11-19 21:36:43');
+(259, 20, 361, 'image', NULL, 'https://via.placeholder.com/640x480.png/006600?text=molestias', 'ex.xlsm', 0, '2025-11-19 21:36:43'),
+(260, 21, 2, 'text', 'hsq', NULL, NULL, 0, '2025-11-25 17:04:57');
 
 -- --------------------------------------------------------
 
@@ -928,7 +972,9 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (31, '2025_11_07_151427_add_social_id_to_users_table', 1),
 (32, '2025_11_15_create_donation_campaigns_table', 1),
 (33, '2025_11_15_create_donations_table', 1),
-(34, 'create_email_logs_table', 1);
+(34, 'create_email_logs_table', 1),
+(35, '2025_11_26_221503_create_email_logs_table', 2),
+(36, '2025_11_27_174528_create_settings_table', 3);
 
 -- --------------------------------------------------------
 
@@ -1132,7 +1178,8 @@ INSERT INTO `notifications` (`notification_id`, `user_id`, `notification_type`, 
 (175, 201, 'Message', 'Non temporibus id voluptatem est.', 'Rerum eaque non officiis porro est architecto quasi molestiae ipsa ut incidunt ducimus dolore.', NULL, NULL, 'http://schinner.net/non-quo-in-officiis-fuga-tempora', 0, 'medium', '2025-11-22 16:13:13'),
 (176, 201, 'Video Call', 'Eius sed qui similique soluta dolor.', 'Rem voluptatem aut laudantium debitis consequatur necessitatibus quos sit nobis.', 77, NULL, NULL, 0, 'high', '2025-11-22 16:13:13'),
 (177, 201, 'System', 'Numquam quis rerum optio sed culpa.', 'In nostrum tenetur in expedita neque omnis est et saepe exercitationem cum dolore.', NULL, NULL, 'http://www.jast.biz/qui-quas-est-omnis', 0, 'high', '2025-11-22 16:13:13'),
-(178, 201, 'Application', 'Aperiam dolorum vel perferendis corporis neque ut.', 'Porro cum asperiores animi rem deserunt sunt dicta tempora possimus incidunt.', 57, NULL, 'http://kreiger.info/sint-tempore-culpa-omnis-ad-exercitationem', 1, 'low', '2025-11-22 16:13:13');
+(178, 201, 'Application', 'Aperiam dolorum vel perferendis corporis neque ut.', 'Porro cum asperiores animi rem deserunt sunt dicta tempora possimus incidunt.', 57, NULL, 'http://kreiger.info/sint-tempore-culpa-omnis-ad-exercitationem', 1, 'low', '2025-11-22 16:13:13'),
+(179, 363, 'Message', 'Bạn được thêm vào conversation mới', 'Chat với quý duy', 21, 'conversation', 'http://127.0.0.1:8000/conversations/21', 0, 'medium', '2025-11-25 17:04:57');
 
 -- --------------------------------------------------------
 
@@ -1165,8 +1212,8 @@ CREATE TABLE `organizations` (
 --
 
 INSERT INTO `organizations` (`org_id`, `user_id`, `organization_name`, `organization_type`, `description`, `mission_statement`, `website`, `contact_person`, `registration_number`, `certificates`, `verification_status`, `founded_year`, `volunteer_count`, `rating`, `total_opportunities`, `created_at`, `updated_at`) VALUES
-('org_6921e012bdfff', 1, 'Test Organzation 1', 'NPO', 'abc', NULL, 'https://mis-bav-g6.odoo.com/odoo/website?debug=assets', 'Hoa Son Quy', '1230921', NULL, 'Pending', '2025', 0, 0.00, 0, '2025-11-22 16:08:50', '2025-11-22 16:08:50'),
-('org_6921e0732472a', 2, 'Hoa Son Quy', 'NPO', 'hoa son quy', NULL, 'https://mis-bav-g6.odoo.com/odoo/website?debug=assets', 'Hoa Son Quy', '1230921', NULL, 'Verified', '2025', 0, 0.00, 0, '2025-11-22 16:10:27', '2025-11-23 11:58:21'),
+('org_6921e012bdfff', 1, 'Test Organzation 1', 'NPO', 'abc', NULL, 'https://mis-bav-g6.odoo.com/odoo/website?debug=assets', 'Hoa Son Quy', '1230921', NULL, 'Verified', '2025', 0, 0.00, 0, '2025-11-22 16:08:50', '2025-11-27 08:42:16'),
+('org_6921e0732472a', 2, 'Hoa Son Quy', 'NPO', 'hoa son quy', NULL, 'https://mis-bav-g6.odoo.com/odoo/website?debug=assets', 'Hoa Son Quy', '1230921', '[\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-1-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-2-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-3-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-4-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-5-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-6-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-7-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-8-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-9-1763901902.jpg\",\"certificates\\/org_6921e0732472a\\/hoa-son-quy-cert-1-1764089385.jpg\"]', 'Verified', '2025', 0, 0.00, 1, '2025-11-22 16:10:27', '2025-11-25 16:49:45'),
 ('org_6921e0d39f40e', 54, 'Disaster Relief Trust - Lake Genesisborough', 'School', 'Est vel iste quia quos est modi eveniet. Aut et ea sit rerum quasi. Quidem reprehenderit voluptatibus in. Laudantium aut ab accusantium voluptatem qui. Nihil esse vitae voluptas et.', 'Sed saepe ullam perferendis numquam atque et vitae voluptas cum dolorem aspernatur suscipit recusandae modi voluptatum.', 'http://kunze.com/possimus-ea-vel-ea-qui-unde-quia-quam.html', 'Prof. Kianna Kiehn', 'ORG-3992-nzsd', NULL, 'Verified', '2023', 85, 0.74, 19, '2025-11-22 16:12:03', '2025-11-22 16:12:03'),
 ('org_6921e0d3a046b', 55, 'Green Children Group - Guillermoview', 'School', 'Nesciunt alias velit perspiciatis natus incidunt pariatur voluptate assumenda. Nulla fugiat esse nisi labore delectus incidunt. Sunt error nulla voluptas minus doloremque corporis voluptas commodi. Est sit incidunt repellat qui id. In eum voluptates illum dicta et qui et. Architecto delectus rerum voluptatem et nulla similique.', 'Quasi at animi adipisci pariatur aspernatur porro mollitia eum nemo repellat quidem quisquam.', 'http://www.hegmann.com/et-officia-exercitationem-aut-sit-eum-repellendus-perferendis.html', 'Prof. Stephania Kovacek', 'ORG-7671-grza', NULL, 'Verified', '1991', 38, 3.34, 7, '2025-11-22 16:12:03', '2025-11-22 16:12:03'),
 ('org_6921e0d3a19fe', 56, 'Education Citizens Society - Schroederchester', 'School', 'Perspiciatis reiciendis sapiente repellat eos distinctio rerum cum. Quibusdam qui ducimus voluptatem dolorem dicta iusto in ut. Dicta ex dolores et est qui. Et est sed est ea debitis quo vel.', 'Sed eum eum inventore et velit quibusdam dolores est atque excepturi temporibus et.', 'http://www.hane.com/vitae-fugiat-et-ut-enim-architecto-ut-cumque', 'Dr. Colten Trantow III', 'ORG-0783-zxkg', NULL, 'Verified', '2023', 87, 3.04, 4, '2025-11-22 16:12:03', '2025-11-22 16:12:03'),
@@ -1242,6 +1289,13 @@ CREATE TABLE `posts` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `posts`
+--
+
+INSERT INTO `posts` (`post_id`, `user_id`, `title`, `content`, `image_url`, `post_type`, `status`, `admin_notes`, `likes_count`, `comments_count`, `shares_count`, `views_count`, `is_pinned`, `allow_comments`, `published_at`, `created_at`, `updated_at`) VALUES
+(1, 3, 'Hoa Sơn Quý', 'Hoa Sơn Quý', '/uploads/posts/1764242279_69283367d8a0a.jpg', 'event', 'published', NULL, 1, 5, 0, 17, 0, 1, '2025-11-27 11:17:59', '2025-11-27 11:17:59', '2025-11-27 11:51:19');
+
 -- --------------------------------------------------------
 
 --
@@ -1256,6 +1310,13 @@ CREATE TABLE `post_bookmarks` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `post_bookmarks`
+--
+
+INSERT INTO `post_bookmarks` (`bookmark_id`, `post_id`, `user_id`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 1, 3, NULL, '2025-11-27 11:38:53', '2025-11-27 11:38:53');
 
 -- --------------------------------------------------------
 
@@ -1275,6 +1336,17 @@ CREATE TABLE `post_comments` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `post_comments`
+--
+
+INSERT INTO `post_comments` (`comment_id`, `post_id`, `user_id`, `content`, `parent_id`, `is_approved`, `likes_count`, `created_at`, `updated_at`) VALUES
+(1, 1, 3, 'hoa sơn quý', NULL, 1, 0, '2025-11-27 11:18:14', '2025-11-27 11:18:14'),
+(2, 1, 3, 'hoa sơn quý yy', 1, 1, 0, '2025-11-27 11:38:26', '2025-11-27 11:38:26'),
+(3, 1, 3, 'hsq\\', 2, 1, 0, '2025-11-27 11:38:33', '2025-11-27 11:38:33'),
+(4, 1, 3, 'hsq', NULL, 1, 0, '2025-11-27 11:38:49', '2025-11-27 11:38:49'),
+(5, 1, 3, 'ê', 3, 1, 0, '2025-11-27 11:42:26', '2025-11-27 11:42:26');
+
 -- --------------------------------------------------------
 
 --
@@ -1288,6 +1360,13 @@ CREATE TABLE `post_likes` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `post_likes`
+--
+
+INSERT INTO `post_likes` (`like_id`, `post_id`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 1, 3, '2025-11-27 11:18:08', '2025-11-27 11:18:08');
 
 -- --------------------------------------------------------
 
@@ -1364,20 +1443,20 @@ CREATE TABLE `reviews` (
 INSERT INTO `reviews` (`review_id`, `reviewer_id`, `reviewee_id`, `opportunity_id`, `rating`, `review_title`, `review_text`, `review_type`, `is_approved`, `helpful_count`, `created_at`) VALUES
 (1, 56, 46, 25, 5, 'Aut quidem molestias aperiam.', NULL, 'Organization to Volunteer', 1, 21, '2025-11-22 16:12:06'),
 (2, 46, 56, 25, 2, 'Dolor quia est consequatur sit praesentium.', 'Nobis deserunt voluptatem magni iusto laborum provident quis. Consequatur delectus labore sed culpa voluptatibus molestiae. Necessitatibus mollitia rerum sint maxime et illo. Tempora beatae error quod a repellat ea.', 'Volunteer to Organization', 1, 43, '2025-11-22 16:12:06'),
-(11, 1, 28, 2, 2, 'Totam deleniti qui incidunt fuga.', NULL, 'Organization to Volunteer', 0, 1, '2025-11-22 16:12:06'),
-(12, 28, 1, 2, 2, 'Aut aspernatur dolores laboriosam sint repudiandae autem.', 'Nostrum in eos iusto explicabo eum omnis. Reiciendis sequi qui expedita aut quos.', 'Volunteer to Organization', 0, 23, '2025-11-22 16:12:06'),
+(11, 1, 28, 2, 2, 'Totam deleniti qui incidunt fuga.', NULL, 'Organization to Volunteer', 1, 1, '2025-11-22 16:12:06'),
+(12, 28, 1, 2, 2, 'Aut aspernatur dolores laboriosam sint repudiandae autem.', 'Nostrum in eos iusto explicabo eum omnis. Reiciendis sequi qui expedita aut quos.', 'Volunteer to Organization', 1, 23, '2025-11-22 16:12:06'),
 (13, 69, 10, 100, 1, 'Consequatur voluptas quasi voluptas voluptatem.', 'Iusto aliquam dolor perspiciatis ad velit reiciendis. Aspernatur iure fugit distinctio ipsa eum deserunt. Nihil temporibus aut qui eveniet.', 'Organization to Volunteer', 1, 10, '2025-11-22 16:12:06'),
 (14, 10, 69, 100, 2, NULL, NULL, 'Volunteer to Organization', 1, 44, '2025-11-22 16:12:06'),
 (17, 72, 12, 121, 1, NULL, 'Et totam labore aut. Ipsa aut dolores exercitationem officia. Error totam maiores atque magni voluptatum dolorem. Est dolor inventore qui modi autem repellat.', 'Organization to Volunteer', 1, 1, '2025-11-22 16:12:06'),
 (19, 12, 72, 121, 2, NULL, 'Assumenda repellendus accusamus voluptatum ipsum perspiciatis enim non. Repudiandae cum eligendi itaque adipisci sunt magni. Qui et dolorum facere exercitationem et placeat et. Explicabo occaecati cupiditate iusto sit doloribus. Dolorem dicta dolorem omnis laudantium alias nam neque.', 'Volunteer to Organization', 1, 11, '2025-11-22 16:12:06'),
 (24, 1, 37, 7, 4, 'Qui expedita repudiandae sapiente corrupti.', 'Saepe blanditiis omnis eum aut. Sint deserunt distinctio incidunt modi porro possimus blanditiis. A incidunt autem eos ipsum.', 'Organization to Volunteer', 1, 19, '2025-11-22 16:12:06'),
-(25, 37, 1, 7, 4, NULL, 'Aut aut officiis necessitatibus ea facere mollitia. Saepe cum placeat autem rerum maxime molestias inventore. Doloremque et aspernatur consequatur ullam. Error rerum quam totam optio molestiae nemo. Et aspernatur velit ullam blanditiis consectetur aliquam fugiat.', 'Volunteer to Organization', 0, 5, '2025-11-22 16:12:06'),
+(25, 37, 1, 7, 4, NULL, 'Aut aut officiis necessitatibus ea facere mollitia. Saepe cum placeat autem rerum maxime molestias inventore. Doloremque et aspernatur consequatur ullam. Error rerum quam totam optio molestiae nemo. Et aspernatur velit ullam blanditiis consectetur aliquam fugiat.', 'Volunteer to Organization', 1, 5, '2025-11-22 16:12:06'),
 (30, 71, 12, 112, 2, 'Cum sunt cumque illo consequatur ab.', NULL, 'Organization to Volunteer', 1, 1, '2025-11-22 16:12:06'),
 (31, 12, 71, 112, 3, 'Culpa natus error sunt.', NULL, 'Volunteer to Organization', 1, 36, '2025-11-22 16:12:06'),
 (38, 71, 7, 112, 1, 'Nemo voluptate similique quas.', 'Tempora non qui voluptatem voluptatem omnis officia delectus et. Illo et maxime sint.', 'Organization to Volunteer', 1, 26, '2025-11-22 16:12:07'),
 (40, 7, 71, 112, 4, NULL, NULL, 'Volunteer to Organization', 1, 46, '2025-11-22 16:12:07'),
 (41, 68, 27, 94, 2, 'Sunt aliquid sunt quidem ad corporis molestiae.', NULL, 'Organization to Volunteer', 1, 20, '2025-11-22 16:12:07'),
-(42, 27, 68, 94, 3, NULL, 'Expedita qui quo nihil eos omnis nulla magni. Qui vero maiores accusamus voluptatem sit excepturi. Aut quos reiciendis in error modi magni.', 'Volunteer to Organization', 0, 23, '2025-11-22 16:12:07'),
+(42, 27, 68, 94, 3, NULL, 'Expedita qui quo nihil eos omnis nulla magni. Qui vero maiores accusamus voluptatem sit excepturi. Aut quos reiciendis in error modi magni.', 'Volunteer to Organization', 1, 23, '2025-11-22 16:12:07'),
 (48, 67, 23, 89, 2, NULL, 'Et perferendis error odit praesentium similique hic recusandae et. Ut et sint corrupti totam quod aut qui. Cumque voluptates provident aut. Et voluptas delectus ipsa ea rerum.', 'Organization to Volunteer', 1, 8, '2025-11-22 16:12:07'),
 (50, 23, 67, 89, 4, NULL, NULL, 'Volunteer to Organization', 1, 9, '2025-11-22 16:12:07'),
 (51, 1, 25, 3, 3, NULL, NULL, 'Organization to Volunteer', 1, 36, '2025-11-22 16:12:07'),
@@ -1397,6 +1476,35 @@ CREATE TABLE `sessions` (
   `payload` longtext NOT NULL,
   `last_activity` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `settings`
+--
+
+CREATE TABLE `settings` (
+  `key` varchar(255) NOT NULL,
+  `value` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `settings`
+--
+
+INSERT INTO `settings` (`key`, `value`, `created_at`, `updated_at`) VALUES
+('allow_registration', '1', NULL, '2025-11-27 10:48:00'),
+('contact_email', NULL, NULL, '2025-11-27 10:48:00'),
+('email_notifications', '1', NULL, '2025-11-27 10:48:00'),
+('mail_from_address', NULL, NULL, '2025-11-27 10:48:00'),
+('mail_from_name', 'Volunteer Connect Pro', NULL, '2025-11-27 10:48:00'),
+('maintenance_message', 'We are currently performing maintenance. Please check back later.', NULL, '2025-11-27 10:48:00'),
+('maintenance_mode', '0', NULL, '2025-11-27 10:48:00'),
+('require_email_verification', '1', NULL, '2025-11-27 10:48:00'),
+('site_description', NULL, NULL, '2025-11-27 10:48:00'),
+('site_name', 'VolunteerConnect', NULL, '2025-11-27 10:48:00');
 
 -- --------------------------------------------------------
 
@@ -1465,9 +1573,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `google_id`, `facebook_id`, `email`, `password`, `first_name`, `last_name`, `phone`, `date_of_birth`, `gender`, `city`, `district`, `address`, `user_type`, `avatar_url`, `is_verified`, `is_active`, `last_login_at`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, NULL, NULL, 'hoasonquy123@gmail.com', '$2y$12$4E22LadUvdhxTmuZJTV7q.pt21KO1LqkqXFBi2XTOpfR.7I5OhhuK', 'Hoa', 'Quy', '0123876543', NULL, NULL, 'Da Nang', 'Đống Đa', 'abc', 'Organization', NULL, 0, 1, NULL, NULL, '2025-11-22 16:08:50', '2025-11-22 16:08:50'),
-(2, NULL, NULL, 'khiemhg0709@gmail.com', '$2y$12$lZcHLfRnBJdnWZSu380zTOjbPMMU0Q/ZxWx6yZa26AbSht/JJyEm.', 'Hoa', 'Quy', '0123876542', NULL, NULL, 'Da Nang', 'Đống Đa', 'abc', 'Organization', 'avatars/organizations/BCt9FiioxrNQJ8Sa6eivEFUGqSRGOA0LxLMe917t.png', 1, 1, '2025-11-23 11:25:09', '2qnon1hskd9LPUAm9xOiDZAMYe8hoa8Nkul2dG13HlOBQx12jfWXifqPexBk', '2025-11-22 16:10:27', '2025-11-23 11:58:21'),
-(3, NULL, NULL, 'admin@volunteer.com', '$2y$12$KRLcJ3UCRD7rerVz1X13Iuf9/tLXMnOyZtT.qJahlWZSh.dFjZP9u', 'Admin', 'User', '0955685316', '1994-09-12', 'Other', 'Ho Chi Minh', NULL, '146 Cassidy Pass Apt. 551\nWest Precious, WV 60420', 'Admin', 'https://via.placeholder.com/200x200.png/00bb77?text=people+ut', 1, 1, NULL, 'bVzOcoFyarL5WTzsUBTYkBX0wFEQgfVUx3b1jzNvteTp4EXGgHeDgMXRaCmX', '2025-11-22 16:11:50', '2025-11-22 16:11:50'),
+(1, NULL, NULL, 'hoasonquy123@gmail.com', '$2y$12$4E22LadUvdhxTmuZJTV7q.pt21KO1LqkqXFBi2XTOpfR.7I5OhhuK', 'Hoa', 'Quy', '0123876543', NULL, NULL, 'Da Nang', 'Đống Đa', 'abc', 'Volunteer', NULL, 1, 1, NULL, NULL, '2025-11-22 16:08:50', '2025-11-27 08:42:16'),
+(2, NULL, NULL, 'khiemhg0709@gmail.com', '$2y$12$lZcHLfRnBJdnWZSu380zTOjbPMMU0Q/ZxWx6yZa26AbSht/JJyEm.', 'Hoa', 'Quy', '0123876542', NULL, NULL, 'Da Nang', 'Đống Đa', 'abc', 'Organization', 'avatars/organizations/hoa-son-quy-avatar-1764089384.jpg', 1, 1, '2025-11-23 11:25:09', 'R6ZsHxz0sLeIqcdOnZgEopBXLtb4Ro5ShrLyrezQprximX72G6DIOFSNcNZH', '2025-11-22 16:10:27', '2025-11-25 16:49:45'),
+(3, NULL, NULL, 'admin@volunteer.com', '$2y$12$KRLcJ3UCRD7rerVz1X13Iuf9/tLXMnOyZtT.qJahlWZSh.dFjZP9u', 'Hoàng Quang', 'Đạt', '0955685316', '1994-09-12', 'Male', 'Hà Nội', NULL, NULL, 'Admin', 'avatars/TAUvEISFnFLVvZGbOZ3gbYIE030goXbLAlIeAP8I.jpg', 1, 1, '2025-11-27 11:17:09', 'n4s35SAndsakuyRn78VHrlwpyTAhm9ByX0luiJeBPDI5vxBYxIxkqet5O8LG', '2025-11-22 16:11:50', '2025-11-27 11:17:09'),
 (4, NULL, NULL, 'lreynolds@example.net', '$2y$12$z4NAHikLocx0F0Kg1wVpv.X6RMnayOuR6j4t8guN3DImT0kZGoNIe', 'Dejah', 'Emard', NULL, NULL, 'Male', 'Da Nang', 'Kutchton', '295 Gulgowski Curve Apt. 839\nNorth Alexis, PA 23659-5373', 'Volunteer', NULL, 1, 1, '2025-11-18 06:26:52', '1kvRM7V965', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (5, NULL, NULL, 'vicky.kunze@example.net', '$2y$12$9W3DJ1GvB2FLKSrar7j87OM/DbwKl44gT6O4PNc2gMgdO3amO7Cji', 'Erin', 'Mayer', '0991639384', '1997-11-15', 'Male', 'Hanoi', NULL, '33511 Flatley Pines Apt. 429\nGutkowskimouth, WV 48012-4433', 'Volunteer', 'https://via.placeholder.com/200x200.png/000088?text=people+exercitationem', 1, 1, '2025-10-24 00:42:18', 'toYYtHWYTv', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (6, NULL, NULL, 'jrempel@example.com', '$2y$12$jsWwINl/ixxXChrA9vLtx.7lWXnktr3qymtdb64bT.HtJCxjBKu3S', 'Claude', 'Russel', NULL, '1999-10-08', 'Female', 'Da Nang', NULL, NULL, 'Volunteer', 'https://via.placeholder.com/200x200.png/00cc00?text=people+asperiores', 1, 1, '2025-11-09 05:15:55', 'mPhX9PalRL', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
@@ -1824,10 +1932,12 @@ INSERT INTO `users` (`user_id`, `google_id`, `facebook_id`, `email`, `password`,
 (355, NULL, NULL, 'froberts@example.net', '$2y$12$fBhNn5raLg2lg1DCFEK8G.S/i9RtTl.1Drp6dmzRPXEpzJaXTK3OS', 'Elena', 'Herman', '0987056838', NULL, 'Male', 'Can Tho', 'Presleymouth', '89975 Bartoletti Place\nEast Alexahaven, IN 49231', 'Volunteer', 'https://via.placeholder.com/200x200.png/006622?text=people+adipisci', 1, 1, NULL, 'BoyMnSccGR', '2025-11-22 16:13:10', '2025-11-22 16:13:10'),
 (356, NULL, NULL, 'daniella65@example.org', '$2y$12$Nh0aai3ImM8qwD56yH7.kO97UEFuvHAnyphMBUrI5XQZItKJROF4K', 'Rosalinda', 'Swift', NULL, '1988-10-11', 'Male', 'Hanoi', NULL, NULL, 'Volunteer', NULL, 0, 1, NULL, 'Hqeb7PPnaf', '2025-11-22 16:13:10', '2025-11-22 16:13:10'),
 (357, NULL, NULL, 'mosciski.joshua@example.org', '$2y$12$1wDxKPO//eU11TGJdBXiH.wf0DwYIt3TKG5ltdk4s6y5e29LQh9Qm', 'Ashleigh', 'Daugherty', NULL, NULL, 'Female', 'Can Tho', 'Labadieport', NULL, 'Volunteer', 'https://via.placeholder.com/200x200.png/00aa44?text=people+non', 0, 1, '2025-10-27 15:15:04', 'jh8R1s6x2j', '2025-11-22 16:13:11', '2025-11-22 16:13:11'),
-(358, NULL, NULL, 'zoie.tromp@example.org', '$2y$12$4ufijz402q.3..PfzI9kJe.1rkk42f94g47zUESTCkM5MVNvAIGO.', 'Marques', 'Leffler', NULL, '1966-08-14', 'Male', 'Hanoi', NULL, '85888 Merlin Radial\nTevinside, NE 39044', 'Volunteer', NULL, 1, 1, '2025-11-13 04:55:20', 'XRQtkDPFvd', '2025-11-22 16:13:11', '2025-11-22 16:13:11'),
+(358, NULL, NULL, 'zoie.tromp@example.org', '$2y$12$4ufijz402q.3..PfzI9kJe.1rkk42f94g47zUESTCkM5MVNvAIGO.', 'Marques', 'Leffler', NULL, '1966-08-14', 'Male', 'Hanoi', NULL, '85888 Merlin Radial\nTevinside, NE 39044', 'Volunteer', NULL, 1, 0, '2025-11-13 04:55:20', 'XRQtkDPFvd', '2025-11-22 16:13:11', '2025-11-27 09:56:30'),
 (359, NULL, NULL, 'beier.emmet@example.org', '$2y$12$r8.CYgKo228aPADrv7jolOYytcNRpxHzPv.ZO6qD0airGuoMOc46K', 'Isabelle', 'Torp', '0933670838', NULL, 'Male', 'Da Nang', NULL, NULL, 'Volunteer', NULL, 0, 1, '2025-11-22 13:13:04', 'gG4tlBiVSW', '2025-11-22 16:13:11', '2025-11-22 16:13:11'),
 (360, NULL, NULL, 'bwalker@example.org', '$2y$12$qG0/wo9QQsNB6Dk0YzhqTOL5xtRtDnGUgYy79XjHoRp91j6T0FvCi', 'Ned', 'Beier', NULL, NULL, 'Male', 'Da Nang', NULL, NULL, 'Volunteer', 'https://via.placeholder.com/200x200.png/00bbee?text=people+quos', 1, 1, '2025-11-05 17:33:41', 'uXeLVyPv4E', '2025-11-22 16:13:11', '2025-11-22 16:13:11'),
-(361, NULL, NULL, 'hauck.ashley@example.net', '$2y$12$dHL.wpXAO5IsdzH683EXFOTluqAB.IcZdxBpMY1T0jLL654MFStDW', 'Rachelle', 'Shields', '0922990118', '1989-05-19', 'Male', 'Hanoi', NULL, NULL, 'Volunteer', 'https://via.placeholder.com/200x200.png/008866?text=people+iste', 1, 1, '2025-11-03 19:05:42', 'U8vjmO8tjJ', '2025-11-22 16:13:12', '2025-11-22 16:13:12');
+(361, NULL, NULL, 'hauck.ashley@example.net', '$2y$12$dHL.wpXAO5IsdzH683EXFOTluqAB.IcZdxBpMY1T0jLL654MFStDW', 'Rachelle', 'Shields', '0922990118', '1989-05-19', 'Male', 'Hanoi', NULL, NULL, 'Volunteer', 'https://via.placeholder.com/200x200.png/008866?text=people+iste', 1, 1, '2025-11-03 19:05:42', 'U8vjmO8tjJ', '2025-11-22 16:13:12', '2025-11-22 16:13:12'),
+(362, NULL, NULL, 'dathoami2k5@gmail.com', '$2y$12$tt0daJWV3PkATxoWJiXOuOl0g0ZJkchKPNGRv61/DeGL4pFZEDbUK', 'Đạt', 'Hoàng Quang', NULL, NULL, NULL, NULL, NULL, NULL, 'Volunteer', 'https://lh3.googleusercontent.com/a/ACg8ocKEwMxwLDUag3LXXhKK6awhnEz6ctqtyIvEVdY5vnSnZJUExfI=s96-c', 1, 1, NULL, NULL, '2025-11-23 16:12:03', '2025-11-23 16:12:03'),
+(363, NULL, NULL, 'goodjobem2@gmail.com', '$2y$12$oA/ZBei3uq9xuIVhe2YkOuy6y6cvr.srVjhb3JcJcDko.KOoCWoRa', 'quý', 'duy', '0912345677', '2005-01-01', 'Female', 'Da Nang', 'Dong Da', 'hoa son quy', 'Volunteer', NULL, 1, 1, NULL, NULL, '2025-11-23 16:31:50', '2025-11-23 16:32:19');
 
 -- --------------------------------------------------------
 
@@ -2152,7 +2262,7 @@ INSERT INTO `volunteer_opportunities` (`opportunity_id`, `org_id`, `category_id`
 (120, 'org_6921e0d3ac78d', 1, 'Accusantium error et officia aut nostrum fugit distinctio.', 'Non voluptas fugit non saepe molestiae saepe dicta. Est impedit nostrum nihil rerum perferendis consequuntur. Ullam reprehenderit maiores exercitationem laudantium quae consequatur. Quam sunt commodi voluptatem illum. Quia nulla quisquam error porro. Non omnis dicta deserunt eum maiores.', 'Debitis quo qui quisquam id sequi. Rerum corporis earum iure perspiciatis nulla recusandae.', 'Velit dolorem qui veniam amet. Mollitia quisquam est minima sed.', 'Ho Chi Minh City, 7164 Grant Mountain', 18.82137200, 107.65624900, '2026-01-17', '2026-02-07', 'Multiple days', 'Monthly', 5, 1, 18, '[\"Design\",\"Translation\"]', 'Some experience', 'Completed', NULL, 338, 42, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
 (121, 'org_6921e0d3ac78d', 1, 'Libero illum ea quod neque quidem debitis facilis est.', 'Et temporibus eum et quia quod atque. Sit dolore esse sint ut magni. Est et aliquid nam velit. Illum debitis nemo ut officiis. Enim soluta perspiciatis alias voluptates. Iusto corrupti enim tempora voluptas voluptates.', NULL, 'Sit molestiae animi dicta cum. Quam placeat minus autem eius eius. Maiores et sequi voluptates in molestias est.', 'Hai Phong, 12535 Torp Camp Apt. 697', 22.50852200, 102.61568500, '2026-01-09', NULL, 'Multiple days', 'Weekly', 18, 3, 16, '[\"Programming\",\"Cooking\",\"First Aid\"]', 'No experience', 'Completed', NULL, 402, 19, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
 (122, 'org_6921e0d3ad224', 2, 'Consectetur fugiat unde autem.', 'Sit ut eum quia eum. Tempore commodi esse quis maiores deleniti tenetur ut. Vitae ex est qui aut. Quas facilis et eligendi facilis et aut in sint. Repellat porro accusantium sint quia.', NULL, NULL, 'Ho Chi Minh City, 978 Hessel Summit', 17.90897100, 104.52328300, '2025-12-06', NULL, '6-8 hours', 'Flexible', 7, 1, 18, '[\"Design\"]', 'Experienced', 'Completed', '2025-11-30', 271, 36, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
-(123, 'org_6921e0d3ad224', 1, 'Accusantium consectetur dignissimos quia dolorem.', 'Aliquam nisi omnis adipisci iusto. Quia eaque vel saepe esse numquam voluptates. At velit sed odio neque tempora. Natus ab accusamus quia molestias aut eum. Quia ut sunt similique et.', 'Quidem aspernatur atque exercitationem omnis. Consequatur quaerat ut voluptas nobis veritatis. Saepe rerum consequatur quam itaque.', NULL, 'Can Tho, 93958 Remington Views Apt. 936', 10.55352900, 108.74652900, '2025-12-11', NULL, '6-8 hours', 'Weekly', 10, 2, 16, '[\"Marketing\"]', 'Experienced', 'Active', NULL, 346, 21, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
+(123, 'org_6921e0d3ad224', 1, 'Accusantium consectetur dignissimos quia dolorem.', 'Aliquam nisi omnis adipisci iusto. Quia eaque vel saepe esse numquam voluptates. At velit sed odio neque tempora. Natus ab accusamus quia molestias aut eum. Quia ut sunt similique et.', 'Quidem aspernatur atque exercitationem omnis. Consequatur quaerat ut voluptas nobis veritatis. Saepe rerum consequatur quam itaque.', NULL, 'Can Tho, 93958 Remington Views Apt. 936', 10.55352900, 108.74652900, '2025-12-11', NULL, '6-8 hours', 'Weekly', 10, 2, 16, '[\"Marketing\"]', 'Experienced', 'Active', NULL, 347, 21, '2025-11-22 16:12:05', '2025-11-26 14:48:31'),
 (124, 'org_6921e0d3ad224', 5, 'Sunt natus et necessitatibus culpa quas dolores enim.', 'Laboriosam cumque eos non ea dolorem. Libero dolorem optio accusamus temporibus molestiae rerum distinctio. Quam impedit ut ad et. Et laborum et et voluptatem. Voluptatem debitis sit doloremque est eaque. Rerum eum sed distinctio voluptatem. Est numquam ratione et corrupti fugit accusamus sunt. Animi debitis quo dolores consequuntur.', 'Excepturi autem accusantium enim. Facere dolores libero et deserunt. Aperiam a voluptates dolorem dolores et quos.', NULL, 'Hai Phong, 22125 Mac Trace', 17.73393100, 109.94684200, '2026-01-01', NULL, '6-8 hours', 'One-time', 10, 4, 16, '[\"Design\"]', 'No experience', 'Cancelled', NULL, 262, 33, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
 (125, 'org_6921e0d3ad224', 1, 'Sint adipisci sint quos iure omnis.', 'Eligendi recusandae reiciendis velit. Velit qui quasi facere voluptatum enim. Velit nulla iusto provident minima. Eos delectus itaque voluptatem dolor explicabo laborum. Quis error natus dignissimos maiores voluptatem voluptatem eum. Maiores dolorem quis iure molestiae.', NULL, 'Harum distinctio adipisci aspernatur rerum ad. Quo alias repudiandae et id natus enim quibusdam. Sunt dolorum magnam dolorem esse ipsum alias.', 'Hanoi, 202 Labadie Village', 14.01159800, 103.12960100, '2025-12-29', NULL, '6-8 hours', 'Monthly', 3, 0, 21, '[\"Programming\",\"Writing\",\"First Aid\",\"Design\"]', 'Some experience', 'Active', NULL, 499, 24, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
 (126, 'org_6921e0d3ad224', 4, 'Dolores et doloribus dicta et.', 'Nostrum et distinctio voluptate et necessitatibus omnis et et. Corporis quas dolores explicabo nihil nam. Accusantium eveniet dolore inventore vitae culpa sint. Qui explicabo consequatur rem et minus est. Quaerat et consequatur fugit adipisci in quidem. Minus laudantium qui nam ex aut ea.', 'Quo et ad quam et ipsa eum laborum non. Voluptatum impedit et iste dicta dolores eum ut ea.', 'Doloribus placeat enim ut ab. Vero esse et pariatur asperiores ex eveniet debitis ipsum. Enim ullam ut autem et debitis eos rerum.', 'Hanoi, 602 Kaycee Vista', 17.17912300, 104.80025800, '2026-01-16', NULL, '6-8 hours', 'Weekly', 17, 5, 16, '[\"Translation\",\"Marketing\",\"Photography\"]', 'Experienced', 'Completed', NULL, 280, 11, '2025-11-22 16:12:05', '2025-11-22 16:12:05'),
@@ -2167,7 +2277,8 @@ INSERT INTO `volunteer_opportunities` (`opportunity_id`, `org_id`, `category_id`
 (135, 'org_6921e0f725d90', 14, 'Illo doloribus maxime velit eaque commodi.', 'Debitis ut aut et consequatur quibusdam. Sed et libero tenetur id. Dolores magnam vero sequi deserunt sed modi. Quibusdam iste dolores ut eos id qui eos. Dolorem exercitationem aliquid perspiciatis provident.', NULL, NULL, 'Ho Chi Minh City, 473 Madison Terrace Suite 024', 21.95156500, 102.14489100, '2025-12-23', '2026-01-16', '1-2 hours', 'Flexible', 13, 4, 21, '[\"Design\",\"Marketing\",\"First Aid\"]', 'Experienced', 'Paused', NULL, 471, 28, '2025-11-22 16:12:39', '2025-11-22 16:12:39'),
 (136, 'org_6921e0fea5da5', 15, 'Est omnis quaerat quia culpa.', 'Id dolorem maxime molestiae similique at cum voluptas. In officia nihil quis voluptatem. Dolorem ea ipsam animi quo dolorem modi ut et. Culpa voluptatem dolores voluptate doloremque rem quae. Eaque voluptatem ipsam id possimus. Repellendus ullam commodi voluptatum deserunt aliquam quis aliquid.', 'Praesentium quas cum dolor illo libero. Minus reprehenderit quia et. Quibusdam eligendi a sunt exercitationem.', NULL, 'Hai Phong, 849 Quinten Meadows', 9.31033600, 102.25261300, '2026-01-09', '2026-02-09', '1-2 hours', 'Weekly', 15, 3, 21, '[\"Photography\",\"Writing\",\"Programming\"]', 'No experience', 'Completed', NULL, 146, 2, '2025-11-22 16:12:46', '2025-11-22 16:12:46'),
 (137, 'org_6921e100bd79f', 16, 'Tempora iure veritatis minima aut dolorum nisi possimus.', 'Quam nihil voluptatem corporis voluptatibus. Reprehenderit voluptas voluptates ab quis. Sed ut est aut veniam odit sequi quae. Itaque consequatur vero dolore quis dolorum.', 'Aut dolor consequatur debitis eos. Et aut vel quo ab amet. Molestias tenetur suscipit quae totam deserunt expedita.', NULL, 'Da Nang, 10252 Harber Underpass Apt. 812', 10.54869600, 102.98942200, '2025-12-12', '2026-02-19', 'Full day', 'Monthly', 18, 5, 18, '[\"Marketing\"]', 'Some experience', 'Paused', NULL, 395, 0, '2025-11-22 16:12:48', '2025-11-22 16:12:48'),
-(138, 'org_6921e106525a2', 17, 'Ipsam voluptas voluptas possimus.', 'Nemo dolore et esse ut. Quia voluptas a non voluptas vero quia. Amet veritatis velit at dolores porro modi consequatur. Unde dolorem nihil recusandae dolorem. Sunt quia saepe rem corrupti voluptatibus veniam inventore.', 'Odit ut incidunt aut nihil eaque aut sapiente. Aut reiciendis rerum id quaerat qui.', NULL, 'Can Tho, 385 Adaline Orchard', 22.53558700, 104.41807400, '2026-01-03', '2026-01-29', '3-5 hours', 'Monthly', 3, 4, 21, '[\"Cooking\",\"First Aid\",\"Design\"]', 'No experience', 'Completed', NULL, 75, 23, '2025-11-22 16:12:54', '2025-11-22 16:12:54');
+(138, 'org_6921e106525a2', 17, 'Ipsam voluptas voluptas possimus.', 'Nemo dolore et esse ut. Quia voluptas a non voluptas vero quia. Amet veritatis velit at dolores porro modi consequatur. Unde dolorem nihil recusandae dolorem. Sunt quia saepe rem corrupti voluptatibus veniam inventore.', 'Odit ut incidunt aut nihil eaque aut sapiente. Aut reiciendis rerum id quaerat qui.', NULL, 'Can Tho, 385 Adaline Orchard', 22.53558700, 104.41807400, '2026-01-03', '2026-01-29', '3-5 hours', 'Monthly', 3, 4, 21, '[\"Cooking\",\"First Aid\",\"Design\"]', 'No experience', 'Completed', NULL, 75, 23, '2025-11-22 16:12:54', '2025-11-22 16:12:54'),
+(139, 'org_6921e0732472a', 5, 'Hoa Sơn Quý', 'Hoa Sơn Quý', NULL, NULL, 'Đống Đa, Hà Nội', NULL, NULL, '2025-11-24', '2025-12-05', 'Full day', 'Weekly', 99, 0, 16, '\"English, Cooking, Counseling, First Aid, IT Support, Photography\"', 'Some experience', 'Active', '2025-12-03', 20, 0, '2025-11-23 15:06:57', '2025-11-27 08:41:44');
 
 -- --------------------------------------------------------
 
@@ -2223,7 +2334,7 @@ INSERT INTO `volunteer_profiles` (`profile_id`, `user_id`, `occupation`, `educat
 (22, 25, NULL, 'High School', 'Sporer, Lesch and Johnson University', NULL, '[\"Sports\",\"Cooking\",\"Data Entry\",\"Translation\",\"Marketing\",\"Programming\"]', 'Porro suscipit ipsum commodi nam.', 'Full-time', 'Consequatur non reiciendis dolorum. Sunt veritatis qui deserunt. Quae quibusdam voluptatum qui vitae quia.', 8, 0.31, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (23, 26, NULL, 'Diploma', ' University', 'Voluptates numquam veniam dolore voluptatem aut sunt. Illum eum sapiente cumque iste. Eaque rerum necessitatibus et non dolore dolore perferendis.', '[\"Design\",\"Teaching\",\"Writing\",\"Photography\",\"Marketing\",\"Cooking\"]', 'Sed officiis ut ipsa labore perspiciatis repellat.', 'Full-time', 'Possimus enim molestiae quos impedit recusandae assumenda. Enim quia nihil et voluptatem.', 7, 0.28, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (24, 27, NULL, 'Bachelor', 'Bechtelar, Heller and King University', NULL, '[\"Teaching\",\"Translation\"]', 'Exercitationem dolores voluptatem commodi maiores officia.', 'Flexible', NULL, 448, 1.65, 'Da Nang', 'Motorbike', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
-(25, 28, 'Production Helper', 'PhD', 'Armstrong-Blick University', 'Sit animi dicta consequatur qui dignissimos. Harum rem rerum veritatis aliquam sed voluptates consequuntur. Debitis minus ipsa dolorem possimus non itaque quas. Est numquam mollitia doloribus quisquam.', '[\"First Aid\",\"Teaching\",\"Marketing\",\"Counseling\",\"Cooking\"]', NULL, 'Weekends', NULL, 367, 0.68, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
+(25, 28, 'Production Helper', 'PhD', 'Armstrong-Blick University', 'Sit animi dicta consequatur qui dignissimos. Harum rem rerum veritatis aliquam sed voluptates consequuntur. Debitis minus ipsa dolorem possimus non itaque quas. Est numquam mollitia doloribus quisquam.', '[\"First Aid\",\"Teaching\",\"Marketing\",\"Counseling\",\"Cooking\"]', NULL, 'Weekends', NULL, 367, 2.00, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-27 10:27:55'),
 (26, 29, NULL, 'High School', 'Pagac Ltd University', NULL, '[\"Photography\",\"Programming\",\"Counseling\",\"Design\"]', NULL, 'Weekdays', 'Sequi voluptates quisquam omnis aliquid et tenetur. Dignissimos maxime totam voluptatem quisquam consequatur eum qui. Amet et suscipit tempora repellat et est quia maxime.', 451, 1.05, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (27, 30, 'Home Appliance Installer', 'Bachelor', 'Abbott, Stamm and Runolfsson University', NULL, '[\"Music\",\"Sports\"]', 'Eum harum eum debitis voluptatem est.', 'Weekends', NULL, 253, 2.45, 'Hanoi', 'Public Transport', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (28, 31, 'Pile-Driver Operator', 'Bachelor', 'Mertz Group University', NULL, '[\"First Aid\",\"Teaching\"]', NULL, 'Weekdays', 'Quia quis minus aut fugit voluptatem veritatis. Sunt qui ea repudiandae laborum laboriosam. Ab rerum possimus fugiat fugit tenetur quis officiis saepe.', 43, 3.82, 'Any', 'Car', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
@@ -2248,7 +2359,10 @@ INSERT INTO `volunteer_profiles` (`profile_id`, `user_id`, `occupation`, `educat
 (47, 50, NULL, 'Bachelor', 'Kub, Beatty and Veum University', 'Recusandae non est ipsa consectetur dicta. Numquam eaque nam sed alias maiores porro. Voluptate voluptas enim sequi nihil aliquid quia.', '[\"Photography\",\"Writing\"]', NULL, 'Full-time', 'Laboriosam non quisquam neque. Nulla aut qui voluptatum officia. Ullam soluta saepe praesentium non saepe est beatae.', 428, 2.06, 'Ho Chi Minh', 'Car', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (48, 51, 'Ship Pilot', 'PhD', ' University', NULL, '[\"Music\",\"Data Entry\",\"Cooking\",\"First Aid\",\"Marketing\",\"Photography\"]', NULL, 'Weekdays', NULL, 151, 4.10, 'Any', 'Public Transport', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
 (49, 52, 'Chemical Technician', 'Bachelor', ' University', 'Nesciunt fugiat et est est quod laudantium minima impedit. Magni mollitia quibusdam facere in ab voluptatem ipsam. Ut quo optio voluptatem numquam.', '[\"Design\",\"Photography\",\"First Aid\",\"Writing\",\"Programming\"]', NULL, 'Weekends', NULL, 92, 1.60, 'Hanoi', 'Public Transport', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
-(50, 53, 'Bench Jeweler', 'Master', ' University', 'Minus perspiciatis aperiam voluptas voluptates. Dolore assumenda quasi dicta amet facilis vitae.', '[\"Teaching\",\"Music\",\"Counseling\",\"Data Entry\"]', 'Enim eveniet ut quaerat magnam.', 'Weekdays', 'Eius numquam quia voluptates eius a. Et hic tenetur maxime molestiae quo.', 148, 1.91, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-22 16:11:59');
+(50, 53, 'Bench Jeweler', 'Master', ' University', 'Minus perspiciatis aperiam voluptas voluptates. Dolore assumenda quasi dicta amet facilis vitae.', '[\"Teaching\",\"Music\",\"Counseling\",\"Data Entry\"]', 'Enim eveniet ut quaerat magnam.', 'Weekdays', 'Eius numquam quia voluptates eius a. Et hic tenetur maxime molestiae quo.', 148, 1.91, 'Ho Chi Minh', 'Walking', '2025-11-22 16:11:59', '2025-11-22 16:11:59'),
+(51, 362, 'Suc vat', 'High School', NULL, 'hoa son quy', '\"hoa son quy\"', 'hoa son quy', NULL, NULL, 0, 0.00, NULL, NULL, '2025-11-23 16:12:03', '2025-11-23 16:12:27'),
+(52, 363, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0.00, NULL, NULL, '2025-11-23 16:31:50', '2025-11-23 16:31:50'),
+(53, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 3.00, NULL, NULL, '2025-11-24 04:31:38', '2025-11-27 10:27:55');
 
 --
 -- Indexes for dumped tables
@@ -2332,9 +2446,7 @@ ALTER TABLE `donation_campaigns`
 -- Indexes for table `email_logs`
 --
 ALTER TABLE `email_logs`
-  ADD PRIMARY KEY (`log_id`),
-  ADD KEY `email_logs_sent_by_foreign` (`sent_by`),
-  ADD KEY `email_logs_sent_at_index` (`sent_at`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `failed_jobs`
@@ -2484,6 +2596,12 @@ ALTER TABLE `sessions`
   ADD KEY `sessions_last_activity_index` (`last_activity`);
 
 --
+-- Indexes for table `settings`
+--
+ALTER TABLE `settings`
+  ADD PRIMARY KEY (`key`);
+
+--
 -- Indexes for table `system_analytics`
 --
 ALTER TABLE `system_analytics`
@@ -2580,37 +2698,37 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `connections`
 --
 ALTER TABLE `connections`
-  MODIFY `connection_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `connection_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `conversations`
 --
 ALTER TABLE `conversations`
-  MODIFY `conversation_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `conversation_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `conversation_participants`
 --
 ALTER TABLE `conversation_participants`
-  MODIFY `participant_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `participant_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `donations`
 --
 ALTER TABLE `donations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `donation_campaigns`
 --
 ALTER TABLE `donation_campaigns`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `email_logs`
 --
 ALTER TABLE `email_logs`
-  MODIFY `log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -2622,7 +2740,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `favorite_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=99;
+  MODIFY `favorite_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -2634,19 +2752,19 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `message_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=260;
+  MODIFY `message_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=261;
 
 --
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=179;
+  MODIFY `notification_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=180;
 
 --
 -- AUTO_INCREMENT for table `personal_access_tokens`
@@ -2658,25 +2776,25 @@ ALTER TABLE `personal_access_tokens`
 -- AUTO_INCREMENT for table `posts`
 --
 ALTER TABLE `posts`
-  MODIFY `post_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `post_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `post_bookmarks`
 --
 ALTER TABLE `post_bookmarks`
-  MODIFY `bookmark_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `bookmark_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `post_comments`
 --
 ALTER TABLE `post_comments`
-  MODIFY `comment_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `comment_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `post_likes`
 --
 ALTER TABLE `post_likes`
-  MODIFY `like_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `like_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `post_reports`
@@ -2712,7 +2830,7 @@ ALTER TABLE `tags`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=362;
+  MODIFY `user_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=364;
 
 --
 -- AUTO_INCREMENT for table `video_calls`
@@ -2730,13 +2848,13 @@ ALTER TABLE `volunteer_activities`
 -- AUTO_INCREMENT for table `volunteer_opportunities`
 --
 ALTER TABLE `volunteer_opportunities`
-  MODIFY `opportunity_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=139;
+  MODIFY `opportunity_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=140;
 
 --
 -- AUTO_INCREMENT for table `volunteer_profiles`
 --
 ALTER TABLE `volunteer_profiles`
-  MODIFY `profile_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `profile_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- Constraints for dumped tables
@@ -2783,12 +2901,6 @@ ALTER TABLE `donations`
 --
 ALTER TABLE `donation_campaigns`
   ADD CONSTRAINT `donation_campaigns_admin_user_id_foreign` FOREIGN KEY (`admin_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `email_logs`
---
-ALTER TABLE `email_logs`
-  ADD CONSTRAINT `email_logs_sent_by_foreign` FOREIGN KEY (`sent_by`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `favorites`

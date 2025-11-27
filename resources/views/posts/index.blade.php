@@ -138,6 +138,82 @@
                     },
                 });
             });
+            async function toggleLike(postId) {
+            try {
+                const response = await fetch(`/posts/${postId}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload để cập nhật lại số like và màu nút
+                    // (Hoặc bạn có thể viết JS để update DOM trực tiếp nếu muốn mượt hơn)
+                    location.reload(); 
+                } else {
+                    // Nếu chưa đăng nhập (lỗi 401) hoặc lỗi khác
+                    if(data.message) alert(data.message);
+                    else window.location.href = '{{ route("login") }}';
+                }
+            } catch (error) {
+                console.error('Error liking post:', error);
+            }
+        }
+
+        // 2. Xử lý Bookmark (Lưu bài)
+        async function savePost(postId) {
+             // Hàm này dùng cho nút Save trong dropdown menu hoặc footer
+             toggleBookmark(postId);
+        }
+
+        async function toggleBookmark(postId) {
+            try {
+                const response = await fetch(`/posts/${postId}/bookmark`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    location.reload();
+                } else {
+                    if(data.message) alert(data.message);
+                    else window.location.href = '{{ route("login") }}';
+                }
+            } catch (error) {
+                console.error('Error bookmarking post:', error);
+            }
+        }
+
+        // 3. Dropdown Actions (Ghim, Xóa...)
+        // Những hàm này cần thiết nếu bạn dùng post-card ở trang index
+        async function deletePost(postId) {
+            if (!confirm('Are you sure you want to delete this post?')) return;
+            
+            try {
+                const response = await fetch(`/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('An error occurred');
+            }
+        }
+
         </script>
     @endpush
 @endsection

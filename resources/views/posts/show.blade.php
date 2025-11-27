@@ -1,233 +1,170 @@
 @extends('layouts.app')
 
-@section('title', $post->title ?: 'Post Details')
+@section('title', $post->title ?: 'Chi tiết bài viết')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-    <div class="max-w-4xl mx-auto px-4">
+<div class="min-h-screen bg-gray-100 dark:bg-gray-900 py-4">
+    <div class="max-w-2xl mx-auto px-4">
         
-        <!-- Back Button -->
-        <div class="mb-6">
+        {{-- Back Button --}}
+        <div class="mb-4">
             <a href="{{ route('posts.index') }}" 
-               class="inline-flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition">
+               class="inline-flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition">
                 <i class="fas fa-arrow-left"></i>
-                <span>Back to Feed</span>
+                <span class="text-[15px] font-semibold">Back to Feed</span>
             </a>
         </div>
 
-        <!-- Main Post Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+        {{-- Main Post Card --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-4">
             
-            <!-- Post Header -->
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between mb-4">
+            {{-- Header --}}
+            <div class="p-4">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <img src="{{ $post->getUserAvatar() }}" 
-                             class="w-12 h-12 rounded-full">
+                        <a href="{{ route('user.public-profile', $post->user_id) }}" class="flex-shrink-0">
+                            <img src="{{ $post->getUserAvatar() }}" 
+                                 class="w-10 h-10 rounded-full object-cover">
+                        </a>
                         <div>
                             <a href="{{ route('user.public-profile', $post->user_id) }}" 
-                               class="font-semibold text-gray-900 dark:text-gray-100 hover:underline">
+                               class="font-semibold text-[15px] text-gray-900 dark:text-gray-100 hover:underline block">
                                 {{ $post->getUserDisplayName() }}
                             </a>
-                            <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                            <div class="flex items-center space-x-1 text-[13px] text-gray-500 dark:text-gray-400">
                                 <span>{{ $post->published_at->diffForHumans() }}</span>
-                                {!! $post->getUserBadge() !!}
+                                <span>·</span>
+                                <i class="fas fa-globe-americas text-[11px]"></i>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Post Actions Dropdown -->
-                    @auth
-                    <div class="relative" x-data="{ open: false }">
-                        <button type="button" 
-                                @click="open = !open"
-                                class="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            <i class="fas fa-ellipsis-h"></i>
-                        </button>
-                        
-                        <div x-show="open" 
-                             @click.away="open = false"
-                             class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
-                            
-                            @if(Auth::id() === $post->user_id)
-                            <a href="{{ route('posts.edit', $post->post_id) }}" 
-                               class="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-edit"></i>
-                                <span>Edit</span>
-                            </a>
-                            <button type="button" 
-                                    onclick="if(confirm('Delete this post?')) document.getElementById('delete-post-form').submit()"
-                                    class="flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-trash"></i>
-                                <span>Delete</span>
-                            </button>
-                            <form id="delete-post-form" action="{{ route('posts.destroy', $post->post_id) }}" method="POST" class="hidden">
-                                @csrf
-                                @method('DELETE')
-                            </form>
-                            @else
-                            <button type="button" 
-                                    onclick="alert('Report feature coming soon')"
-                                    class="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-flag"></i>
-                                <span>Report</span>
-                            </button>
-                            @endif
-                            
-                            <button type="button" 
-                                    onclick="sharePost({{ $post->post_id }})"
-                                    class="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-share"></i>
-                                <span>Share</span>
-                            </button>
-                        </div>
-                    </div>
-                    @endauth
+                    <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
                 </div>
 
-                <!-- Post Type Badge -->
-                <div class="inline-flex items-center space-x-2 px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium">
-                    <i class="{{ $post->getTypeIcon() }}"></i>
-                    <span>{{ $post->getTypeLabel() }}</span>
-                </div>
-            </div>
+                {{-- Content --}}
+                <div class="mt-4">
+                    @if($post->title)
+                        <h1 class="text-[20px] font-semibold text-gray-900 dark:text-white mb-2">{{ $post->title }}</h1>
+                    @endif
 
-            <!-- Post Content -->
-            <div class="p-6">
-                @if($post->title)
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                    {{ $post->title }}
-                </h1>
-                @endif
-
-                <div class="prose dark:prose-invert max-w-none">
-                    <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
+                    <div class="text-[15px] text-gray-900 dark:text-gray-100 whitespace-pre-line leading-relaxed">
                         {{ $post->content }}
-                    </p>
+                    </div>
                 </div>
-
-                <!-- Post Image -->
-                @if($post->image_url)
-                <div class="mt-6">
-                    <img src="{{ $post->image_url }}" 
-                         alt="Post image" 
-                         class="w-full rounded-lg shadow-sm max-w-2xl mx-auto">
-                </div>
-                @endif
             </div>
 
-            <!-- Post Stats & Actions -->
-            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-6 text-sm text-gray-600 dark:text-gray-400">
-                        <span class="flex items-center space-x-1">
-                            <i class="fas fa-eye"></i>
-                            <span>{{ $post->views_count }} views</span>
-                        </span>
-                        <span class="flex items-center space-x-1">
-                            <i class="fas fa-heart"></i>
-                            <span id="likes-count">{{ $post->likes_count }} likes</span>
-                        </span>
-                        <span class="flex items-center space-x-1">
-                            <i class="fas fa-comment"></i>
-                            <span>{{ $post->comments_count }} comments</span>
-                        </span>
-                    </div>
+            {{-- Image --}}
+            @if($post->image_url)
+            <div class="border-t border-b border-gray-200 dark:border-gray-700">
+                <img src="{{ $post->image_url }}" alt="Post image" class="w-full object-cover">
+            </div>
+            @endif
 
-                    <div class="flex items-center space-x-3">
-                        @auth
-                        <!-- Like Button -->
-                        <button type="button" 
-                                id="like-btn"
-                                onclick="toggleLike({{ $post->post_id }})"
-                                class="flex items-center space-x-1 px-3 py-2 rounded-lg transition {{ $post->isLikedByUser(Auth::id()) ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-                            <i class="{{ $post->isLikedByUser(Auth::id()) ? 'fas' : 'far' }} fa-heart"></i>
-                            <span>Like</span>
-                        </button>
+            {{-- Stats Bar --}}
+            <div class="px-4 py-2 flex items-center justify-between text-[15px] text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center space-x-1">
+                    @if($post->likes_count > 0)
+                        <div class="flex items-center -space-x-1">
+                            <div class="w-[18px] h-[18px] rounded-full bg-blue-500 flex items-center justify-center">
+                                <i class="fas fa-thumbs-up text-white text-[10px]"></i>
+                            </div>
+                            <div class="w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center">
+                                <i class="fas fa-heart text-white text-[10px]"></i>
+                            </div>
+                        </div>
+                        <span class="ml-2">{{ $post->likes_count }}</span>
+                    @endif
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <span>{{ $post->comments_count }} comments</span>
+                    <span>{{ number_format($post->views_count) }} views</span>
+                </div>
+            </div>
 
-                        <!-- Bookmark Button -->
-                        <button type="button" 
-                                id="bookmark-btn"
-                                onclick="toggleBookmark({{ $post->post_id }})"
-                                class="flex items-center space-x-1 px-3 py-2 rounded-lg transition {{ $post->isBookmarkedByUser(Auth::id()) ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-                            <i class="{{ $post->isBookmarkedByUser(Auth::id()) ? 'fas' : 'far' }} fa-bookmark"></i>
-                            <span>Save</span>
-                        </button>
-                        @else
-                        <a href="{{ route('login') }}" 
-                           class="flex items-center space-x-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                            <i class="far fa-heart"></i>
-                            <span>Like</span>
-                        </a>
-                        <a href="{{ route('login') }}" 
-                           class="flex items-center space-x-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                            <i class="far fa-bookmark"></i>
-                            <span>Save</span>
-                        </a>
-                        @endauth
-                    </div>
+            {{-- Action Buttons --}}
+            <div class="px-2 py-1">
+                <div class="flex items-center justify-around">
+                    <button onclick="toggleLike({{ $post->post_id }})" 
+                            class="flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ $post->isLikedByUser(Auth::id()) ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400' }}">
+                        <i class="{{ $post->isLikedByUser(Auth::id()) ? 'fas' : 'far' }} fa-thumbs-up text-xl"></i>
+                        <span class="font-semibold text-[15px]">Like</span>
+                    </button>
+
+                    <button class="flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-400">
+                        <i class="far fa-comment text-xl"></i>
+                        <span class="font-semibold text-[15px]">Comment</span>
+                    </button>
+
+                    <button onclick="toggleBookmark({{ $post->post_id }})" 
+                            class="flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition {{ $post->isBookmarkedByUser(Auth::id()) ? 'text-yellow-600' : 'text-gray-600 dark:text-gray-400' }}">
+                        <i class="{{ $post->isBookmarkedByUser(Auth::id()) ? 'fas' : 'far' }} fa-bookmark text-xl"></i>
+                        <span class="font-semibold text-[15px]">Save</span>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Comments Section -->
+        {{-- Comments Section --}}
         @if($post->allow_comments)
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Comments ({{ $post->comments_count }})
-            </h3>
-
-            <!-- Add Comment Form - SỬA ĐÂY -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+            
             @auth
-            <form action="{{ route('posts.comment', $post->post_id) }}" method="POST" class="mb-6">
-                @csrf
-                <div class="flex items-start space-x-3">
-                    <img src="{{ Auth::user()->avatar_url ?? '/images/default-avatar.png' }}" 
-                         class="w-10 h-10 rounded-full flex-shrink-0">
-                    <div class="flex-1">
-                        <textarea name="content" 
-                                  rows="3"
-                                  required
-                                  minlength="1"
-                                  maxlength="1000"
-                                  placeholder="Share your thoughts..."
-                                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
-                                Max 1000 characters
-                            </span>
-                            <button type="submit" 
-                                    class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition">
-                                <i class="fas fa-paper-plane mr-2"></i>Post Comment
+            {{-- Comment Form --}}
+            <div class="mb-6">
+                <form action="{{ route('posts.comment', $post->post_id) }}" method="POST" id="comment-form">
+                    @csrf
+                    <input type="hidden" name="parent_id" id="parent_id_input">
+
+                    {{-- Reply Indicator --}}
+                    <div id="reply-indicator" class="hidden mb-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-lg text-[13px] flex justify-between items-center">
+                        <span>Replying to <b id="reply-to-username"></b></span>
+                        <button type="button" onclick="cancelReply()" class="hover:text-blue-900">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <img src="{{ Auth::user()->avatar_url ? asset('storage/'.Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->first_name).'&background=random' }}" 
+                             class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+                        
+                        <div class="flex-1 flex items-center bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2">
+                            <input type="text" 
+                                   name="content" 
+                                   id="comment-content"
+                                   class="flex-1 bg-transparent border-0 focus:ring-0 text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-500"
+                                   placeholder="Write a comment...">
+                            <button type="submit" class="ml-2 text-blue-600 hover:text-blue-700 transition">
+                                <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
             @else
-            <div class="bg-gray-50 dark:bg-gray-750 rounded-lg p-4 text-center mb-6">
-                <p class="text-gray-600 dark:text-gray-400 mb-2">
-                    Please <a href="{{ route('login') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">login</a> to join the conversation.
+            <div class="mb-6 text-center py-4">
+                <p class="text-gray-600 dark:text-gray-400 text-[15px]">
+                    <a href="{{ route('login') }}" class="text-blue-600 font-semibold hover:underline">Log in</a> to comment
                 </p>
             </div>
             @endauth
 
-            <!-- Comments List -->
-            <div class="space-y-6" id="comments-section">
+            {{-- Comments List --}}
+            <div class="space-y-1">
                 @forelse($post->comments as $comment)
-                    @include('posts.components.comment-item', ['comment' => $comment])
+                    @include('posts.components.comment-item', ['comment' => $comment, 'level' => 0])
                 @empty
                     <div class="text-center py-8">
-                        <i class="fas fa-comments text-gray-300 dark:text-gray-600 text-4xl mb-3"></i>
-                        <p class="text-gray-600 dark:text-gray-400">No comments yet. Be the first to share your thoughts!</p>
+                        <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                            <i class="far fa-comments text-2xl text-gray-400"></i>
+                        </div>
+                        <p class="text-gray-500 dark:text-gray-400 text-[15px]">No comments yet. Be the first to comment!</p>
                     </div>
                 @endforelse
             </div>
-        </div>
-        @else
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
-            <i class="fas fa-comment-slash text-gray-300 dark:text-gray-600 text-4xl mb-3"></i>
-            <p class="text-gray-600 dark:text-gray-400">Comments are disabled for this post.</p>
         </div>
         @endif
 
@@ -236,62 +173,55 @@
 
 @push('scripts')
 <script>
-// Like functionality
-async function toggleLike(postId) {
-    try {
-        const response = await fetch(`/posts/${postId}/like`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            location.reload();
-        }
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
+    function replyToComment(commentId, username) {
+        const parentInput = document.getElementById('parent_id_input');
+        const replyIndicator = document.getElementById('reply-indicator');
+        const replyUsername = document.getElementById('reply-to-username');
+        const input = document.getElementById('comment-content');
 
-// Bookmark functionality
-async function toggleBookmark(postId) {
-    try {
-        const response = await fetch(`/posts/${postId}/bookmark`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            location.reload();
+        if (parentInput && input) {
+            parentInput.value = commentId;
+            replyUsername.textContent = username;
+            replyIndicator.classList.remove('hidden');
+            input.focus();
+            input.placeholder = "Write a reply...";
+            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    } catch (error) {
-        console.error('Error:', error);
     }
-}
 
-// Share functionality
-function sharePost(postId) {
-    const url = `${window.location.origin}/posts/${postId}`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: '{{ $post->title }}',
-            url: url
-        });
-    } else {
-        navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
+    function cancelReply() {
+        document.getElementById('parent_id_input').value = '';
+        document.getElementById('reply-indicator').classList.add('hidden');
+        const input = document.getElementById('comment-content');
+        input.placeholder = "Write a comment...";
+        input.value = '';
     }
-}
+
+    async function toggleLike(postId) {
+        try {
+            const response = await fetch(`/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                }
+            });
+            if ((await response.json()).success) location.reload();
+        } catch (error) { console.error(error); }
+    }
+
+    async function toggleBookmark(postId) {
+        try {
+            const response = await fetch(`/posts/${postId}/bookmark`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                }
+            });
+            if ((await response.json()).success) location.reload();
+        } catch (error) { console.error(error); }
+    }
 </script>
 @endpush
 @endsection

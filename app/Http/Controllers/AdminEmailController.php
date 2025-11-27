@@ -8,14 +8,18 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Mail\AdminBroadcastEmail;
+use Illuminate\Mail\Mailable;
 
 class AdminEmailController extends Controller
 {
+
+    public $subject;
+    public $messageContent;
+    public $recipient;
     public function __construct()
     {
         $this->middleware('auth');
         $this->middleware('admin');
-
     }
 
     /**
@@ -23,6 +27,7 @@ class AdminEmailController extends Controller
      */
     public function sendEmail(Request $request)
     {
+        // 1. Validate dữ liệu
         $validated = $request->validate([
             'recipient_type' => 'required|in:all,volunteers,organizations,active,single',
             'user_id' => 'nullable|exists:users,user_id',
@@ -30,7 +35,7 @@ class AdminEmailController extends Controller
             'message' => 'required|string'
         ]);
 
-        // Get recipients based on type
+        // 2. Lấy danh sách người nhận
         $recipients = $this->getRecipients($validated['recipient_type'], $validated['user_id'] ?? null);
 
         if ($recipients->isEmpty()) {
@@ -40,27 +45,28 @@ class AdminEmailController extends Controller
             ], 400);
         }
 
-        // Send emails
+        // 3. Gửi email (Vòng lặp)
         $sentCount = 0;
         foreach ($recipients as $recipient) {
             try {
+                // GỌI ĐÚNG CLASS MAILABLE CỦA BẠN Ở ĐÂY
                 Mail::to($recipient->email)->send(new AdminBroadcastEmail(
-                    $validated['subject'],
-                    $validated['message'],
-                    $recipient
+                    $validated['subject'], // Chủ đề
+                    $validated['message'], // Nội dung (chưa replace)
+                    $recipient             // Đối tượng User để lấy tên thay thế
                 ));
                 $sentCount++;
             } catch (\Exception $e) {
-                \Log::error('Failed to send email to ' . $recipient->email . ': ' . $e->getMessage());
+                Log::error('Failed to send email to ' . $recipient->email . ': ' . $e->getMessage());
             }
         }
 
-        // Log email activity
+        // 4. Lưu lịch sử (Log)
         $this->logEmailActivity([
             'recipient_type' => $validated['recipient_type'],
             'recipient_count' => $sentCount,
             'subject' => $validated['subject'],
-            'sent_by' => auth()->id()
+            'sent_by' => auth()->id() // Hoặc Auth::id()
         ]);
 
         return response()->json([
@@ -68,7 +74,6 @@ class AdminEmailController extends Controller
             'message' => "Email sent successfully to $sentCount recipient(s)"
         ]);
     }
-
     /**
      * Get email history
      */
@@ -94,20 +99,20 @@ class AdminEmailController extends Controller
             case 'all':
                 // All active users
                 break;
-                
+
             case 'volunteers':
                 $query->where('user_type', 'Volunteer');
                 break;
-                
+
             case 'organizations':
                 $query->where('user_type', 'Organization');
                 break;
-                
+
             case 'active':
                 $query->whereNotNull('last_login_at')
                     ->where('last_login_at', '>=', now()->subDays(30));
                 break;
-                
+
             case 'single':
                 if ($userId) {
                     $query->where('user_id', $userId);

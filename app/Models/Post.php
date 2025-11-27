@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\PostMedia;
 
 class Post extends Model
 {
@@ -119,12 +120,28 @@ class Post extends Model
         return $this->user->first_name . ' ' . $this->user->last_name;
     }
 
+    // public function getUserAvatar()
+    // {
+    //     if ($this->user->user_type === 'Organization' && $this->user->organization) {
+    //         return $this->user->organization->user->avatar_url ?? $this->user->avatar_url ?? '/images/default-org.png';
+    //     }
+    //     return $this->user->avatar_url ?? '/images/default-avatar.png';
+    // }
+
     public function getUserAvatar()
     {
-        if ($this->user->user_type === 'Organization' && $this->user->organization) {
-            return $this->user->organization->user->avatar_url ?? $this->user->avatar_url ?? '/images/default-org.png';
+        if (!$this->user) {
+            return 'https://ui-avatars.com/api/?name=Unknown&background=random&color=fff';
         }
-        return $this->user->avatar_url ?? '/images/default-avatar.png';
+
+        // 1. Nếu user có avatar trong DB
+        if ($this->user->avatar_url) {
+            return asset('storage/' . $this->user->avatar_url);
+        }
+
+        // 2. Fallback: Dùng UI Avatars với tên hiển thị
+        $name = $this->getUserDisplayName();
+        return 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=random&color=fff';
     }
 
     public function getUserBadge()
@@ -191,6 +208,10 @@ class Post extends Model
     public function hasImage()
     {
         return !empty($this->image_url);
+    }
+    public function media()
+    {
+        return $this->hasMany(PostMedia::class, 'post_id');
     }
 
     public function getReadingTime()

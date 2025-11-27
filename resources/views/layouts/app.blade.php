@@ -6,9 +6,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Volunteer Connect Pro')</title>
-    <link rel="icon" href="{{ asset('local.jpg') }}" type="image/jpeg">
-    <!-- Tailwind CSS -->
+    <title>@yield('title', 'VolunteerConnect Platform')</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,10 +27,8 @@
         }
     </script>
 
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
@@ -151,32 +148,36 @@
 <body
     class="h-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
     <div class="min-h-full">
-        <!-- Navigation -->
         <nav class="glass dark:glass-dark sticky top-0 z-50 border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg"
             x-data="{ mobileMenuOpen: false }">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
-                    <!-- Logo & Main Nav -->
                     <div class="flex items-center space-x-8">
                         <a href="{{ route('home') }}" class="flex items-center space-x-2 group">
                             <div class="relative">
                                 <div
                                     class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition">
                                 </div>
-                                <div class="relative rounded-lg overflow-hidden shadow-md">
-                                    <img src="{{ asset('local.jpg') }}" alt="Logo" class="w-10 h-10 object-cover">
+                                <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-lg">
+                                    <i class="fas fa-hands-helping text-white text-xl"></i>
                                 </div>
                             </div>
                             <span class="font-bold text-xl gradient-text hidden sm:block">VolunteerConnect</span>
                         </a>
 
-                        <!-- Desktop Navigation -->
                         <div class="hidden md:flex md:space-x-1">
 
                             <a href="{{ route('opportunities.index') }}"
                                 class="nav-link inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
                                 <i class="fas fa-search mr-2"></i>Tìm Cơ Hội
                             </a>
+
+                            {{-- [MỚI] Thêm nút Bản đồ --}}
+                            <a href="{{ route('map.index') }}"
+                                class="nav-link inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
+                                <i class="fas fa-map-marked-alt mr-2"></i>Bản Đồ
+                            </a>
+
                             <a href="{{ route('organizations.index') }}"
                                 class="nav-link inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
                                 <i class="fas fa-building mr-2"></i>Tổ Chức
@@ -192,9 +193,7 @@
                         </div>
                     </div>
 
-                    <!-- Right Nav -->
                     <div class="flex items-center space-x-2">
-                        <!-- Dark Mode Toggle -->
                         <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)"
                             class="p-2.5 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg transition">
                             <i class="fas text-lg" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
@@ -210,7 +209,6 @@
                                 <i class="fas fa-user-plus mr-2"></i>Đăng Ký
                             </a>
                         @else
-                            <!-- Notifications -->
                             <div class="relative hidden sm:block" x-data="{ open: false }">
                                 <button @click="open = !open" type="button"
                                     class="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg transition">
@@ -222,13 +220,11 @@
                                 </button>
                             </div>
 
-                            <!-- Messages -->
                             <a href="{{ route('conversations.index') }}"
                                 class="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg transition hidden sm:block">
                                 <i class="fas fa-comments text-lg"></i>
                             </a>
 
-                            <!-- User Menu -->
                             <div class="relative" x-data="{ open: false }">
                                 <button @click="open = !open" type="button"
                                     class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
@@ -240,7 +236,6 @@
                                         :class="{ 'rotate-180': open }"></i>
                                 </button>
 
-                                <!-- Dropdown Menu -->
                                 <div x-show="open" @click.away="open = false" x-transition
                                     class="absolute right-0 mt-2 w-64 glass dark:glass-dark rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50"
                                     style="display: none;">
@@ -251,7 +246,6 @@
                                         <p class="text-xs text-gray-500 dark:text-gray-400">{{ Auth::user()->email }}</p>
                                     </div>
 
-                                    {{-- CODE ĐÃ SỬA LỖI LOGIC --}}
                                     <div class="py-1">
                                         <a href="{{ route('dashboard') }}"
                                             class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
@@ -259,9 +253,7 @@
                                                 class="fas fa-tachometer-alt w-5 text-indigo-600 dark:text-indigo-400"></i><span>Dashboard</span>
                                         </a>
 
-                                        {{-- START: SỬA LỖI LOGIC --}}
                                         @if(Auth::user()->user_type === 'Volunteer')
-                                            {{-- Nếu là Tình nguyện viên, trỏ đến hồ sơ chuyên biệt --}}
                                             <a href="{{ route('volunteer.profile.profile') }}"
                                                 class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                                                 <i class="fas fa-user-tie w-5 text-blue-600 dark:text-blue-400"></i><span>Hồ Sơ
@@ -274,7 +266,6 @@
                                             </a>
 
                                         @elseif(Auth::user()->user_type === 'Organization')
-                                            {{-- Nếu là Tổ chức, trỏ đến hồ sơ tổ chức --}}
                                             <a href="{{ route('organization.profile.show') }}"
                                                 class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                                                 <i class="fas fa-building w-5 text-blue-600 dark:text-blue-400"></i><span>Hồ Sơ
@@ -287,7 +278,6 @@
                                             </a>
 
                                         @elseif(Auth::user()->user_type === 'Admin')
-                                            {{-- Nếu là Admin, giữ nguyên link Admin Panel --}}
                                             <a href="{{ route('admin.dashboard') }}"
                                                 class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                                                 <i class="fas fa-cog w-5 text-red-600 dark:text-red-400"></i><span>Admin
@@ -295,14 +285,12 @@
                                             </a>
 
                                         @else
-                                            {{-- Dự phòng cho các loại user khác (nếu có) --}}
                                             <a href="{{ route('profile') }}"
                                                 class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                                                 <i class="fas fa-user w-5 text-blue-600 dark:text-blue-400"></i><span>Cài Đặt Hồ
                                                     Sơ</span>
                                             </a>
                                         @endif
-                                        {{-- END: SỬA LỖI LOGIC --}}
                                     </div>
 
                                     <div class="border-t border-gray-200 dark:border-gray-700 py-1">
@@ -318,7 +306,6 @@
                             </div>
                         @endguest
 
-                        <!-- Mobile menu button -->
                         <button @click="mobileMenuOpen = !mobileMenuOpen" type="button"
                             class="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-800/50">
                             <i class="fas text-xl" :class="mobileMenuOpen ? 'fa-times' : 'fa-bars'"></i>
@@ -326,13 +313,19 @@
                     </div>
                 </div>
 
-                <!-- Mobile Menu -->
                 <div x-show="mobileMenuOpen" x-transition class="md:hidden pb-4" style="display: none;">
                     <div class="space-y-1">
                         <a href="{{ route('opportunities.index') }}"
                             class="block px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg">
                             <i class="fas fa-search mr-2"></i>Tìm Cơ Hội
                         </a>
+
+                        {{-- [MỚI] Thêm nút Bản đồ Mobile --}}
+                        <a href="{{ route('map.index') }}"
+                            class="block px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg">
+                            <i class="fas fa-map-marked-alt mr-2"></i>Bản Đồ
+                        </a>
+
                         <a href="{{ route('organizations.index') }}"
                             class="block px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg">
                             <i class="fas fa-building mr-2"></i>Tổ Chức
@@ -356,7 +349,6 @@
             </div>
         </nav>
 
-        <!-- Flash Messages -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
             @if(session('success'))
                 <div
@@ -391,10 +383,8 @@
             @endif
         </div>
 
-        <!-- Main Content -->
         <main>@yield('content')</main>
 
-        <!-- Footer -->
         <footer class="glass dark:glass-dark border-t border-gray-200/50 dark:border-gray-700/50 mt-16">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -459,6 +449,13 @@
                                     class="text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center space-x-2 group"><i
                                         class="fas fa-chevron-right text-xs text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all"></i><span>Cơ
                                         Hội</span></a></li>
+
+                            {{-- [MỚI] Thêm link Bản đồ vào Footer --}}
+                            <li><a href="{{ route('map.index') }}"
+                                    class="text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center space-x-2 group"><i
+                                        class="fas fa-chevron-right text-xs text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all"></i><span>Bản
+                                        Đồ</span></a></li>
+
                             <li><a href="{{ route('organizations.index') }}"
                                     class="text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center space-x-2 group"><i
                                         class="fas fa-chevron-right text-xs text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all"></i><span>Tổ
@@ -478,14 +475,42 @@
             </div>
         </footer>
 
-        <!-- Scroll to Top -->
         <button id="scrollToTop" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
             class="fixed bottom-8 right-8 w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-indigo-500/50 transform hover:scale-110 transition-all opacity-0 pointer-events-none z-50">
             <i class="fas fa-arrow-up"></i>
         </button>
     </div>
 
-    <!-- Scripts -->
+    <div id="mediaLightbox"
+        class="fixed inset-0 z-[9999] hidden bg-black/95 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity duration-300"
+        tabindex="-1">
+
+        <button onclick="closeLightbox()"
+            class="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition z-50">
+            <i class="fas fa-times text-2xl"></i>
+        </button>
+
+        <button id="lbPrev" onclick="changeMedia(-1)"
+            class="absolute left-4 text-white/70 hover:text-white p-4 rounded-full hover:bg-white/10 transition z-50 hidden md:block">
+            <i class="fas fa-chevron-left text-3xl"></i>
+        </button>
+
+        <button id="lbNext" onclick="changeMedia(1)"
+            class="absolute right-4 text-white/70 hover:text-white p-4 rounded-full hover:bg-white/10 transition z-50 hidden md:block">
+            <i class="fas fa-chevron-right text-3xl"></i>
+        </button>
+
+        <div class="relative w-full h-full flex items-center justify-center p-4 md:p-10">
+            <div id="lbContent"
+                class="max-w-full max-h-full shadow-2xl rounded-lg overflow-hidden flex items-center justify-center">
+            </div>
+        </div>
+
+        <div class="absolute bottom-4 left-0 right-0 text-center text-white pointer-events-none">
+            <span id="lbCounter" class="bg-black/50 px-3 py-1 rounded-full text-sm backdrop-blur-md"></span>
+        </div>
+    </div>
+
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -616,6 +641,141 @@
     </script>
 
     @stack('scripts')
+
+    <script>
+        let currentMedia = [];
+        let currentIndex = 0;
+        const lightbox = document.getElementById('mediaLightbox');
+        const content = document.getElementById('lbContent');
+        const counter = document.getElementById('lbCounter');
+
+        // Hàm mở Lightbox (Được gọi từ post-card)
+        window.openLightbox = function (mediaArray, index) {
+            if (!mediaArray || mediaArray.length === 0) return;
+
+            currentMedia = mediaArray;
+            currentIndex = index;
+
+            // Hiển thị Modal
+            lightbox.classList.remove('hidden');
+            // Trick để kích hoạt transition opacity
+            setTimeout(() => lightbox.classList.remove('opacity-0'), 10);
+            document.body.style.overflow = 'hidden'; // Khóa scroll trang web
+
+            showCurrentMedia();
+        };
+
+        // Hàm đóng Lightbox
+        window.closeLightbox = function () {
+            lightbox.classList.add('opacity-0');
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+                content.innerHTML = ''; // Xóa nội dung để dừng video
+                document.body.style.overflow = ''; // Mở khóa scroll
+            }, 300);
+        };
+
+        // Hàm chuyển ảnh
+        window.changeMedia = function (direction) {
+            currentIndex += direction;
+
+            // Loop vòng tròn
+            if (currentIndex < 0) currentIndex = currentMedia.length - 1;
+            if (currentIndex >= currentMedia.length) currentIndex = 0;
+
+            showCurrentMedia();
+        };
+
+        // Hàm hiển thị nội dung media hiện tại
+        function showCurrentMedia() {
+            const item = currentMedia[currentIndex];
+            const url = `/storage/${item.file_path}`; // Đảm bảo đường dẫn đúng
+
+            content.innerHTML = ''; // Clear cũ
+
+            if (item.file_type === 'video') {
+                content.innerHTML = `
+                    <video src="${url}" controls autoplay class="max-w-full max-h-[85vh] object-contain shadow-lg rounded-md"></video>
+                `;
+            } else {
+                content.innerHTML = `
+                    <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-lg rounded-md animate-zoom-in">
+                `;
+            }
+
+            // Cập nhật số thứ tự (VD: 1/5)
+            if (currentMedia.length > 1) {
+                counter.textContent = `${currentIndex + 1} / ${currentMedia.length}`;
+                counter.classList.remove('hidden');
+            } else {
+                counter.classList.add('hidden');
+            }
+        }
+
+        // Đóng khi click ra ngoài (background)
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.closest('.w-full.h-full')) {
+                // closeLightbox(); // Bỏ comment nếu muốn click nền để đóng
+            }
+        });
+
+        // Phím tắt (ESC, Left, Right)
+        document.addEventListener('keydown', (e) => {
+            if (lightbox.classList.contains('hidden')) return;
+
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') changeMedia(-1);
+            if (e.key === 'ArrowRight') changeMedia(1);
+        });
+
+        window.openLightbox = function (mediaArray, index) {
+            if (!mediaArray || mediaArray.length === 0) return;
+
+            // 1. Tạm dừng tất cả video đang chạy trên trang feed để tránh ồn
+            document.querySelectorAll('video').forEach(vid => vid.pause());
+
+            currentMedia = mediaArray;
+            currentIndex = index;
+
+            lightbox.classList.remove('hidden');
+            setTimeout(() => lightbox.classList.remove('opacity-0'), 10);
+            document.body.style.overflow = 'hidden';
+
+            showCurrentMedia();
+        };
+
+        window.closeLightbox = function () {
+            lightbox.classList.add('opacity-0');
+
+            // Dừng video trong lightbox khi đóng
+            const lbVideo = content.querySelector('video');
+            if (lbVideo) lbVideo.pause();
+
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+                content.innerHTML = '';
+                document.body.style.overflow = '';
+            }, 300);
+        };
+    </script>
+
+    <style>
+        @keyframes zoom-in {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .animate-zoom-in {
+            animation: zoom-in 0.2s ease-out forwards;
+        }
+    </style>
 </body>
 
 </html>

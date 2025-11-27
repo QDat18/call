@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Validator;
 
 class ReviewModerationController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(['auth', 'role:Admin']);
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware(['auth', 'role:Admin']);
+    // }
 
     /**
      * Display reviews pending moderation

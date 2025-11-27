@@ -34,6 +34,10 @@ use App\Http\Controllers\DonationController;
 use App\Http\Controllers\ActivityController;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ContactFormMail;
+use App\Http\Controllers\Admin\ReviewModerationController;
+use App\Http\Controllers\Admin\ActivityVerificationController;
+use App\Http\Controllers\Admin\ReportGenerationController;
+use App\Http\Controllers\MapController;
 
 /*
 |--------------------------------------------------------------------------
@@ -134,7 +138,8 @@ Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->
 // === BẮT ĐẦU: THÊM ROUTE CHIẾN DỊCH QUYÊN GÓP ===
 // Trang chi tiết chiến dịch (Public)
 Route::get('/campaigns/{id}', [DonationController::class, 'show'])->name('campaign.show');
-
+Route::get('/map', [MapController::class, 'index'])->name('map.index');
+Route::get('/api/map/search', [MapController::class, 'search'])->name('api.map.search');
 
 /*
 |--------------------------------------------------------------------------
@@ -454,6 +459,12 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::get('/', [AdminController::class, 'users'])->name('index');
             Route::get('/create', [AdminController::class, 'createUser'])->name('create');
             Route::post('/', [AdminController::class, 'storeUser'])->name('store');
+
+            // --- CÁC ROUTE MỚI CẦN THÊM ---
+            Route::get('/download-template', [AdminController::class, 'downloadUserTemplate'])->name('download-template');
+            Route::post('/import', [AdminController::class, 'importUsers'])->name('import');
+            // ------------------------------
+
             Route::get('/{id}', [AdminController::class, 'showUser'])->name('show');
             Route::get('/{id}/edit', [AdminController::class, 'editUser'])->name('edit');
             Route::put('/{id}', [AdminController::class, 'updateUser'])->name('update');
@@ -461,6 +472,9 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::post('/{id}/activate', [AdminController::class, 'activateUser'])->name('activate');
             Route::post('/{id}/deactivate', [AdminController::class, 'deactivateUser'])->name('deactivate');
             Route::get('/export', [AdminController::class, 'exportUsers'])->name('export');
+
+            // Route bulk action
+            Route::post('/bulk-action', [AdminController::class, 'userBulkAction'])->name('bulk-action');
         });
 
         // Organizations
@@ -517,22 +531,39 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
 
         // Activities
         Route::prefix('activities')->name('activities.')->group(function () {
+            // Route Pending (Thêm mới)
+            Route::get('/pending', [AdminController::class, 'pendingActivities'])->name('pending');
+
             Route::get('/', [AdminController::class, 'activities'])->name('index');
-            Route::get('/{id}', [AdminController::class, 'showActivity'])->name('show');
             Route::get('/disputes', [AdminController::class, 'disputedActivities'])->name('disputes');
+
+            // Route {id} nên để cuối cùng để tránh xung đột
+            Route::get('/{id}', [AdminController::class, 'showActivity'])->name('show');
+
             Route::post('/{id}/resolve-dispute', [AdminController::class, 'resolveDispute'])->name('resolve-dispute');
+
+            // Thêm route Verify và Dispute action (nếu chưa có)
+            Route::post('/{id}/verify', [ActivityVerificationController::class, 'verify'])->name('verify');
+            Route::post('/{id}/dispute', [ActivityVerificationController::class, 'dispute'])->name('dispute');
+            Route::post('/bulk-verify', [ActivityVerificationController::class, 'bulkVerify'])->name('bulkVerify');
         });
 
         // Reviews
         Route::prefix('reviews')->name('reviews.')->group(function () {
-            Route::get('/', [ReviewController::class, 'pending'])->name('index');
-            Route::get('/all', [AdminController::class, 'allReviews'])->name('all');
-            Route::get('/pending', [ReviewController::class, 'pending'])->name('pending');
-            Route::post('/{id}/approve', [ReviewController::class, 'approve'])->name('approve');
-            Route::post('/{id}/reject', [ReviewController::class, 'reject'])->name('reject');
-            Route::post('/bulk-approve', [ReviewController::class, 'bulkApprove'])->name('bulk-approve');
-        });
+            // Trang danh sách review (kết hợp cả moderate và index)
+            Route::get('/', [ReviewModerationController::class, 'index'])->name('index');
+            Route::get('/moderate', [ReviewModerationController::class, 'index'])->name('moderate'); // Để khớp với code trong Controller
 
+            // Chi tiết review
+            Route::get('/{id}', [ReviewModerationController::class, 'show'])->name('show');
+
+            // Các hành động duyệt/từ chối
+            Route::post('/{id}/approve', [ReviewModerationController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [ReviewModerationController::class, 'reject'])->name('reject');
+
+            // Hành động hàng loạt
+            Route::post('/bulk-action', [ReviewModerationController::class, 'bulkAction'])->name('bulkAction');
+        });
         // Categories
         Route::prefix('categories')->name('categories.')->group(function () {
             Route::get('/', [AdminController::class, 'categories'])->name('index');
@@ -572,8 +603,16 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
         });
 
         // Reports
-        Route::post('/reports/{id}/resolve', [PostController::class, 'resolveReport'])->name('reports.resolve');
+        Route::prefix('reports')->name('reports.')->group(function () {
+            // Route chính: admin.reports.index
+            Route::get('/', [ReportGenerationController::class, 'index'])->name('index');
 
+            // Route tạo báo cáo (xem trước): admin.reports.generate
+            Route::get('/generate', [ReportGenerationController::class, 'generate'])->name('generate');
+
+            // Route tải xuống (PDF/CSV): admin.reports.download
+            Route::get('/download/{type}', [ReportGenerationController::class, 'download'])->name('download');
+        });
         // Settings
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings.index');
         Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');

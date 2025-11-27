@@ -65,9 +65,8 @@
         <!-- Logo -->
         <div class="flex items-center justify-between h-16 px-6 border-b border-slate-700 dark:border-slate-800">
             <div class="flex items-center space-x-3">
-                <div
-                    class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-hands-helping text-white text-xl"></i>
+                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center bg-slate-700">
+                    <img src="{{ asset('local.jpg') }}" alt="Logo" class="w-full h-full object-cover">
                 </div>
                 <div>
                     <h1 class="text-lg font-bold">VolunteerConnect</h1>

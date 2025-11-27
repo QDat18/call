@@ -1,9 +1,12 @@
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
     <div class="flex items-start space-x-3">
-        <img src="{{ Auth::user()->avatar_url ?? '/images/default-avatar.png' }}" 
-             class="w-10 h-10 rounded-full">
+        {{-- SỬA LẠI LOGIC LẤY ẢNH AVATAR CHUẨN --}}
+        <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name . ' ' . Auth::user()->last_name) . '&background=random&color=fff' }}" 
+             class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+             alt="Avatar">
+             
         <a href="{{ route('posts.create') }}" 
-           class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition cursor-pointer">
+           class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition cursor-pointer text-sm">
             What's on your mind, {{ Auth::user()->first_name }}?
         </a>
     </div>

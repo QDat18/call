@@ -147,34 +147,20 @@
                 <!-- Image Upload -->
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Add Image (Optional)
+                        Photos & Videos
                     </label>
+                    
                     <div class="flex items-center justify-center w-full">
-                        <label for="image" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition bg-gray-50 dark:bg-gray-800">
-                            <div class="text-center py-4">
-                                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Click to upload or drag and drop</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                        <label for="media" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fas fa-images text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-500">Click to upload multiple images/videos</p>
                             </div>
-                            <input type="file" 
-                                   id="image" 
-                                   name="image" 
-                                   accept="image/*"
-                                   class="hidden"
-                                   onchange="previewImage(this)">
+                            <input id="media" name="media[]" type="file" class="hidden" multiple accept="image/*,video/*" onchange="previewMedia(this)">
                         </label>
                     </div>
-                    <div id="image-preview" class="mt-4 hidden">
-                        <img src="" alt="Preview" class="max-w-full h-64 object-cover rounded-lg shadow-sm">
-                        <button type="button" 
-                                onclick="removeImage()"
-                                class="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400">
-                            <i class="fas fa-times mr-1"></i>Remove image
-                        </button>
-                    </div>
-                    @error('image')
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                    @enderror
+
+                    <div id="media-preview-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4"></div>
                 </div>
 
                 <!-- Settings -->
@@ -239,19 +225,49 @@ if (contentTextarea) {
 }
 
 // Image preview
-function previewImage(input) {
-    const preview = document.getElementById('image-preview');
-    const previewImg = preview.querySelector('img');
+// function previewImage(input) {
+//     const preview = document.getElementById('image-preview');
+//     const previewImg = preview.querySelector('img');
     
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
+//     if (input.files && input.files[0]) {
+//         const reader = new FileReader();
         
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.classList.remove('hidden');
-        }
+//         reader.onload = function(e) {
+//             previewImg.src = e.target.result;
+//             preview.classList.remove('hidden');
+//         }
         
-        reader.readAsDataURL(input.files[0]);
+//         reader.readAsDataURL(input.files[0]);
+//     }
+// }
+
+function previewMedia(input) {
+    const grid = document.getElementById('media-preview-grid');
+    grid.innerHTML = ''; // Clear old previews
+    
+    if (input.files) {
+        Array.from(input.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'relative rounded-lg overflow-hidden h-24 border border-gray-200';
+                
+                if (file.type.startsWith('image/')) {
+                    div.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                } else if (file.type.startsWith('video/')) {
+                    div.innerHTML = `
+                        <video class="w-full h-full object-cover">
+                            <source src="${e.target.result}">
+                        </video>
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <i class="fas fa-play text-white"></i>
+                        </div>
+                    `;
+                }
+                grid.appendChild(div);
+            }
+            reader.readAsDataURL(file);
+        });
     }
 }
 
