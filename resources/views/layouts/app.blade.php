@@ -511,6 +511,26 @@
         </div>
     </div>
 
+    <div id="mediaLightbox"
+        class="fixed inset-0 z-[9999] hidden bg-black/95 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity duration-300"
+        tabindex="-1">
+        <button onclick="closeLightbox()"
+            class="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition z-50"><i
+                class="fas fa-times text-3xl"></i></button>
+        <button onclick="changeMedia(-1)"
+            class="absolute left-4 text-white/70 hover:text-white p-4 rounded-full hover:bg-white/10 transition z-50 hidden md:block"><i
+                class="fas fa-chevron-left text-4xl"></i></button>
+        <button onclick="changeMedia(1)"
+            class="absolute right-4 text-white/70 hover:text-white p-4 rounded-full hover:bg-white/10 transition z-50 hidden md:block"><i
+                class="fas fa-chevron-right text-4xl"></i></button>
+
+        <div class="relative w-full h-full flex items-center justify-center p-4">
+            <div id="lbContent" class="max-w-full max-h-full flex items-center justify-center shadow-2xl"></div>
+        </div>
+        <div class="absolute bottom-4 text-white font-medium bg-black/50 px-4 py-1 rounded-full backdrop-blur"><span
+                id="lbCounter"></span></div>
+    </div>
+
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -643,121 +663,149 @@
     @stack('scripts')
 
     <script>
+        // --- LOGIC LIGHTBOX ---
         let currentMedia = [];
         let currentIndex = 0;
         const lightbox = document.getElementById('mediaLightbox');
-        const content = document.getElementById('lbContent');
-        const counter = document.getElementById('lbCounter');
+        const lbContent = document.getElementById('lbContent');
+        const lbCounter = document.getElementById('lbCounter');
 
-        // Hàm mở Lightbox (Được gọi từ post-card)
-        window.openLightbox = function (mediaArray, index) {
-            if (!mediaArray || mediaArray.length === 0) return;
+        window.openLightbox = function (media, index) {
+            if (!media || media.length === 0) return;
+            // Dừng video trên feed
+            document.querySelectorAll('video').forEach(v => v.pause());
 
-            currentMedia = mediaArray;
+            currentMedia = media;
             currentIndex = index;
-
-            // Hiển thị Modal
             lightbox.classList.remove('hidden');
-            // Trick để kích hoạt transition opacity
             setTimeout(() => lightbox.classList.remove('opacity-0'), 10);
-            document.body.style.overflow = 'hidden'; // Khóa scroll trang web
-
-            showCurrentMedia();
-        };
-
-        // Hàm đóng Lightbox
-        window.closeLightbox = function () {
-            lightbox.classList.add('opacity-0');
-            setTimeout(() => {
-                lightbox.classList.add('hidden');
-                content.innerHTML = ''; // Xóa nội dung để dừng video
-                document.body.style.overflow = ''; // Mở khóa scroll
-            }, 300);
-        };
-
-        // Hàm chuyển ảnh
-        window.changeMedia = function (direction) {
-            currentIndex += direction;
-
-            // Loop vòng tròn
-            if (currentIndex < 0) currentIndex = currentMedia.length - 1;
-            if (currentIndex >= currentMedia.length) currentIndex = 0;
-
-            showCurrentMedia();
-        };
-
-        // Hàm hiển thị nội dung media hiện tại
-        function showCurrentMedia() {
-            const item = currentMedia[currentIndex];
-            const url = `/storage/${item.file_path}`; // Đảm bảo đường dẫn đúng
-
-            content.innerHTML = ''; // Clear cũ
-
-            if (item.file_type === 'video') {
-                content.innerHTML = `
-                    <video src="${url}" controls autoplay class="max-w-full max-h-[85vh] object-contain shadow-lg rounded-md"></video>
-                `;
-            } else {
-                content.innerHTML = `
-                    <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-lg rounded-md animate-zoom-in">
-                `;
-            }
-
-            // Cập nhật số thứ tự (VD: 1/5)
-            if (currentMedia.length > 1) {
-                counter.textContent = `${currentIndex + 1} / ${currentMedia.length}`;
-                counter.classList.remove('hidden');
-            } else {
-                counter.classList.add('hidden');
-            }
+            document.body.style.overflow = 'hidden';
+            showMedia();
         }
 
-        // Đóng khi click ra ngoài (background)
-        lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox || e.target.closest('.w-full.h-full')) {
-                // closeLightbox(); // Bỏ comment nếu muốn click nền để đóng
+        window.closeLightbox = function () {
+            lightbox.classList.add('opacity-0');
+            // Dừng video trong lightbox
+            const v = lbContent.querySelector('video');
+            if (v) v.pause();
+
+            setTimeout(() => {
+                lightbox.classList.add('hidden');
+                lbContent.innerHTML = '';
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        window.changeMedia = function (dir) {
+            currentIndex = (currentIndex + dir + currentMedia.length) % currentMedia.length;
+            showMedia();
+        }
+
+        function showMedia() {
+            const item = currentMedia[currentIndex];
+            const path = `/storage/${item.file_path}`;
+
+            if (item.file_type === 'video') {
+                lbContent.innerHTML = `<video src="${path}" controls autoplay class="max-w-full max-h-[85vh] rounded-lg"></video>`;
+            } else {
+                lbContent.innerHTML = `<img src="${path}" class="max-w-full max-h-[85vh] object-contain rounded-lg">`;
             }
-        });
+            lbCounter.textContent = `${currentIndex + 1} / ${currentMedia.length}`;
+        }
 
-        // Phím tắt (ESC, Left, Right)
-        document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', e => {
             if (lightbox.classList.contains('hidden')) return;
-
             if (e.key === 'Escape') closeLightbox();
             if (e.key === 'ArrowLeft') changeMedia(-1);
             if (e.key === 'ArrowRight') changeMedia(1);
         });
 
-        window.openLightbox = function (mediaArray, index) {
-            if (!mediaArray || mediaArray.length === 0) return;
+        // --- LOGIC TƯƠNG TÁC BÀI VIẾT (LIKE, SAVE, DELETE) ---
 
-            // 1. Tạm dừng tất cả video đang chạy trên trang feed để tránh ồn
-            document.querySelectorAll('video').forEach(vid => vid.pause());
+        async function toggleLike(postId) {
+            try {
+                const response = await fetch(`/posts/${postId}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
 
-            currentMedia = mediaArray;
-            currentIndex = index;
+                if (response.status === 401) {
+                    window.location.href = '{{ route("login") }}';
+                    return;
+                }
 
-            lightbox.classList.remove('hidden');
-            setTimeout(() => lightbox.classList.remove('opacity-0'), 10);
-            document.body.style.overflow = 'hidden';
+                const data = await response.json();
+                if (data.success) {
+                    // Cách đơn giản nhất: Reload để cập nhật UI
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error liking post:', error);
+            }
+        }
 
-            showCurrentMedia();
-        };
+        async function savePost(postId) {
+            toggleBookmark(postId);
+        }
 
-        window.closeLightbox = function () {
-            lightbox.classList.add('opacity-0');
+        async function toggleBookmark(postId) {
+            try {
+                const response = await fetch(`/posts/${postId}/bookmark`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
 
-            // Dừng video trong lightbox khi đóng
-            const lbVideo = content.querySelector('video');
-            if (lbVideo) lbVideo.pause();
+                if (response.status === 401) {
+                    window.location.href = '{{ route("login") }}';
+                    return;
+                }
 
-            setTimeout(() => {
-                lightbox.classList.add('hidden');
-                content.innerHTML = '';
-                document.body.style.overflow = '';
-            }, 300);
-        };
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error bookmarking post:', error);
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('Are you sure you want to delete this post?')) return;
+
+            try {
+                const response = await fetch(`/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Nếu đang ở trang chi tiết, về trang chủ. Nếu ở trang list, reload.
+                    if (window.location.pathname.includes('/posts/')) {
+                        window.location.href = '{{ route("posts.index") }}';
+                    } else {
+                        location.reload();
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting post:', error);
+                alert('Failed to delete post');
+            }
+        }
     </script>
+
+    @stack('scripts')
 
     <style>
         @keyframes zoom-in {

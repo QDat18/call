@@ -177,7 +177,7 @@ Route::middleware('guest')->group(function () {
 
     // Password Reset
     Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
-    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
     Route::get('/reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
@@ -233,16 +233,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/archive', [ConversationController::class, 'archive'])->name('archive');
     });
 
-    // Messages
-    Route::prefix('messages')->name('messages.')->group(function () {
-        Route::get('/conversation/{conversationId}', [MessageController::class, 'index'])->name('index');
-        Route::post('/conversation/{conversationId}', [MessageController::class, 'send'])->name('send');
-        Route::post('/conversation/{conversationId}/read', [MessageController::class, 'markRead'])->name('read');
-        Route::post('/conversation/{conversationId}/upload', [MessageController::class, 'uploadAttachment'])->name('upload');
-        Route::delete('/conversation/{conversationId}/{messageId}', [MessageController::class, 'destroy'])->name('destroy');
-        Route::get('/conversation/{conversationId}/latest', [MessageController::class, 'getLatest'])->name('latest');
-        Route::get('/unread-count', [MessageController::class, 'getUnreadCount'])->name('unread-count');
-    });
+    Route::get('/conversations/{conversationId}/messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::post('/conversations/{conversationId}/messages', [MessageController::class, 'send'])->name('messages.send');
+    Route::post('/conversations/{conversationId}/messages/read', [MessageController::class, 'markRead'])->name('messages.read');
+    Route::post('/conversations/{conversationId}/messages/upload', [MessageController::class, 'uploadAttachment'])->name('messages.upload');
+    Route::delete('/conversations/{conversationId}/messages/{messageId}', [MessageController::class, 'destroy'])->name('messages.destroy');
+    Route::get('/conversations/{conversationId}/messages/latest', [MessageController::class, 'getLatest'])->name('messages.latest');
+    Route::get('/messages/unread-count', [MessageController::class, 'getUnreadCount'])->name('messages.unread-count');
 
     // Connections (Friends)
     Route::prefix('connections')->name('connections.')->group(function () {
@@ -324,8 +321,9 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
         ->name('applications.my');
 
     // Form ứng tuyển (có ID cơ hội)
-    Route::get('/create/{opportunity}', [ApplicationController::class, 'create'])->name('create');
-
+    // Route::get('/create/{opportunity}', [ApplicationController::class, 'create'])->name('create');
+    Route::get('/applications/create/{opportunity}', [ApplicationController::class, 'create'])
+        ->name('applications.create');
     // Gửi đơn
     Route::post('/applications', [ApplicationController::class, 'store'])
         ->name('applications.store');
@@ -348,7 +346,8 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
 
     // Favorites
     Route::get('/favorites', [FavoriteController::class, 'index'])->name('favorites.index');
-    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');
+    Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])
+        ->name('favorites.toggle');
     Route::put('/favorites/{id}/notes', [FavoriteController::class, 'updateNotes'])->name('favorites.notes');
     Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy'])->name('favorites.destroy');
     Route::post('/favorites/bulk-destroy', [FavoriteController::class, 'bulkDestroy'])->name('favorites.bulk-destroy');

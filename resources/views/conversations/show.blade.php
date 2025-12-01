@@ -60,11 +60,34 @@ body {
 }
 
 .header-avatar {
+    position: relative;
     width: 50px;
     height: 50px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--primary-color);
+}
+
+.online-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--success-color);
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+.offline-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: #9ca3af;
+    border: 2px solid white;
+    border-radius: 50%;
 }
 
 .header-info {
@@ -80,12 +103,16 @@ body {
 
 .header-status {
     font-size: 13px;
-    color: #6b7280;
     margin: 0;
 }
 
 .header-status.online {
     color: var(--success-color);
+    font-weight: 500;
+}
+
+.header-status.offline {
+    color: #6b7280;
 }
 
 .header-actions {
@@ -633,27 +660,48 @@ body {
         </a>
 
         @if($otherUser)
-            <img src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}"
-                 alt="{{ $otherUser->first_name }}"
-                 class="header-avatar">
+            <div class="relative">
+                <img src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}"
+                     alt="{{ $otherUser->first_name }}"
+                     class="header-avatar">
+                @if($otherUser->is_online)
+                    <div class="online-indicator" title="Online"></div>
+                @else
+                    <div class="offline-indicator" title="Offline"></div>
+                @endif
+            </div>
         @endif
 
         <div class="header-info">
             <h4 class="header-name">
                 {{ $otherUser ? $otherUser->first_name . ' ' . $otherUser->last_name : 'User' }}
             </h4>
-            <p class="header-status {{ $otherUser && $otherUser->is_online ? 'online' : '' }}">
-                {{ $otherUser && $otherUser->is_online ? 'Online' : 'Offline' }}
+            <p class="header-status {{ $otherUser && $otherUser->is_online ? 'online' : 'offline' }}">
+                {{ $otherUser ? $otherUser->last_activity_text : 'Offline' }}
             </p>
         </div>
 
         <div class="header-actions">
-            <button id="start-voice-call" class="action-btn" title="Voice Call">
-                <i class="fas fa-phone"></i>
-            </button>
-            <button id="start-video-call" class="action-btn" title="Video Call">
-                <i class="fas fa-video"></i>
-            </button>
+            @if($conversation->type === 'direct')
+                {{-- Call buttons for direct chat --}}
+                <button id="start-voice-call" class="action-btn" title="Voice Call">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <button id="start-video-call" class="action-btn" title="Video Call">
+                    <i class="fas fa-video"></i>
+                </button>
+            @else
+                {{-- Group call buttons for group chat --}}
+                <button id="start-group-voice-call" class="action-btn" title="Group Voice Call">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <button id="start-group-video-call" class="action-btn" title="Group Video Call">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button id="group-info-btn" class="action-btn" title="Group Info">
+                    <i class="fas fa-users"></i>
+                </button>
+            @endif
         </div>
     </div>
 
@@ -780,7 +828,9 @@ window.chatConfig = {
     receiverId: {{ $otherUser?->user_id ?? 0 }},
     currentUserName: "{{ addslashes(auth()->user()->first_name) }}",
     otherUserName: "{{ addslashes($otherUser ? $otherUser->first_name . ' ' . $otherUser->last_name : 'User') }}",
-    otherUserAvatar: "{{ $otherUser ? ($otherUser->avatar_url ?? asset('images/default-avatar.png')) : asset('images/default-avatar.png') }}"
+    otherUserAvatar: "{{ $otherUser ? ($otherUser->avatar_url ?? asset('images/default-avatar.png')) : asset('images/default-avatar.png') }}",
+    otherUserIsOnline: {{ $otherUser && $otherUser->is_online ? 'true' : 'false' }},
+    otherUserLastActivity: "{{ $otherUser ? addslashes($otherUser->last_activity_text) : 'Offline' }}"
 };
 
 console.log('💬 Chat configuration:', window.chatConfig);
@@ -797,15 +847,23 @@ class VideoCallManager {
     setupCallButtons() {
         const videoBtn = document.getElementById('start-video-call');
         const voiceBtn = document.getElementById('start-voice-call');
+        const groupVideoBtn = document.getElementById('start-group-video-call');
+        const groupVoiceBtn = document.getElementById('start-group-voice-call');
 
         if (videoBtn) {
             videoBtn.addEventListener('click', () => this.initiateCall('video'));
-            console.log('✅ Video button attached');
         }
 
         if (voiceBtn) {
             voiceBtn.addEventListener('click', () => this.initiateCall('audio'));
-            console.log('✅ Voice button attached');
+        }
+
+        if (groupVideoBtn) {
+            groupVideoBtn.addEventListener('click', () => this.initiateCall('video'));
+        }
+
+        if (groupVoiceBtn) {
+            groupVoiceBtn.addEventListener('click', () => this.initiateCall('audio'));
         }
     }
 
@@ -820,25 +878,15 @@ class VideoCallManager {
                 console.log('📞 Incoming call:', data);
                 this.showIncomingCallModal(data);
             });
-
-        console.log('✅ Listening for calls on:', `user.${this.config.currentUserId}`);
     }
 
     async initiateCall(callType) {
         try {
             console.log(`🚀 Initiating ${callType} call...`);
-            console.log('Config:', {
-                conversationId: this.config.conversationId,
-                callType: callType
-            });
 
             this.showLoading(`Starting ${callType} call...`);
 
-            // ✅ ĐÚNG URL
-            const url = '/api/video-calls/initiate';
-            console.log('Calling URL:', url);
-
-            const response = await fetch(url, {
+            const response = await fetch('/api/video-calls/initiate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -852,12 +900,6 @@ class VideoCallManager {
                 })
             });
 
-            console.log('Response status:', response.status);
-            console.log('Response headers:', {
-                contentType: response.headers.get('content-type')
-            });
-
-            // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
@@ -1048,11 +1090,6 @@ async function initializeApp() {
         return;
     }
 
-    if (!window.chatConfig.receiverId) {
-        console.error('❌ Missing receiverId');
-        return;
-    }
-
     // Wait for Echo
     let attempts = 0;
     while (!window.Echo && attempts < 50) {
@@ -1062,7 +1099,6 @@ async function initializeApp() {
 
     if (!window.Echo) {
         console.error('❌ Echo not initialized after 5 seconds');
-        alert('Connection error. Please refresh the page.');
         return;
     }
 

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.volunteer')
 
 @section('title', 'Chi Tiết Đơn Ứng Tuyển')
 
@@ -8,30 +8,41 @@
         <div class="p-8 border-b border-purple-100">
             <h1 class="text-3xl font-bold mb-4 text-purple-800">{{ $application->opportunity->title }}</h1>
             <div class="flex items-center gap-6 text-sm text-gray-600">
-                <span>Trạng thái: <span class="font-medium {{ $application->status == 'Accepted' ? 'text-green-600' : ($application->status == 'Pending' ? 'text-yellow-600' : 'text-red-600') }}">{{ $application->status }}</span></span>
-                <span>Ứng tuyển ngày: {{ $application->applied_date->format('d/m/Y') }}</span>
+                <span>Status: <span class="font-medium @if($application->status == 'Pending') text-yellow-600 @elseif($application->status == 'Under Review') text-blue-600 @elseif($application->status == 'Accepted') text-green-600 @elseif($application->status == 'Rejected') text-red-600 @else text-gray-600 @endif">{{ $application->status }}</span></span>
+                <div>
+                    <p class="text-sm text-gray-600">Applied Date</p>
+                    <p class="font-semibold text-gray-800">
+                        {{ $application->applied_date->format('M d, Y') }}  <!-- Sửa format ưu tiên theo organization -->
+                        <span class="text-sm text-gray-500">({{ $application->applied_date->diffForHumans() }})</span>  <!-- Thêm như organization -->
+                    </p>
+                </div>
                 @if($application->reviewed_date)
-                    <span>Xem xét ngày: {{ $application->reviewed_date->format('d/m/Y') }}</span>
+                    <div>
+                        <p class="text-sm text-gray-600">Reviewed Date</p>
+                        <p class="font-semibold text-gray-800">{{ $application->reviewed_date->format('M d, Y') }}</p>  <!-- Đồng bộ format -->
+                    </div>
                 @endif
             </div>
         </div>
 
         <div class="p-8">
             <h2 class="font-semibold text-lg mb-3 text-purple-700">Tổ chức</h2>
-            <p class="text-gray-700 mb-6">{{ $application->opportunity->organization->organization_name }}</p>
+            <p class="text-gray-700 mb-6">{{ $application->opportunity->organization->organization_name }}</p>  <!-- Ưu tiên tên từ organization -->
 
             <h2 class="font-semibold text-lg mb-3 text-purple-700">Lý do ứng tuyển</h2>
-            <p class="text-gray-700 mb-6 leading-relaxed">{{ $application->motivation_letter }}</p>
+            <div class="text-gray-700 whitespace-pre-line mb-6">{{ $application->motivation_letter }}</div>  <!-- Giữ như organization -->
 
             <h2 class="font-semibold text-lg mb-3 text-purple-700">Kinh nghiệm liên quan</h2>
-            <p class="text-gray-700 mb-6 leading-relaxed">{{ $application->relevant_experience }}</p>
+            <div class="text-gray-700 whitespace-pre-line mb-6">{{ $application->relevant_experience }}</div>
 
             <h2 class="font-semibold text-lg mb-3 text-purple-700">Ghi chú thời gian sẵn sàng</h2>
-            <p class="text-gray-700 mb-8 leading-relaxed">{{ $application->availability_note ?? 'Không có' }}</p>
+            <div class="text-gray-700 whitespace-pre-line mb-8">{{ $application->availability_note }}</div>
 
-            @if($application->status == 'Rejected' && $application->organization_notes)
-                <h2 class="font-semibold text-lg mb-3 text-red-700">Ghi chú từ tổ chức</h2>
-                <p class="text-red-600 bg-red-50 p-4 rounded-xl">{{ $application->organization_notes }}</p>
+            @if($application->organization_notes)  <!-- Ưu tiên hiển thị notes từ organization nếu có -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+                    <h2 class="text-xl font-semibold text-yellow-900 mb-4">Internal Notes từ Tổ chức</h2>
+                    <div class="text-yellow-800 whitespace-pre-line">{{ $application->organization_notes }}</div>
+                </div>
             @endif
         </div>
 

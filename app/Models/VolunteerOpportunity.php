@@ -74,7 +74,7 @@ class VolunteerOpportunity extends Model{
         return $this->hasMany(Application::class, 'opportunity_id', 'opportunity_id');
     }
 
-    public function activities(): HasMany
+    public function volunteerActivities(): HasMany
     {
         return $this->hasMany(VolunteerActivity::class, 'opportunity_id', 'opportunity_id');
     }

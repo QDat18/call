@@ -9,12 +9,13 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\ClearAnalyticsCache;
+use Illuminate\Support\Facades\Cache;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
     use ClearAnalyticsCache;
-    
+
     protected $table = 'users';
     protected $primaryKey = 'user_id';
 
@@ -33,6 +34,10 @@ class User extends Authenticatable
         'avatar_url',
         'is_verified',
         'is_active',
+        'last_activity_at',
+        'last_login_at',
+        'reset_password_token',
+        'reset_password_token_expires_at',
     ];
 
     protected $hidden = [
@@ -46,8 +51,15 @@ class User extends Authenticatable
         'is_verified' => 'boolean',
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
+        'last_activity_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'reset_password_token_expires_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'is_online',
+        'last_activity_text'
     ];
 
     // ============================================
@@ -59,10 +71,6 @@ class User extends Authenticatable
         return $this->hasOne(VolunteerProfile::class, 'user_id', 'user_id');
     }
 
-    /**
-     * Alias for volunteerProfile to fix "Call to undefined method" error
-     * This allows usages like User::with('volunteer') or $user->volunteer
-     */
     public function volunteer(): HasOne
     {
         return $this->hasOne(VolunteerProfile::class, 'user_id', 'user_id');
@@ -191,13 +199,13 @@ class User extends Authenticatable
      */
     public function isFriendWith($userId): bool
     {
-        return Connection::where(function($q) use ($userId) {
-                $q->where('user_id', $this->user_id)
-                  ->where('friend_id', $userId);
-            })
-            ->orWhere(function($q) use ($userId) {
+        return Connection::where(function ($q) use ($userId) {
+            $q->where('user_id', $this->user_id)
+                ->where('friend_id', $userId);
+        })
+            ->orWhere(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->where('friend_id', $this->user_id);
+                    ->where('friend_id', $this->user_id);
             })
             ->where('status', 'accepted')
             ->exists();
@@ -208,13 +216,13 @@ class User extends Authenticatable
      */
     public function getConnectionStatus($userId): string
     {
-        $connection = Connection::where(function($q) use ($userId) {
-                $q->where('user_id', $this->user_id)
-                  ->where('friend_id', $userId);
-            })
-            ->orWhere(function($q) use ($userId) {
+        $connection = Connection::where(function ($q) use ($userId) {
+            $q->where('user_id', $this->user_id)
+                ->where('friend_id', $userId);
+        })
+            ->orWhere(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->where('friend_id', $this->user_id);
+                    ->where('friend_id', $this->user_id);
             })
             ->first();
 
@@ -227,13 +235,13 @@ class User extends Authenticatable
     public function sendFriendRequest($userId)
     {
         // Check if connection already exists
-        $exists = Connection::where(function($q) use ($userId) {
-                $q->where('user_id', $this->user_id)
-                  ->where('friend_id', $userId);
-            })
-            ->orWhere(function($q) use ($userId) {
+        $exists = Connection::where(function ($q) use ($userId) {
+            $q->where('user_id', $this->user_id)
+                ->where('friend_id', $userId);
+        })
+            ->orWhere(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
-                  ->where('friend_id', $this->user_id);
+                    ->where('friend_id', $this->user_id);
             })
             ->exists();
 
@@ -289,6 +297,99 @@ class User extends Authenticatable
     }
 
     // ============================================
+    // 🆕 ONLINE/OFFLINE METHODS - ĐÃ SỬA ĐỂ HOẠT ĐỘNG CHÍNH XÁC
+    // ============================================
+
+    /**
+     * Check if user is currently online
+     * - Online nếu last_activity_at trong vòng 5 phút
+     * - Sử dụng cache để tối ưu realtime
+     */
+    public function getIsOnlineAttribute(): bool
+    {
+        // Kiểm tra cache presence trước (từ Pusher hoặc middleware)
+        $cacheKey = 'user-online-' . $this->user_id;
+        if (Cache::has($cacheKey)) {
+            return true;
+        }
+
+        // Fallback time-based: online nếu hoạt động trong 5 phút
+        if (!$this->last_activity_at) {
+            return false;
+        }
+
+        return $this->last_activity_at->gt(now()->subMinutes(5));
+    }
+
+    /**
+     * Get last activity text
+     * - "Online" nếu đang online
+     * - "Hoạt động x phút/giờ trước" nếu có last_activity_at
+     * - "Offline" nếu không có hoạt động
+     */
+    public function getLastActivityTextAttribute(): string
+    {
+        if (!$this->last_activity_at) {
+            return 'Không hoạt động';
+        }
+
+        $now = now();
+        $diff = floor($this->last_activity_at->diffInRealMinutes($now));  // THÊM floor và dùng diffInRealMinutes để làm tròn xuống
+
+        if ($diff < 1) {
+            return 'Vừa mới đây';
+        } elseif ($diff < 60) {
+            return $diff . ' phút trước';
+        } elseif ($diff < 1440) {
+            return floor($diff / 60) . ' giờ trước';
+        } else {
+            return floor($diff / 1440) . ' ngày trước';
+        }
+    }
+
+    /**
+     * Update user activity timestamp and set online cache
+     * - Gọi từ middleware khi truy cập trang
+     */
+    public function updateActivity(): void
+    {
+        $this->update(['last_activity_at' => now()]);
+
+        // Set cache for presence (expire sau 5 phút)
+        Cache::put('user-online-' . $this->user_id, true, now()->addMinutes(5));
+    }
+
+    /**
+     * Mark user as offline
+     * - Gọi khi detect disconnect (qua Pusher hoặc onbeforeunload)
+     */
+    public function markOffline(): void
+    {
+        // Chỉ xóa cache, không cập nhật last_activity_at để không làm sai lệch thời gian offline
+        Cache::forget('user-online-' . $this->user_id);
+    }
+
+    /**
+     * Force update last activity and set online
+     * - Dùng cho testing hoặc manual update
+     */
+    public function forceOnline(): void
+    {
+        $this->update(['last_activity_at' => now()]);
+        Cache::put('user-online-' . $this->user_id, true, now()->addMinutes(5));
+    }
+
+    /**
+     * Force mark as offline
+     * - Dùng cho testing hoặc admin actions
+     */
+    public function forceOffline(): void
+    {
+        Cache::forget('user-online-' . $this->user_id);
+        // KHÔNG cập nhật last_activity_at ở đây
+    }
+
+    // ============================================
     // 🆕 VIDEO CALLS RELATIONSHIPS
     // ============================================
 
@@ -305,7 +406,7 @@ class User extends Authenticatable
      */
     public function allVideoCalls()
     {
-        return VideoCall::whereHas('conversation.participants', function($q) {
+        return VideoCall::whereHas('conversation.participants', function ($q) {
             $q->where('user_id', $this->user_id);
         })->orderBy('created_at', 'desc');
     }
@@ -325,9 +426,9 @@ class User extends Authenticatable
      */
     public function missedCallsCount(): int
     {
-        return VideoCall::whereHas('conversation.participants', function($q) {
-                $q->where('user_id', $this->user_id);
-            })
+        return VideoCall::whereHas('conversation.participants', function ($q) {
+            $q->where('user_id', $this->user_id);
+        })
             ->where('call_status', 'missed')
             ->where('initiated_by', '!=', $this->user_id)
             ->count();
@@ -338,9 +439,9 @@ class User extends Authenticatable
      */
     public function totalCallDuration(): int
     {
-        return VideoCall::whereHas('conversation.participants', function($q) {
-                $q->where('user_id', $this->user_id);
-            })
+        return VideoCall::whereHas('conversation.participants', function ($q) {
+            $q->where('user_id', $this->user_id);
+        })
             ->where('call_status', 'ended')
             ->sum('duration');
     }
@@ -351,12 +452,12 @@ class User extends Authenticatable
     public function formattedTotalCallDuration(): string
     {
         $seconds = $this->totalCallDuration();
-        
+
         if ($seconds < 3600) {
             $minutes = floor($seconds / 60);
             return $minutes . 'm';
         }
-        
+
         $hours = floor($seconds / 3600);
         $minutes = floor(($seconds % 3600) / 60);
         return $hours . 'h ' . $minutes . 'm';
@@ -413,7 +514,13 @@ class User extends Authenticatable
 
     public function markAsLoggedIn()
     {
-        $this->update(['last_login_at' => now()]);
+        $this->update([
+            'last_login_at' => now(),
+            'last_activity_at' => now() // Cập nhật activity khi login
+        ]);
+
+        // Set cache online
+        Cache::put('user-online-' . $this->user_id, true, now()->addMinutes(5));
     }
 
     public function verify(): void
@@ -424,10 +531,56 @@ class User extends Authenticatable
     public function deactivate(): void
     {
         $this->update(['is_active' => false]);
+        $this->markOffline(); // Mark offline khi deactivate
     }
 
     public function activate(): void
     {
         $this->update(['is_active' => true]);
+        $this->updateActivity(); // Update activity khi activate
+    }
+
+    /**
+     * Initialize last_activity_at for existing users
+     */
+    public function initializeActivity(): void
+    {
+        if (!$this->last_activity_at) {
+            $activityTime = $this->last_login_at ?? $this->created_at ?? now();
+            $this->update(['last_activity_at' => $activityTime]);
+
+            // Set cache nếu thời gian activity trong vòng 5 phút
+            if ($activityTime->gt(now()->subMinutes(5))) {
+                Cache::put('user-online-' . $this->user_id, true, now()->addMinutes(5));
+            }
+        }
+    }
+
+    /**
+     * Get online users count
+     */
+    public static function getOnlineCount(): int
+    {
+        return self::where('last_activity_at', '>', now()->subMinutes(5))
+            ->where('is_active', true)
+            ->count();
+    }
+
+    /**
+     * Get users who were recently active (last 30 minutes)
+     */
+    public function scopeRecentlyActive($query, $minutes = 30)
+    {
+        return $query->where('last_activity_at', '>', now()->subMinutes($minutes))
+            ->where('is_active', true);
+    }
+
+    /**
+     * Clean up old activity records (for maintenance)
+     */
+    public static function cleanupOldActivities($days = 30)
+    {
+        return self::where('last_activity_at', '<', now()->subDays($days))
+            ->update(['last_activity_at' => null]);
     }
 }

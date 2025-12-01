@@ -1,5 +1,5 @@
 {{-- resources/views/volunteer/activities/create.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.volunteer')
 
 @section('title', 'Log Giờ Tình Nguyện')
 

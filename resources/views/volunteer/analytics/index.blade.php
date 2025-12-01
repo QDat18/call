@@ -1,5 +1,5 @@
 {{-- resources/views/analytics/index.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.volunteer')
 
 @section('title', 'Phân Tích & Thống Kê')
 

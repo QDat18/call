@@ -10,6 +10,9 @@ use App\Models\User;
 use App\Models\VolunteerProfile;
 use App\Mail\OTPVerificationEmail;
 use Illuminate\Validation\Rule;
+use App\Models\VolunteerOpportunity;
+use App\Models\Category;
+use Illuminate\Support\Facades\DB;
 
 class VolunteerProfileController extends Controller
 {
@@ -21,10 +24,12 @@ class VolunteerProfileController extends Controller
             abort(403, 'Only volunteers can access this page!');
         }
 
-        // Tạo profile nếu chưa có
         $profile = $user->volunteerProfile ?? VolunteerProfile::create(['user_id' => $user->user_id]);
 
-        // THỐNG KÊ
+        // Tự động cập nhật kỹ năng & sở thích
+        $this->updateAutoSkillsAndInterests($user, $profile);
+
+        // Thống kê
         $stats = [
             'total_hours' => $profile->total_volunteer_hours ?? 0,
             'rating' => $profile->volunteer_rating ?? 0,
@@ -34,23 +39,15 @@ class VolunteerProfileController extends Controller
             'reviews_count' => $user->receivedReviews()->where('is_approved', true)->count(),
         ];
 
-        // THÀNH TỰU
+        // Thành tựu
         $achievements = [];
         $hours = $profile->total_volunteer_hours ?? 0;
         $rating = $profile->volunteer_rating ?? 0;
 
-        if ($hours >= 10) {
-            $achievements[] = ['name' => 'Bronze Volunteer', 'description' => '10 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'bronze'];
-        }
-        if ($hours >= 50) {
-            $achievements[] = ['name' => 'Silver Volunteer', 'description' => '50 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'silver'];
-        }
-        if ($hours >= 100) {
-            $achievements[] = ['name' => 'Gold Volunteer', 'description' => '100 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'gold'];
-        }
-        if ($rating >= 4.5) {
-            $achievements[] = ['name' => 'Top Rated', 'description' => 'Đánh giá 4.5+', 'icon' => 'fas fa-star', 'color' => 'yellow'];
-        }
+        if ($hours >= 10) $achievements[] = ['name' => 'Bronze Volunteer', 'description' => '10 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'bronze'];
+        if ($hours >= 50) $achievements[] = ['name' => 'Silver Volunteer', 'description' => '50 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'silver'];
+        if ($hours >= 100) $achievements[] = ['name' => 'Gold Volunteer', 'description' => '100 giờ tình nguyện', 'icon' => 'fas fa-medal', 'color' => 'gold'];
+        if ($rating >= 4.5) $achievements[] = ['name' => 'Top Rated', 'description' => 'Đánh giá 4.5+', 'icon' => 'fas fa-star', 'color' => 'yellow'];
 
         return view('volunteer.profile.profile', compact('profile', 'stats', 'achievements'));
     }
@@ -63,9 +60,52 @@ class VolunteerProfileController extends Controller
         }
 
         $profile = $user->volunteerProfile ?? VolunteerProfile::create(['user_id' => $user->user_id]);
-        return view('volunteer.profile.edit-profile', compact('profile'));
-    }
 
+        // TỰ ĐỘNG TÍNH KỸ NĂNG & SỞ THÍCH (ĐÃ SỬA LỖI CỘT & RELATIONSHIP)
+        $autoSkills = VolunteerOpportunity::whereHas('favorites', function($q) use ($user) {
+                $q->where('user_id', $user->user_id); // favorites.user_id
+            })
+            ->orWhereHas('applications', function($q) use ($user) {
+                $q->where('volunteer_id', $user->user_id) // applications.volunteer_id
+                  ->where('status', 'Accepted');
+            })
+            ->orWhereHas('volunteerActivities', function($q) use ($user) {
+                $q->where('volunteer_id', $user->user_id) // volunteer_activities.volunteer_id
+                  ->where('status', 'Verified');
+            })
+            ->get()
+            ->pluck('skills_required')
+            ->filter()
+            ->flatMap(function ($skills) {
+                return preg_split('/[,;]/', $skills); // Tách kỹ năng
+            })
+            ->map('trim')
+            ->filter()
+            ->unique()
+            ->take(15)
+            ->values();
+
+        $autoInterests = Category::whereHas('opportunities', function ($q) use ($user) {
+        $q->where(function ($sub) use ($user) {
+            // Cơ hội đã yêu thích
+            $sub->whereHas('favorites', fn($f) => $f->where('user_id', $user->user_id))
+                // Cơ hội đã được chấp nhận
+                ->orWhereHas('applications', fn($a) => $a->where('volunteer_id', $user->user_id)->where('status', 'Accepted'))
+                // Hoạt động đã hoàn thành
+                ->orWhereHas('volunteerActivities', fn($va) => $va->where('volunteer_id', $user->user_id)->where('status', 'Verified'));
+        });
+    })
+    ->select('categories.category_id')
+    ->selectRaw('categories.category_name')
+    ->selectRaw('categories.icon')
+    ->selectRaw('categories.description')
+    ->selectRaw('COUNT(*) as total_engagement')
+    ->groupBy('categories.category_id', 'categories.category_name', 'categories.icon', 'categories.description')
+    ->orderByDesc('total_engagement')
+    ->limit(10)
+    ->get();
+        return view('volunteer.profile.edit-profile', compact('profile', 'autoSkills', 'autoInterests'));
+    }
 public function update(Request $request)
     {
         $user = Auth::user();
@@ -391,5 +431,60 @@ public function update(Request $request)
         // Chuyển về trang edit với tick xanh
         return redirect()->route('volunteer.profile.edit')
             ->with('success', 'Xác thực tài khoản thành công!');
+    }
+    private function updateAutoSkillsAndInterests($user, $profile)
+{
+    // TỰ ĐỘNG HỌC KỸ NĂNG & SỞ THÍCH – CHẠY MƯỢT 100%
+$autoSkills = VolunteerOpportunity::whereHas('favorites', function($q) use ($user) {
+                $q->where('user_id', $user->user_id); // favorites.user_id
+            })
+            ->orWhereHas('applications', function($q) use ($user) {
+                $q->where('volunteer_id', $user->user_id) // applications.volunteer_id
+                  ->where('status', 'Accepted');
+            })
+            ->orWhereHas('volunteerActivities', function($q) use ($user) {
+                $q->where('volunteer_id', $user->user_id) // volunteer_activities.volunteer_id
+                  ->where('status', 'Verified');
+            })
+            ->get()
+            ->pluck('skills_required')
+            ->filter()
+            ->flatMap(function ($skills) {
+                return preg_split('/[,;]/', $skills); // Tách kỹ năng
+            })
+            ->map('trim')
+            ->filter()
+            ->unique()
+            ->take(15)
+            ->values();
+
+        $autoInterests = Category::whereHas('opportunities', function ($q) use ($user) {
+        $q->where(function ($sub) use ($user) {
+            // Cơ hội đã yêu thích
+            $sub->whereHas('favorites', fn($f) => $f->where('user_id', $user->user_id))
+                // Cơ hội đã được chấp nhận
+                ->orWhereHas('applications', fn($a) => $a->where('volunteer_id', $user->user_id)->where('status', 'Accepted'))
+                // Hoạt động đã hoàn thành
+                ->orWhereHas('volunteerActivities', fn($va) => $va->where('volunteer_id', $user->user_id)->where('status', 'Verified'));
+        });
+    })
+    ->select('categories.category_id')
+    ->selectRaw('categories.category_name')
+    ->selectRaw('categories.icon')
+    ->selectRaw('categories.description')
+    ->selectRaw('COUNT(*) as total_engagement')
+    ->groupBy('categories.category_id', 'categories.category_name', 'categories.icon', 'categories.description')
+    ->orderByDesc('total_engagement')
+    ->limit(10)
+    ->get();
+    $newSkills = $autoSkills->implode(', ');
+        $newInterests = $autoInterests->pluck('category_name')->implode(', ');
+
+        if ($profile->skills !== $newSkills || $profile->interests !== $newInterests) {
+            $profile->update([
+                'skills' => $newSkills,
+                'interests' => $newInterests,
+            ]);
+        }
     }
 }

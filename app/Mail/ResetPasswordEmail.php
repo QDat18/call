@@ -16,12 +16,17 @@ class ResetPasswordEmail extends Mailable
     public function __construct(User $user, $token)
     {
         $this->user = $user;
-        $this->resetUrl = route('password.reset', ['token' => $token]);
+        // SỬA: Dùng route name thay vì URL trực tiếp
+        $this->resetUrl = url('/reset-password/' . $token);
     }
 
     public function build()
     {
-        return $this->subject('Reset Your Password - Volunteer Connect')
-                    ->view('emails.reset-password');
+        return $this->subject('Đặt Lại Mật Khẩu - Volunteer Connect')
+                    ->view('emails.reset-password') // Đảm bảo view này tồn tại
+                    ->with([
+                        'user' => $this->user,
+                        'resetUrl' => $this->resetUrl
+                    ]);
     }
 }

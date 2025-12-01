@@ -62,6 +62,7 @@ class AuthController extends Controller
                 ]);
             }
         }
+
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
@@ -75,21 +76,21 @@ class AuthController extends Controller
             'address' => 'nullable|string',
             'terms' => 'required|accepted',
         ], [
-            'first_name.required' => 'First name is required',
-            'last_name.required' => 'Last name is required',
-            'email.required' => 'Email address is required',
-            'email.email' => 'Please enter a valid email address',
-            'email.unique' => 'This email is already registered',
-            'phone.required' => 'Phone number is required',
-            'phone.unique' => 'This phone number is already registered',
-            'date_of_birth.required' => 'Date of birth is required',
-            'date_of_birth.before' => 'You must be at least 16 years old to register',
-            'gender.required' => 'Please select your gender',
-            'city.required' => 'Please select your city',
-            'password.required' => 'Password is required',
-            'password.min' => 'Password must be at least 8 characters',
-            'password.confirmed' => 'Password confirmation does not match',
-            'terms.accepted' => 'You must agree to the terms and conditions',
+            'first_name.required' => 'Họ là bắt buộc',
+            'last_name.required' => 'Tên là bắt buộc',
+            'email.required' => 'Email là bắt buộc',
+            'email.email' => 'Vui lòng nhập địa chỉ email hợp lệ',
+            'email.unique' => 'Email này đã được đăng ký',
+            'phone.required' => 'Số điện thoại là bắt buộc',
+            'phone.unique' => 'Số điện thoại này đã được đăng ký',
+            'date_of_birth.required' => 'Ngày sinh là bắt buộc',
+            'date_of_birth.before' => 'Bạn phải ít nhất 16 tuổi để đăng ký',
+            'gender.required' => 'Vui lòng chọn giới tính',
+            'city.required' => 'Vui lòng chọn thành phố',
+            'password.required' => 'Mật khẩu là bắt buộc',
+            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+            'terms.accepted' => 'Bạn phải đồng ý với điều khoản và điều kiện',
         ]);
 
         if ($validator->fails()) {
@@ -116,6 +117,7 @@ class AuthController extends Controller
                 'user_type' => 'Volunteer',
                 'is_active' => true,
                 'is_verified' => false,
+                'last_activity_at' => now(), // THÊM: Cập nhật last_activity_at khi đăng ký
             ]);
 
             // Create volunteer profile
@@ -130,12 +132,11 @@ class AuthController extends Controller
             // Auto login
             Auth::login($user);
 
-            // Update last login
-            $user->update(['last_login_at' => now()]);
-
-            // return redirect() -> route('home')
-            //     ->with('success', 'Welcome to VolunteerConnect! Your account has been created.')
-            //     ->with('show_profile_toast', true);
+            // Update last login và last activity
+            $user->update([
+                'last_login_at' => now(),
+                'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+            ]);
 
             return redirect()->route('volunteer.profile.edit')
                 ->with('success', 'Chào mừng bạn! Vui lòng hoàn thiện hồ sơ và xác thực tài khoản.');
@@ -143,7 +144,7 @@ class AuthController extends Controller
             DB::rollBack();
 
             return redirect()->back()
-                ->with('error', 'Registration failed. Please try again.')
+                ->with('error', 'Đăng ký thất bại. Vui lòng thử lại.')
                 ->withInput();
         }
     }
@@ -153,7 +154,6 @@ class AuthController extends Controller
      */
     public function registerOrganization(Request $request)
     {
-        // dd($request->all());
         $existingUser = User::where('email', $request->email)->first();
         if ($existingUser) {
             if ($existingUser->user_type === 'Volunteer') {
@@ -166,8 +166,8 @@ class AuthController extends Controller
                     'email' => 'Email này đã được đăng ký tài khoản Quản trị viên.'
                 ]);
             }
-            // Nếu là Organization thì để validator bên dưới xử lý
         }
+
         $validator = Validator::make($request->all(), [
             // User information
             'first_name' => 'required|string|max:50',
@@ -195,32 +195,31 @@ class AuthController extends Controller
             'terms' => 'required|accepted',
             'verify_info' => 'required|accepted',
         ], [
-            'first_name.required' => 'Representative first name is required',
-            'last_name.required' => 'Representative last name is required',
-            'email.required' => 'Official email address is required',
-            'email.unique' => 'This email is already registered',
-            'phone.required' => 'Phone number is required',
-            'phone.unique' => 'This phone number is already registered',
-            'city.required' => 'Please select your city',
-            'district.required' => 'District is required',
-            'address.required' => 'Full address is required',
-            'organization_name.required' => 'Organization name is required',
-            'organization_type.required' => 'Please select organization type',
-            'description.required' => 'Organization description is required',
-            'description.max' => 'Description cannot exceed 500 characters',
-            'registration_number.required' => 'Registration number is required',
-            'founded_year.required' => 'Founded year is required',
-            'founded_year.max' => 'Founded year cannot be in the future',
-            'password.required' => 'Password is required',
-            'password.min' => 'Password must be at least 8 characters',
-            'password.confirmed' => 'Password confirmation does not match',
-            'terms.accepted' => 'You must agree to the terms and conditions',
-            'verify_info.accepted' => 'You must confirm the accuracy of the information',
-            'registration_document.required' => 'Please upload authentication documents',
+            'first_name.required' => 'Họ người đại diện là bắt buộc',
+            'last_name.required' => 'Tên người đại diện là bắt buộc',
+            'email.required' => 'Email chính thức là bắt buộc',
+            'email.unique' => 'Email này đã được đăng ký',
+            'phone.required' => 'Số điện thoại là bắt buộc',
+            'phone.unique' => 'Số điện thoại này đã được đăng ký',
+            'city.required' => 'Vui lòng chọn thành phố',
+            'district.required' => 'Quận/huyện là bắt buộc',
+            'address.required' => 'Địa chỉ đầy đủ là bắt buộc',
+            'organization_name.required' => 'Tên tổ chức là bắt buộc',
+            'organization_type.required' => 'Vui lòng chọn loại tổ chức',
+            'description.required' => 'Mô tả tổ chức là bắt buộc',
+            'description.max' => 'Mô tả không được vượt quá 500 ký tự',
+            'registration_number.required' => 'Mã số đăng ký là bắt buộc',
+            'founded_year.required' => 'Năm thành lập là bắt buộc',
+            'founded_year.max' => 'Năm thành lập không thể ở tương lai',
+            'password.required' => 'Mật khẩu là bắt buộc',
+            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+            'terms.accepted' => 'Bạn phải đồng ý với điều khoản và điều kiện',
+            'verify_info.accepted' => 'Bạn phải xác nhận tính chính xác của thông tin',
+            'registration_document.required' => 'Vui lòng tải lên tài liệu xác thực',
         ]);
 
         if ($validator->fails()) {
-            dd($validator->errors());
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
@@ -242,30 +241,25 @@ class AuthController extends Controller
                 'user_type' => 'Organization',
                 'is_active' => true,
                 'is_verified' => false,
+                'last_activity_at' => now(), // THÊM: Cập nhật last_activity_at khi đăng ký
             ]);
 
             $logoPath = null;
             if ($request->hasFile('logo')) {
                 $file = $request->file('logo');
-                // Tạo tên file an toàn từ tên tổ chức
                 $safeName = Str::slug($request->organization_name);
                 $fileName = $safeName . '_logo.' . $file->getClientOriginalExtension();
-
-                // Dùng storeAs để đặt tên theo ý mình
                 $logoPath = $file->storeAs('logos', $fileName, 'public');
             }
 
-            // Xử lý Tài liệu xác thực (Đặt tên: ten-to-chuc_xacthuc.pdf)
             $documentPath = null;
             if ($request->hasFile('registration_document')) {
                 $file = $request->file('registration_document');
-                // Tạo tên file an toàn
                 $safeName = Str::slug($request->organization_name);
                 $fileName = $safeName . '_xacthuc.' . $file->getClientOriginalExtension();
-
-                // Dùng storeAs
                 $documentPath = $file->storeAs('documents', $fileName, 'public');
             }
+
             // Create organization
             Organization::create([
                 'user_id' => $user->user_id,
@@ -283,7 +277,7 @@ class AuthController extends Controller
                 'total_opportunities' => 0,
             ]);
 
-            // Create notification for admin (if notification system exists)
+            // Create notification for admin
             try {
                 \App\Models\Notification::create([
                     'user_id' => 1, // Admin user ID
@@ -300,26 +294,13 @@ class AuthController extends Controller
 
             DB::commit();
 
-            // Auto login
-            // Auth::login($user);
-
-            // // Update last login
-            // $user->update(['last_login_at' => now()]);
-
             return redirect()->route('login')
                 ->with('success', 'Đăng ký thành công! Tài khoản của bạn đang chờ quản trị viên xét duyệt.');
-
-            // return redirect()->route('home')
-            //     ->with('success', 'Welcome to VolunteerConnect! Your organization has been registered. Please submit verification documents to get verified badge.');
         } catch (\Exception $e) {
             DB::rollBack();
 
-            // === THÊM DÒNG NÀY VÀO ĐÂY ĐỂ XEM LỖI ===
-            dd($e->getMessage());
-            // ========================================
-
             return redirect()->back()
-                ->with('error', 'Registration failed. Please try again.')
+                ->with('error', 'Đăng ký thất bại. Vui lòng thử lại.')
                 ->withInput();
         }
     }
@@ -341,9 +322,9 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ], [
-            'email.required' => 'Email address is required',
-            'email.email' => 'Please enter a valid email address',
-            'password.required' => 'Password is required',
+            'email.required' => 'Email là bắt buộc',
+            'email.email' => 'Vui lòng nhập địa chỉ email hợp lệ',
+            'password.required' => 'Mật khẩu là bắt buộc',
         ]);
 
         if ($validator->fails()) {
@@ -357,13 +338,13 @@ class AuthController extends Controller
 
         if (!$user) {
             return redirect()->back()
-                ->with('error', 'No account found with this email address.')
+                ->with('error', 'Không tìm thấy tài khoản với email này.')
                 ->withInput($request->only('email', 'remember'));
         }
 
         if (!$user->is_active) {
             return redirect()->back()
-                ->with('error', 'Your account has been deactivated. Please contact support.')
+                ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.')
                 ->withInput($request->only('email', 'remember'));
         }
 
@@ -390,8 +371,12 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
-            // Update last login
-            $user->update(['last_login_at' => now()]);
+            
+            // SỬA: Update last login và last activity
+            $user->update([
+                'last_login_at' => now(),
+                'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+            ]);
 
             // Redirect based on user type
             $redirectRoute = match ($user->user_type) {
@@ -402,11 +387,11 @@ class AuthController extends Controller
             };
 
             return redirect()->intended($redirectRoute)
-                ->with('success', 'Welcome back, ' . $user->first_name . '!');
+                ->with('success', 'Chào mừng trở lại, ' . $user->first_name . '!');
         }
 
         return redirect()->back()
-            ->with('error', 'Invalid email or password.')
+            ->with('error', 'Email hoặc mật khẩu không đúng.')
             ->withInput($request->only('email', 'remember'));
     }
 
@@ -415,13 +400,18 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        // THÊM: Cập nhật last_activity_at trước khi logout
+        if (Auth::check()) {
+            Auth::user()->update(['last_activity_at' => now()]);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('login')
-            ->with('success', 'You have been logged out successfully.');
+            ->with('success', 'Bạn đã đăng xuất thành công.');
     }
 
     /**
@@ -436,78 +426,124 @@ class AuthController extends Controller
      * Send password reset link
      */
     public function sendResetLinkEmail(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
-        ], [
-            'email.required' => 'Email address is required',
-            'email.email' => 'Please enter a valid email address',
-            'email.exists' => 'We could not find an account with this email address',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email|exists:users,email',
+    ], [
+        'email.required' => 'Email là bắt buộc',
+        'email.email' => 'Vui lòng nhập địa chỉ email hợp lệ',
+        'email.exists' => 'Không tìm thấy tài khoản với email này',
+    ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
-
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with('status', 'We have emailed your password reset link!')
-            : back()->withErrors(['email' => __($status)]);
+    if ($validator->fails()) {
+        return redirect()->back()
+            ->withErrors($validator)
+            ->withInput();
     }
 
+    try {
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return back()->withErrors(['email' => 'Không tìm thấy tài khoản với email này.']);
+        }
+
+        // Generate reset token
+        $token = Str::random(60);
+        
+        // Save token to user
+        $user->update([
+            'reset_password_token' => $token,
+            'reset_password_token_expires_at' => now()->addHours(1)
+        ]);
+
+        \Log::info("Attempting to send reset email to: " . $user->email);
+
+        // GỬI EMAIL THẬT - SỬ DỤNG ResetPasswordEmail
+        Mail::to($user->email)->send(new \App\Mail\ResetPasswordEmail($user, $token));
+
+        \Log::info("Reset email sent successfully to: " . $user->email);
+
+        return back()->with('status', 'Chúng tôi đã gửi liên kết đặt lại mật khẩu đến email của bạn!');
+
+    } catch (\Exception $e) {
+        \Log::error('Password reset error: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return back()->withErrors(['email' => 'Có lỗi xảy ra khi gửi email. Vui lòng thử lại sau.']);
+    }
+}
     /**
      * Show reset password form
      */
-    public function showResetPasswordForm($token)
-    {
-        return view('auth.reset-password', ['token' => $token]);
+    public function showResetPasswordForm(Request $request, $token)
+{
+    $user = User::where('reset_password_token', $token)
+        ->where('reset_password_token_expires_at', '>', now())
+        ->first();
+
+    if (!$user) {
+        return redirect()->route('password.request')
+            ->with('error', 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
     }
+
+    return view('auth.reset-password', [
+        'token' => $token,
+        'email' => $user->email  // THÊM DÒNG NÀY: Truyền email sang view
+    ]);
+}
 
     /**
      * Handle password reset
      */
     public function resetPassword(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|min:8|confirmed',
-        ], [
-            'email.required' => 'Email address is required',
-            'email.email' => 'Please enter a valid email address',
-            'password.required' => 'Password is required',
-            'password.min' => 'Password must be at least 8 characters',
-            'password.confirmed' => 'Password confirmation does not match',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'token' => 'required',
+        'email' => 'required|email',
+        'password' => 'required|min:8|confirmed',
+    ], [
+        'email.required' => 'Email là bắt buộc',
+        'email.email' => 'Vui lòng nhập địa chỉ email hợp lệ',
+        'password.required' => 'Mật khẩu là bắt buộc',
+        'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
+        'password.confirmed' => 'Xác nhận mật khẩu không khớp',
+    ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput($request->only('email'));
+    if ($validator->fails()) {
+        return redirect()->back()
+            ->withErrors($validator)
+            ->withInput($request->only('email'));
+    }
+
+    try {
+        // Find user by token and email
+        $user = User::where('email', $request->email)
+                    ->where('reset_password_token', $request->token)
+                    ->where('reset_password_token_expires_at', '>', now())
+                    ->first();
+
+        if (!$user) {
+            return back()->withErrors(['email' => 'Token không hợp lệ hoặc đã hết hạn.']);
         }
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password)
-                ])->setRememberToken(Str::random(60));
+        // Update password and clear reset token
+        $user->update([
+            'password' => Hash::make($request->password),
+            'reset_password_token' => null,
+            'reset_password_token_expires_at' => null
+        ]);
 
-                $user->save();
+        // Fire password reset event
+        event(new PasswordReset($user));
 
-                event(new PasswordReset($user));
-            }
-        );
+        return redirect()->route('login')
+            ->with('success', 'Mật khẩu của bạn đã được đặt lại thành công!');
 
-        return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('success', 'Your password has been reset successfully!')
-            : back()->withErrors(['email' => [__($status)]]);
+    } catch (\Exception $e) {
+        \Log::error('Password reset error: ' . $e->getMessage());
+        return back()->withErrors(['email' => 'Có lỗi xảy ra. Vui lòng thử lại sau.']);
     }
+}
 
     /**
      * Redirect to Google OAuth
@@ -518,7 +554,7 @@ class AuthController extends Controller
             return Socialite::driver('google')->redirect();
         } catch (Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Unable to connect to Google. Please try again later.');
+                ->with('error', 'Không thể kết nối với Google. Vui lòng thử lại sau.');
         }
     }
 
@@ -537,11 +573,16 @@ class AuthController extends Controller
                 // User exists, login
                 if (!$user->is_active) {
                     return redirect()->route('login')
-                        ->with('error', 'Your account has been deactivated. Please contact support.');
+                        ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.');
                 }
 
                 Auth::login($user);
-                $user->update(['last_login_at' => now()]);
+                
+                // SỬA: Update last login và last activity
+                $user->update([
+                    'last_login_at' => now(),
+                    'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+                ]);
 
                 $redirectRoute = match ($user->user_type) {
                     'Admin' => route('admin.dashboard'),
@@ -551,7 +592,7 @@ class AuthController extends Controller
                 };
 
                 return redirect()->intended($redirectRoute)
-                    ->with('success', 'Welcome back, ' . $user->first_name . '!');
+                    ->with('success', 'Chào mừng trở lại, ' . $user->first_name . '!');
             }
 
             // New user - create account as Volunteer
@@ -565,13 +606,14 @@ class AuthController extends Controller
 
                 $user = User::create([
                     'email' => $googleUser->email,
-                    'password' => Hash::make(Str::random(16)), // Random password
+                    'password' => Hash::make(Str::random(16)),
                     'first_name' => $firstName,
                     'last_name' => $lastName,
                     'user_type' => 'Volunteer',
                     'is_active' => true,
-                    'is_verified' => true, // Auto verify OAuth users
+                    'is_verified' => true,
                     'avatar_url' => $googleUser->avatar,
+                    'last_activity_at' => now(), // THÊM: Cập nhật last_activity_at khi đăng ký
                 ]);
 
                 // Create volunteer profile
@@ -585,18 +627,23 @@ class AuthController extends Controller
 
                 // Login
                 Auth::login($user);
-                $user->update(['last_login_at' => now()]);
+                
+                // SỬA: Update last login và last activity
+                $user->update([
+                    'last_login_at' => now(),
+                    'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+                ]);
 
                 return redirect()->route('volunteer.profile.edit')
                     ->with('success', 'Chào mừng bạn! Vui lòng hoàn thiện hồ sơ và xác thực tài khoản.');
             } catch (Exception $e) {
                 DB::rollBack();
                 return redirect()->route('login')
-                    ->with('error', 'Failed to create account. Please try again.');
+                    ->with('error', 'Tạo tài khoản thất bại. Vui lòng thử lại.');
             }
         } catch (Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Failed to authenticate with Google. Please try again.');
+                ->with('error', 'Xác thực với Google thất bại. Vui lòng thử lại.');
         }
     }
 
@@ -609,7 +656,7 @@ class AuthController extends Controller
             return Socialite::driver('facebook')->redirect();
         } catch (Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Unable to connect to Facebook. Please try again later.');
+                ->with('error', 'Không thể kết nối với Facebook. Vui lòng thử lại sau.');
         }
     }
 
@@ -628,11 +675,16 @@ class AuthController extends Controller
                 // User exists, login
                 if (!$user->is_active) {
                     return redirect()->route('login')
-                        ->with('error', 'Your account has been deactivated. Please contact support.');
+                        ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.');
                 }
 
                 Auth::login($user);
-                $user->update(['last_login_at' => now()]);
+                
+                // SỬA: Update last login và last activity
+                $user->update([
+                    'last_login_at' => now(),
+                    'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+                ]);
 
                 $redirectRoute = match ($user->user_type) {
                     'Admin' => route('admin.dashboard'),
@@ -642,7 +694,7 @@ class AuthController extends Controller
                 };
 
                 return redirect()->intended($redirectRoute)
-                    ->with('success', 'Welcome back, ' . $user->first_name . '!');
+                    ->with('success', 'Chào mừng trở lại, ' . $user->first_name . '!');
             }
 
             // New user - create account as Volunteer
@@ -656,13 +708,14 @@ class AuthController extends Controller
 
                 $user = User::create([
                     'email' => $facebookUser->email,
-                    'password' => Hash::make(Str::random(16)), // Random password
+                    'password' => Hash::make(Str::random(16)),
                     'first_name' => $firstName,
                     'last_name' => $lastName,
                     'user_type' => 'Volunteer',
                     'is_active' => true,
-                    'is_verified' => true, // Auto verify OAuth users
+                    'is_verified' => true,
                     'avatar_url' => $facebookUser->avatar,
+                    'last_activity_at' => now(), // THÊM: Cập nhật last_activity_at khi đăng ký
                 ]);
 
                 // Create volunteer profile
@@ -676,18 +729,23 @@ class AuthController extends Controller
 
                 // Login
                 Auth::login($user);
-                $user->update(['last_login_at' => now()]);
+                
+                // SỬA: Update last login và last activity
+                $user->update([
+                    'last_login_at' => now(),
+                    'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+                ]);
 
                 return redirect()->route('home')
-                    ->with('success', 'Welcome to VolunteerConnect! Your account has been created successfully.');
+                    ->with('success', 'Chào mừng đến với VolunteerConnect! Tài khoản của bạn đã được tạo thành công.');
             } catch (Exception $e) {
                 DB::rollBack();
                 return redirect()->route('login')
-                    ->with('error', 'Failed to create account. Please try again.');
+                    ->with('error', 'Tạo tài khoản thất bại. Vui lòng thử lại.');
             }
         } catch (Exception $e) {
             return redirect()->route('login')
-                ->with('error', 'Failed to authenticate with Facebook. Please try again.');
+                ->with('error', 'Xác thực với Facebook thất bại. Vui lòng thử lại.');
         }
     }
 }

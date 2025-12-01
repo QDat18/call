@@ -1,5 +1,5 @@
 {{-- resources/views/volunteer/profile/profile.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.volunteer')
 
 @section('title', 'Hồ Sơ Tình Nguyện - ' . $profile->user->first_name)
 

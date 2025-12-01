@@ -1,5 +1,5 @@
 {{-- resources/views/volunteer/profile/edit-profile.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.volunteer')
 @section('title', 'Chỉnh Sửa Hồ Sơ')
 
 @push('styles')
@@ -63,20 +63,53 @@
                 </div>
 
                 <!-- Skills & Interests -->
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <label class="block text-lg font-bold text-purple-700 mb-3">Kỹ năng</label>
-                        <input type="text" id="skillsInput" placeholder="Nhập kỹ năng, cách nhau bằng dấu phẩy" 
-                               class="w-full p-4 border-2 border-purple-200 rounded-2xl focus:ring-4 focus:ring-purple-300 focus:border-purple-600 outline-none text-lg">
-                        <div id="skillsTags" class="flex flex-wrap gap-3 mt-4"></div>
-                    </div>
-                    <div>
-                        <label class="block text-lg font-bold text-purple-700 mb-3">Sở thích</label>
-                        <input type="text" id="interestsInput" placeholder="Nhập sở thích, cách nhau bằng dấu phẩy" 
-                               class="w-full p-4 border-2 border-purple-200 rounded-2xl focus:ring-4 focus:ring-purple-300 focus:border-purple-600 outline-none text-lg">
-                        <div id="interestsTags" class="flex flex-wrap gap-3 mt-4"></div>
-                    </div>
-                </div>
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-8 border-2 border-purple-200">
+    <div class="flex items-center gap-4 mb-6">
+        <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+            <i class="fas fa-tools"></i>
+        </div>
+        <div>
+            <h3 class="text-2xl font-bold text-orange-800">Kỹ năng của bạn</h3>
+            <p class="text-gray-600">Được tổng hợp từ các cơ hội bạn đã tham gia hoặc yêu thích</p>
+        </div>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        @if($autoSkills && count($autoSkills) > 0)
+            @foreach($autoSkills as $skill)
+                <span class="px-5 py-3 rounded-full bg-gradient-to-r from-orange-100 to-red-100 text-orange-800 font-bold text-sm shadow-lg border border-orange-300">
+                    {{ $skill }}
+                </span>
+            @endforeach
+        @else
+            <p class="text-gray-500 italic">Chưa có kỹ năng nào được phát hiện. Hãy tham gia các cơ hội để hệ thống học hỏi!</p>
+        @endif
+    </div>
+</div>
+
+<!-- Sở thích (TỰ ĐỘNG TỪ DANH MỤC) -->
+<div class="bg-gradient-to-r from-pink-50 to-purple-50 rounded-3xl p-8 border-2 border-pink-200 mt-8">
+    <div class="flex items-center gap-4 mb-6">
+        <div class="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+            <i class="fas fa-heart"></i>
+        </div>
+        <div>
+            <h3 class="text-2xl font-bold text-pink-800">Sở thích tình nguyện</h3>
+            <p class="text-gray-600">Danh mục bạn hay quan tâm</p>
+        </div>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        @if($autoInterests && count($autoInterests) > 0)
+            @foreach($autoInterests as $cat)
+                <span class="px-5 py-3 rounded-full bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 font-bold text-sm shadow-lg border border-pink-300">
+                    <i class="{{ $cat->icon ?? 'fas fa-star' }} mr-2"></i>
+                    {{ $cat->category_name }}
+                </span>
+            @endforeach
+        @else
+            <p class="text-gray-500 italic">Chưa xác định được sở thích. Hãy yêu thích hoặc ứng tuyển để hệ thống hiểu bạn hơn!</p>
+        @endif
+    </div>
+</div>
 
                 <!-- Submit -->
                 <div class="flex justify-center pt-8 gap-6">

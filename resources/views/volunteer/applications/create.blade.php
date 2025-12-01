@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.volunteer')
 
 @section('title', 'Ứng Tuyển Cơ Hội')
 
@@ -10,6 +10,8 @@
         <form method="POST" action="{{ route('volunteer.applications.store') }}">
             @csrf
             <input type="hidden" name="opportunity_id" value="{{ $opportunity->opportunity_id }}">
+            <!-- Thêm hidden nếu cần ưu tiên biến từ organization, ví dụ: org_id -->
+            <input type="hidden" name="org_id" value="{{ $opportunity->org_id }}">  <!-- Ưu tiên truyền org_id để organization filter dễ hơn -->
 
             <!-- Motivation Letter -->
             <div class="mb-6">

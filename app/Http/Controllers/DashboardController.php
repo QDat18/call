@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    
+
     public function index()
     {
         $user = Auth::user();
@@ -45,14 +45,79 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        $recommendations = VolunteerOpportunity::where('status', 'Active')
+        // === GỢI Ý CƠ HỘI CÁ NHÂN HÓA - SIÊU THÔNG MINH ===
+        $recommendations = VolunteerOpportunity::with(['organization', 'category'])
+            ->where('status', 'Active')
             ->where('application_deadline', '>', now())
-            ->when($user->city, function ($query) use ($user) {
-                $query->where('location', 'LIKE', "%{$user->city}%");
+            ->whereRaw('(volunteers_needed - volunteers_registered) > 0')
+            ->where(function ($query) use ($user, $profile) {
+                $query->when($user->city, function ($q) use ($user) {
+                    $q->orWhere('location', 'LIKE', "%{$user->city}%");
+                });
+
+                // Ưu tiên kỹ năng khớp
+                if ($profile?->skills) {
+                    $skills = collect(explode(',', $profile->skills))->map('trim')->filter();
+                    foreach ($skills as $skill) {
+                        $query->orWhere('required_skills', 'LIKE', "%{$skill}%");
+                    }
+                }
+
+                // Ưu tiên danh mục yêu thích
+                if ($profile?->interests) {
+                    $interestNames = collect(explode(',', $profile->interests))->map('trim')->filter();
+                    $categoryIds = \App\Models\Category::whereIn('category_name', $interestNames)
+                        ->pluck('category_id');
+
+                    if ($categoryIds->isNotEmpty()) {
+                        $query->orWhereIn('category_id', $categoryIds);
+                    }
+                }
             })
-            ->latest()
-            ->take(6)
-            ->get();
+            ->get()
+            ->map(function ($opp) use ($user, $profile) {
+                $score = 30; // điểm cơ bản
+
+                // Địa điểm khớp +15
+                if ($user->city && str_contains(strtolower($opp->location), strtolower($user->city))) {
+                    $score += 15;
+                }
+
+                // Kỹ năng khớp: mỗi kỹ năng +8 (tối đa +40)
+                if ($profile?->skills) {
+                    $userSkills = collect(explode(',', $profile->skills))->map('trim')->map('strtolower');
+                    $oppSkills = collect(preg_split('/[,;]/', $opp->skills_required ?? ''))
+                        ->map('trim')->map('strtolower')->filter();
+
+                    $matchedSkills = $userSkills->intersect($oppSkills)->count();
+                    $score += min($matchedSkills * 8, 40);
+                }
+
+                // Danh mục yêu thích +25
+                if ($profile?->interests && $opp->category) {
+                    $interests = collect(explode(',', $profile->interests))->map('trim');
+                    if ($interests->contains($opp->category->category_name)) {
+                        $score += 25;
+                    }
+                }
+
+                // Đã từng tương tác với tổ chức này +10
+                if ($user->applications()->whereHas('opportunity', fn($q) => $q->where('org_id', $opp->org_id))->exists()) {
+                    $score += 10;
+                }
+
+                // Ưu tiên cơ hội mới +5
+                if ($opp->created_at->gt(now()->subWeek())) {
+                    $score += 5;
+                }
+
+                $opp->match_score = min(98, $score); // không cho 100%
+                $opp->match_reason = $score >= 80 ? 'Rất phù hợp' : ($score >= 60 ? 'Khá phù hợp' : 'Có thể phù hợp');
+
+                return $opp;
+            })
+            ->sortByDesc('match_score')
+            ->take(6);
 
         $upcomingActivities = $user->applications()
             ->where('status', 'Accepted')

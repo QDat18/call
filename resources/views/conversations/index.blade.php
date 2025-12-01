@@ -140,6 +140,17 @@ body {
     border-radius: 50%;
 }
 
+.offline-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: #9ca3af;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
 .conversation-info {
     flex: 1;
     min-width: 0;
@@ -160,6 +171,20 @@ body {
 
 .conversation-time {
     font-size: 12px;
+    color: #6b7280;
+}
+
+.conversation-status {
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.conversation-status.online {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.conversation-status.offline {
     color: #6b7280;
 }
 
@@ -361,8 +386,10 @@ body {
                             <img src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}" 
                                  alt="{{ $otherUser->first_name }}" 
                                  class="avatar-img">
-                            @if($otherUser->is_active)
-                                <span class="online-badge"></span>
+                            @if($otherUser->is_online)
+                                <span class="online-badge" title="Online"></span>
+                            @else
+                                <span class="offline-badge" title="Offline"></span>
                             @endif
                         </div>
                         
@@ -376,6 +403,11 @@ body {
                                         {{ $lastMessage->sent_at->diffForHumans(null, true) }}
                                     </span>
                                 @endif
+                            </div>
+                            
+                            {{-- Hiển thị trạng thái online/offline --}}
+                            <div class="conversation-status {{ $otherUser->is_online ? 'online' : 'offline' }}">
+                                {{ $otherUser->last_activity_text }}
                             </div>
                             
                             <div class="conversation-last-message">

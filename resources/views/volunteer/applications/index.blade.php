@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.volunteer')
 
 @section('title', 'Đơn Ứng Tuyển Của Tôi')
 
@@ -14,10 +14,10 @@
             <form method="GET" class="p-6 border-b border-purple-100 flex gap-4">
                 <select name="status" class="flex-1 p-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-300">
                     <option value="">Tất cả trạng thái</option>
-                    <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Chờ xử lý</option>
-                    <option value="Under Review" {{ request('status') == 'Under Review' ? 'selected' : '' }}>Đang xem xét</option>
-                    <option value="Accepted" {{ request('status') == 'Accepted' ? 'selected' : '' }}>Đã chấp nhận</option>
-                    <option value="Rejected" {{ request('status') == 'Rejected' ? 'selected' : '' }}>Từ chối</option>
+                    <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="Under Review" {{ request('status') == 'Under Review' ? 'selected' : '' }}>Under Review</option>
+                    <option value="Accepted" {{ request('status') == 'Accepted' ? 'selected' : '' }}>Accepted</option>
+                    <option value="Rejected" {{ request('status') == 'Rejected' ? 'selected' : '' }}>Rejected</option>
                 </select>
                 <button type="submit" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 rounded-xl font-semibold hover:shadow-xl transition">Lọc</button>
             </form>
@@ -32,14 +32,18 @@
                                     {{ $app->opportunity->title }}
                                 </a>
                                 <div class="text-sm text-gray-600 mt-1">{{ $app->opportunity->organization->organization_name }}</div>
-                                <div class="text-sm text-gray-500 mt-2">Ứng tuyển ngày: {{ $app->applied_date->format('d/m/Y') }}</div>
+                                <div class="text-sm text-gray-600 mt-2">Applied Date</div>
+                                <p class="font-semibold text-gray-800">
+                                    {{ $app->applied_date->format('M d, Y') }}  <!-- Sửa format ưu tiên theo organization -->
+                                    <span class="text-sm text-gray-500">({{ $app->applied_date->diffForHumans() }})</span>  <!-- Thêm như organization -->
+                                </p>
                             </div>
-                            <span class="px-4 py-2 rounded-full font-medium {{ $app->status == 'Accepted' ? 'bg-green-100 text-green-800' : ($app->status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
+                            <span class="px-4 py-2 rounded-full font-medium @if($app->status == 'Pending') bg-yellow-100 text-yellow-800 @elseif($app->status == 'Under Review') bg-blue-100 text-blue-800 @elseif($app->status == 'Accepted') bg-green-100 text-green-800 @elseif($app->status == 'Rejected') bg-red-100 text-red-800 @else bg-gray-100 text-gray-800 @endif">
                                 {{ $app->status }}
                             </span>
                         </div>
                         @if($app->status == 'Rejected')
-                            <p class="text-sm text-red-600 mt-3">Lý do: {{ $app->organization_notes ?? 'Không có ghi chú' }}</p>
+                            <p class="text-sm text-red-600 mt-3">Lý do: {{ $app->organization_notes ?? 'Không có ghi chú' }}</p>  <!-- Ưu tiên hiển thị notes từ organization -->
                         @endif
                     </div>
                 @empty
