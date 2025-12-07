@@ -1,2 +1,2 @@
-web: php artisan storage:link && php artisan migrate --force && php artisan optimize:clear && php artisan serve --host=0.0.0.0 --port=$PORT
+web: php -S 0.0.0.0:$PORT -t public
 worker: php artisan queue:work --tries=3 --timeout=90
