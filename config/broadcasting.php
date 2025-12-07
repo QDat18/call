@@ -18,17 +18,16 @@ return [
 
     'connections' => [
 
-        'pusher' => [
-            'driver' => 'pusher',
-            'key' => env('PUSHER_APP_KEY'),
-            'secret' => env('PUSHER_APP_SECRET'),
-            'app_id' => env('PUSHER_APP_ID'),
-            'options' => [
-                'cluster' => env('PUSHER_APP_CLUSTER'),
-                'useTLS' => true,
-                'encrypted' => true,
-            ],
+    'pusher' => [
+        'driver' => 'pusher',
+        'key' => env('PUSHER_APP_KEY', 'deploy'),      // Thêm 'deploy'
+        'secret' => env('PUSHER_APP_SECRET', 'deploy'), // Thêm 'deploy'
+        'app_id' => env('PUSHER_APP_ID', 'deploy'),     // Thêm 'deploy'
+        'options' => [
+            'cluster' => env('PUSHER_APP_CLUSTER', 'mt1'), // Thêm 'mt1'
+            'useTLS' => true,
         ],
+    ],
 
         'ably' => [
             'driver' => 'ably',
