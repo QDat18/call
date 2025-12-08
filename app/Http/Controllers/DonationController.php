@@ -54,7 +54,6 @@ class DonationController extends Controller
             'amount'      => $request->amount,
             'message'     => $request->message ?? 'Ung ho chien dich',
             'status'      => 'Pending',
-            'payment_method' => 'MoMo', 
         ]);
 
         // 2. Cấu hình momo từ config (Đã tạo file config/momo.php)
