@@ -3,71 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thanh toán MoMo (Môi trường Giả lập)</title>
+    <title>Thanh toán MoMo (ATM Nội địa)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Roboto', sans-serif; }
         .momo-pink { background-color: #a50064; }
-        .momo-pink-hover:hover { background-color: #8d0056; }
-        .momo-text { color: #a50064; }
+        .momo-bg { background-color: #f4f7fa; }
     </style>
 </head>
-<body class="bg-[#f0f2f5] h-screen flex items-center justify-center p-4">
+<body class="momo-bg h-screen flex items-center justify-center p-4">
 
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-gray-200">
         {{-- Header --}}
         <div class="momo-pink p-4 text-white flex justify-between items-center">
             <div class="flex items-center gap-2">
-                {{-- Logo MoMo giả --}}
                 <div class="bg-white rounded p-1 w-8 h-8 flex items-center justify-center">
-                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 4.5V19.5H19.5V4.5H4.5Z" stroke="#a50064" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#a50064"/></svg>
+                   <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 4.5V19.5H19.5V4.5H4.5Z" stroke="#a50064" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#a50064"/></svg>
                 </div>
-                <span class="font-bold text-lg">Cổng thanh toán</span>
+                <div>
+                    <h1 class="font-bold text-sm uppercase">Cổng thanh toán MoMo</h1>
+                    <p class="text-[10px] opacity-80">Giả lập - Thẻ ATM Nội địa</p>
+                </div>
             </div>
-            <span class="text-[10px] uppercase font-bold bg-white/20 px-2 py-1 rounded border border-white/30 tracking-wider">
-                Simulation Mode
-            </span>
+            <div class="text-right">
+                <p class="text-xs opacity-90">Số tiền thanh toán</p>
+                <p class="font-bold text-lg">{{ number_format($amount ?? 0, 0, ',', '.') }}đ</p>
+            </div>
         </div>
 
         {{-- Body --}}
-        <div class="p-6 flex flex-col items-center text-center">
-            <div class="w-full border-b border-gray-100 pb-4 mb-4">
-                <p class="text-gray-500 text-sm mb-1">Đơn hàng từ <strong>Volunteer Connect</strong></p>
-                <p class="text-xs text-gray-400 truncate w-full">{{ $orderInfo ?? 'Quyên góp chiến dịch' }}</p>
-            </div>
-            
-            <h2 class="text-4xl font-bold momo-text mb-6">
-                {{ number_format($amount ?? 0, 0, ',', '.') }}đ
-            </h2>
-
-            {{-- Fake QR Code --}}
-            <div class="relative group mb-6">
-                <div class="p-3 border-2 border-[#a50064] rounded-xl bg-white shadow-sm">
-                    {{-- Tạo QR Code từ Google API --}}
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=MOMO_SIMULATION_{{ $orderId ?? time() }}" 
-                         alt="QR Code" 
-                         class="w-48 h-48 object-contain">
-                </div>
-                <div class="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
-                    <span class="relative flex h-3 w-3">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#a50064] opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-3 w-3 bg-[#a50064]"></span>
-                    </span>
-                    Đang chờ quét mã...
+        <div class="p-6">
+            <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6 flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="text-sm text-blue-800">
+                    <p class="font-bold">Đơn hàng: {{ $orderInfo ?? 'Quyên góp' }}</p>
+                    <p class="text-xs mt-1">Mã đơn: {{ $orderId }}</p>
                 </div>
             </div>
 
-            <div class="bg-blue-50 border border-blue-100 text-blue-800 text-xs p-3 rounded-lg mb-6 w-full text-left flex gap-2">
-                <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+            {{-- Form giả lập ATM --}}
+            <div class="space-y-4 mb-6">
                 <div>
-                    <strong>Chế độ Demo:</strong><br>
-                    Không cần mở điện thoại. Bấm nút bên dưới để giả lập kết quả trả về từ MoMo.
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ngân hàng</label>
+                    <select class="w-full border border-gray-300 rounded p-2.5 text-sm bg-gray-50">
+                        <option>Vietcombank</option>
+                        <option>Techcombank</option>
+                        <option>MB Bank</option>
+                        <option>BIDV</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Số thẻ</label>
+                    <input type="text" value="9704 0000 0000 0018" readonly class="w-full border border-gray-300 rounded p-2.5 text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ngày phát hành</label>
+                        <input type="text" value="03/12" readonly class="w-full border border-gray-300 rounded p-2.5 text-sm bg-gray-100 text-gray-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tên chủ thẻ</label>
+                        <input type="text" value="NGUYEN VAN A" readonly class="w-full border border-gray-300 rounded p-2.5 text-sm bg-gray-100 text-gray-500">
+                    </div>
                 </div>
             </div>
 
             {{-- Action Buttons --}}
-            <div class="space-y-3 w-full">
+            <div class="space-y-3">
                 {{-- Nút Thành công --}}
                 <a href="{{ route('donation.momoReturn', [
                     'partnerCode' => 'MOMO_FAKE',
@@ -77,32 +82,30 @@
                     'orderInfo' => $orderInfo ?? '',
                     'orderType' => 'momo_wallet',
                     'transId' => rand(100000, 999999),
-                    'resultCode' => '0', // 0 = Thành công
+                    'resultCode' => '0', 
                     'message' => 'Giao dịch thành công',
                     'payType' => 'qr',
                     'responseTime' => time(),
                     'extraData' => ''
                 ]) }}" 
-                class="block w-full momo-pink momo-pink-hover text-white font-bold py-3.5 rounded-xl transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Giả lập: Thanh toán THÀNH CÔNG
+                class="block w-full momo-pink hover:bg-[#8d0056] text-white font-bold py-3 rounded-lg text-center transition shadow-md">
+                    XÁC NHẬN THANH TOÁN
                 </a>
 
-                {{-- Nút Thất bại --}}
+                {{-- Nút Hủy --}}
                 <a href="{{ route('donation.momoReturn', [
-                    'resultCode' => '1006', // Mã lỗi người dùng hủy
+                    'resultCode' => '1006',
                     'orderId' => $orderId ?? time(),
                     'message' => 'Người dùng hủy giao dịch'
                 ]) }}" 
-                class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    Giả lập: Hủy / Thất bại
+                class="block w-full text-gray-500 hover:text-gray-700 text-sm font-semibold text-center py-2">
+                    Hủy giao dịch
                 </a>
             </div>
         </div>
         
         <div class="bg-gray-50 border-t p-3 text-center">
-            <p class="text-[10px] text-gray-400">Secured by Volunteer Connect Simulation</p>
+            <p class="text-[10px] text-gray-400">Simulation Environment</p>
         </div>
     </div>
 
