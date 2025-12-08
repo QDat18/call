@@ -136,28 +136,56 @@ class DonationController extends Controller
     /**
      * Xử lý kết quả trả về từ MoMo (Redirect Back)
      */
-    public function momoReturn(Request $request)
+public function momoReturn(Request $request)
     {
-        // resultCode = 0 là thành công
-        if ($request->resultCode == '0') {
-            // Tách ID thật từ orderId (format: ID_Time)
-            $parts = explode('_', $request->orderId);
-            $donationId = $parts[0];
-
-            $donation = Donation::find($donationId);
-            if ($donation && $donation->status == 'Pending') {
-                $donation->update(['status' => 'Success']);
-                $donation->campaign->increment('current_amount', $donation->amount);
+        try {
+            // 1. Kiểm tra mã lỗi trả về từ MoMo
+            if ($request->resultCode != '0') {
+                return redirect()->route('home')
+                    ->with('error', 'Giao dịch thất bại hoặc bị hủy: ' . $request->message);
             }
 
-            return redirect()->route('campaigns.show', $donation->campaign_id)
-                ->with('success', 'Thanh toán thành công! Cảm ơn bạn.');
+            // 2. Tách lấy ID đơn hàng (Định dạng: ID_Time)
+            // Ví dụ: 10_1765175230 -> Lấy số 10
+            $orderParts = explode('_', $request->orderId);
+            $donationId = $orderParts[0];
+
+            // 3. Tìm đơn hàng trong Database
+            $donation = Donation::find($donationId);
+
+            if (!$donation) {
+                return redirect()->route('home')->with('error', 'Không tìm thấy đơn hàng này.');
+            }
+
+            // 4. Kiểm tra trạng thái để tránh cộng tiền 2 lần
+            if ($donation->status == 'Pending') {
+                DB::transaction(function () use ($donation) {
+                    // Cập nhật trạng thái
+                    $donation->update(['status' => 'Success']);
+                    
+                    // Cộng tiền vào chiến dịch (Kiểm tra xem chiến dịch còn tồn tại không)
+                    if ($donation->campaign) {
+                        $donation->campaign->increment('current_amount', $donation->amount);
+                    }
+                });
+                
+                // Redirect về trang chi tiết chiến dịch
+                return redirect()->route('campaigns.show', $donation->campaign_id)
+                    ->with('success', 'Thanh toán thành công! Cảm ơn tấm lòng của bạn.');
+            }
+
+            // Nếu đã thành công rồi thì cũng cho về trang đích
+            return redirect()->route('campaign.show', $donation->campaign_id);
+
+        } catch (\Exception $e) {
+            // Log lỗi ra file để debug thay vì sập web
+            Log::error('MoMo Return Error: ' . $e->getMessage());
+            
+            // Redirect về trang chủ thông báo lỗi nhẹ nhàng
+            return redirect()->route('home')
+                ->with('error', 'Có lỗi xảy ra khi xử lý giao dịch. Vui lòng liên hệ Admin.');
         }
-
-        return redirect('/')->with('error', 'Giao dịch thất bại: ' . $request->message);
-    }
-
-    /**
+    }    /**
      * IPN (Webhook) - Server gọi Server
      */
     public function momoIpn(Request $request)
