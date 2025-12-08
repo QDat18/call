@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Http; // ✅ Đã sửa dòng này (Quan trọng)
+use Illuminate\Support\Facades\Http; // ✅ Import chuẩn
 
 class DonationController extends Controller
 {
@@ -54,10 +54,10 @@ class DonationController extends Controller
             'amount'      => $request->amount,
             'message'     => $request->message ?? 'Ung ho chien dich',
             'status'      => 'Pending',
-            'payment_method' => 'MoMo', // Đảm bảo DB có cột này, nếu không thì xóa dòng này đi
+            'payment_method' => 'MoMo', 
         ]);
 
-        // 2. Cấu hình momo từ .env
+        // 2. Cấu hình momo từ config (Đã tạo file config/momo.php)
         $endpoint = config('momo.endpoint');
         $partnerCode = config('momo.partner_code');
         $accessKey = config('momo.access_key');
@@ -71,11 +71,11 @@ class DonationController extends Controller
 
         // 3. Chuẩn bị dữ liệu
         $requestId = (string) Str::uuid();
-        $orderId = $donation->id . '_' . time();
+        $orderId = $donation->id . '_' . time(); // ID_Time để đảm bảo unique
         $amount = (string)$request->amount;
         $orderInfo = "Ung ho Campaign " . $campaign->id;
 
-        // Dùng route() để tự động sinh link có https (nhờ forceScheme ở AppServiceProvider)
+        // Route callback
         $redirectUrl = route('donation.momoReturn');
         $ipnUrl = route('donation.momoIpn');
 
@@ -129,6 +129,9 @@ class DonationController extends Controller
         }
     }
 
+    /**
+     * Xử lý kết quả trả về từ MoMo (Redirect Back)
+     */
     public function momoReturn(Request $request)
     {
         // resultCode = 0 là thành công
@@ -155,9 +158,7 @@ class DonationController extends Controller
      */
     public function momoIpn(Request $request)
     {
-        // Ghi log để debug nếu cần
-        // Log::info('MoMo IPN', $request->all());
-
+        // Kiểm tra kết quả
         if ($request->resultCode == '0') {
             $parts = explode('_', $request->orderId);
             $donationId = $parts[0];
