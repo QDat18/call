@@ -748,14 +748,14 @@ Route::middleware('auth')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| THANH TOÁN ROUTES (VNPAY)
+| THANH TOÁN ROUTES (MOMO)
 |--------------------------------------------------------------------------
 */
 // Bắt buộc login để tạo thanh toán
 Route::middleware('auth')->post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createPayment');
-// Các route VNPay gọi về, không cần login
-Route::get('/donation/vnpay-return', [DonationController::class, 'vnpayReturn'])->name('donation.vnpayReturn');
-Route::get('/donation/vnpay-ipn', [DonationController::class, 'vnpayIpn'])->name('donation.vnpayIpn');
+Route::get('/donation/momo', [DonationController::class, 'momoReturn'])->name('donation.momoReturn');
+Route::get('/payment/fake-momo', [DonationController::class, 'fakeMomoGateway'])->name('payment.fakeMomo');
+
 
 /*
 |--------------------------------------------------------------------------
