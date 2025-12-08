@@ -111,21 +111,26 @@ class DonationController extends Controller
             'signature' => $signature
         ];
 
-        try {
-            $response = Http::post($endpoint, $data);
-            $json = $response->json();
+        // try {
+        //     $response = Http::post($endpoint, $data);
+        //     $json = $response->json();
 
-            // Nếu thành công, MoMo trả về payUrl
-            if (isset($json['payUrl'])) {
-                return redirect($json['payUrl']);
-            } else {
-                Log::error('MoMo Create Error', $json);
-                return back()->with('error', $json['message'] ?? 'Lỗi tạo giao dịch MoMo: ' . json_encode($json));
-            }
-        } catch (\Exception $e) {
-            Log::error('MoMo Exception: ' . $e->getMessage());
-            return back()->with('error', 'Lỗi kết nối: ' . $e->getMessage());
-        }
+        //     // Nếu thành công, MoMo trả về payUrl
+        //     if (isset($json['payUrl'])) {
+        //         return redirect($json['payUrl']);
+        //     } else {
+        //         Log::error('MoMo Create Error', $json);
+        //         return back()->with('error', $json['message'] ?? 'Lỗi tạo giao dịch MoMo: ' . json_encode($json));
+        //     }
+        // } catch (\Exception $e) {
+        //     Log::error('MoMo Exception: ' . $e->getMessage());
+        //     return back()->with('error', 'Lỗi kết nối: ' . $e->getMessage());
+        // }
+        return view('campaigns.fake_momo', [
+            'amount' => $amount,
+            'orderId' => $orderId,
+            'orderInfo' => $orderInfo
+        ]);
     }
 
     /**
