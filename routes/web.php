@@ -751,12 +751,20 @@ Route::middleware('auth')->group(function () {
 | THANH TOÁN ROUTES (MOMO)
 |--------------------------------------------------------------------------
 */
-// Bắt buộc login để tạo thanh toán
-Route::middleware('auth')->post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createPayment');
+Route::middleware('auth')->group(function () {
+    // 1. Route tạo thanh toán
+    // Lưu ý: Đổi tên route thành 'donation.createMomo' để khớp với View show.blade.php
+    Route::post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createMomo');
+    
+    // 2. Route Fake Gateway (Nếu dùng giả lập)
+    Route::get('/payment/fake-momo', [DonationController::class, 'fakeMomoGateway'])->name('payment.fakeMomo');
+});
+
+// 3. Route Return URL (Người dùng quay về từ MoMo)
 Route::get('/donation/momo', [DonationController::class, 'momoReturn'])->name('donation.momoReturn');
-Route::get('/payment/fake-momo', [DonationController::class, 'fakeMomoGateway'])->name('payment.fakeMomo');
 
-
+// 4. [QUAN TRỌNG] Route IPN - Đây là cái thiếu gây lỗi 500
+Route::get('/donation/momo-ipn', [DonationController::class, 'momoIpn'])->name('donation.momoIpn');
 /*
 |--------------------------------------------------------------------------
 | Fallback Route (404 Page)
