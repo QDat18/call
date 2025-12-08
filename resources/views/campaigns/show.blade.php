@@ -199,16 +199,17 @@
                     {{-- Donation Form --}}
                     @if($campaign->end_date > now() && $campaign->status == 'Active')
                         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                            <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white">
+                            <div class="bg-[#d82d8b] p-6 text-white">
                                 <h2 class="text-2xl font-bold mb-2 flex items-center">
-                                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
+                                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                                     </svg>
-                                    Quyên góp ngay
+                                    Quyên góp qua MoMo
                                 </h2>
-                                <p class="text-blue-100 text-sm">Mỗi đóng góp đều có ý nghĩa</p>
+                                <p class="text-pink-100 text-sm">Quét mã QR - Thanh toán siêu tốc</p>
                             </div>
                             
+                            {{-- Action trỏ về route createPayment (Đã được update logic MoMo trong Controller) --}}
                             <form action="{{ route('donation.createPayment') }}" method="POST" class="p-6 space-y-5">
                                 @csrf
                                 <input type="hidden" name="campaign_id" value="{{ $campaign->id }}">
@@ -228,10 +229,11 @@
                                                name="amount" 
                                                id="amount" 
                                                required 
-                                               min="10000" 
-                                               step="10000"
+                                               min="1000" 
+                                               step="1000"
+                                               value="50000"
                                                placeholder="Nhập số tiền"
-                                               class="w-full px-4 py-3 pr-16 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-lg font-semibold">
+                                               class="w-full px-4 py-3 pr-16 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-[#d82d8b] focus:border-transparent transition text-lg font-semibold text-[#d82d8b]">
                                         <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                                             VNĐ
                                         </span>
@@ -246,7 +248,7 @@
                                     @foreach([50000, 100000, 200000, 500000, 1000000, 2000000] as $amount)
                                         <button type="button" 
                                                 onclick="document.getElementById('amount').value='{{ $amount }}'"
-                                                class="px-3 py-2.5 bg-gray-50 hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-400 rounded-lg text-sm font-bold text-gray-700 hover:text-blue-600 transition-all transform hover:scale-105">
+                                                class="px-3 py-2.5 bg-gray-50 hover:bg-pink-50 border-2 border-gray-200 hover:border-pink-400 rounded-lg text-sm font-bold text-gray-700 hover:text-[#d82d8b] transition-all transform hover:scale-105">
                                             {{ $amount >= 1000000 ? number_format($amount/1000000, 0) . 'M' : number_format($amount/1000, 0) . 'K' }}
                                         </button>
                                     @endforeach
@@ -260,22 +262,22 @@
                                               id="message" 
                                               rows="3"
                                               placeholder="Chia sẻ động viên của bạn..."
-                                              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"></textarea>
+                                              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-[#d82d8b] focus:border-transparent transition resize-none"></textarea>
                                 </div>
 
                                 <button type="submit" 
-                                        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center text-lg">
-                                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
+                                        class="w-full bg-[#A50064] hover:bg-[#8d0056] text-white font-bold py-4 px-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center text-lg">
+                                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
                                     </svg>
-                                    Quyên góp ngay
+                                    Thanh toán qua Ví MoMo
                                 </button>
                                 
                                 <div class="flex items-center justify-center text-xs text-gray-500 gap-2">
                                     <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
-                                    <span>Thanh toán an toàn qua VNPay</span>
+                                    <span>Được bảo mật bởi MoMo Payment</span>
                                 </div>
                             </form>
                         </div>
