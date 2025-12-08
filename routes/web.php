@@ -754,7 +754,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     // 1. Route tạo thanh toán
     // Lưu ý: Đổi tên route thành 'donation.createMomo' để khớp với View show.blade.php
-    Route::post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createMomo');
+    Route::post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createPayment');
     
     // 2. Route Fake Gateway (Nếu dùng giả lập)
     Route::get('/payment/fake-momo', [DonationController::class, 'fakeMomoGateway'])->name('payment.fakeMomo');
