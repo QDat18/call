@@ -1,234 +1,244 @@
 {{-- resources/views/volunteer/profile/profile.blade.php --}}
 @extends('layouts.volunteer')
 
-@section('title', 'Hồ Sơ Tình Nguyện - ' . $profile->user->first_name)
-
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<style>
-    .gradient-purple { background: linear-gradient(135deg, #8b5cf6, #6b46c1); }
-    .card-hover { @apply transition transform hover:-translate-y-2 hover:shadow-2xl; }
-    .badge-bronze { @apply text-orange-700 bg-orange-100; }
-    .badge-silver { @apply text-gray-600 bg-gray-200; }
-    .badge-gold { @apply text-yellow-600 bg-yellow-100; }
-    .badge-star { @apply text-yellow-500 bg-yellow-50; }
-</style>
-@endpush
+@section('title', 'Hồ Sơ Của Tôi')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 py-12 px-4">
-    <div class="max-w-6xl mx-auto">
-
-        <!-- Navigation Tabs -->
-        <div class="flex justify-center mb-12">
-            <div class="bg-white rounded-full shadow-2xl p-2 flex space-x-2">
-                <a href="{{ route('volunteer.dashboard') }}" 
-                   class="px-8 py-4 rounded-full font-bold text-gray-700 hover:bg-purple-100 transition flex items-center gap-3">
-                    <i class="fas fa-home"></i> Dashboard
-                </a>
-                <a href="{{ route('volunteer.profile.profile') }}" 
-                   class="px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg flex items-center gap-3">
-                    <i class="fas fa-user-tie"></i> Hồ Sơ
-                </a>
-                <a href="{{ route('volunteer.profile.edit') }}" 
-                   class="px-8 py-4 rounded-full font-bold text-gray-700 hover:bg-purple-100 transition flex items-center gap-3">
-                    <i class="fas fa-edit"></i> Chỉnh Sửa
-                </a>
-            </div>
+    <div class="h-60 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 relative">
+        <div class="absolute inset-0 bg-black/10"></div>
+        
+        <div class="absolute top-6 right-6">
+            <a href="{{ route('volunteer.profile.edit') }}"
+                class="bg-white/20 backdrop-blur-md text-white border border-white/30 px-4 py-2 rounded-lg hover:bg-white hover:text-purple-700 transition font-medium flex items-center gap-2 shadow-sm">
+                <i class="fas fa-pen"></i> <span class="hidden sm:inline">Chỉnh sửa</span>
+            </a>
         </div>
+    </div>
 
-        <div class="grid lg:grid-cols-3 gap-8">
-
-            <!-- Left: Avatar + Info + Stats -->
-            <div class="lg:col-span-1">
-                <div class="bg-white rounded-3xl shadow-2xl p-8 text-center border border-purple-100 card-hover">
-                    <img src="{{ $profile->user->avatar_url 
-                        ? asset('storage/'.$profile->user->avatar_url) 
-                        : 'https://ui-avatars.com/api/?name='.urlencode($profile->user->first_name.' '.$profile->user->last_name).'&background=8b5cf6&color=fff&size=256' }}" 
-                         class="w-48 h-48 rounded-full mx-auto object-cover border-8 border-white shadow-2xl ring-4 ring-purple-200">
-
-                    <h1 class="text-3xl font-bold text-purple-800 mt-6">
-                        {{ $profile->user->first_name }} {{ $profile->user->last_name }}
-                    </h1>
-                    <p class="text-xl text-gray-600 mt-2">Tình Nguyện Viên</p>
-
-                    @if($profile->preferred_location)
-                        <p class="text-sm text-gray-500 mt-2">
-                            <i class="fas fa-map-marker-alt"></i> {{ $profile->preferred_location }}
-                        </p>
-                    @endif
-
-                    <!-- Stats -->
-                    <div class="grid grid-cols-2 gap-4 mt-8">
-                        <div class="bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-2xl p-6">
-                            <div class="text-3xl font-bold">{{ $stats['total_hours'] }}</div>
-                            <div class="text-sm">Giờ TNV</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-2xl p-6">
-                            <div class="text-3xl font-bold">{{ number_format($stats['rating'], 1) }}</div>
-                            <div class="text-sm flex items-center justify-center gap-1">
-                                <i class="fas fa-star"></i> Đánh giá
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 space-y-3">
-                        <div class="bg-green-50 text-green-800 px-6 py-3 rounded-xl font-bold">
-                            {{ $stats['accepted_applications'] }} / {{ $stats['applications'] }} Đơn chấp nhận
-                        </div>
-                        <div class="bg-blue-50 text-blue-800 px-6 py-3 rounded-xl font-bold">
-                            {{ $stats['completed_activities'] }} Hoạt động hoàn thành
-                        </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 relative z-10 pb-12">
+        
+        @if(!Auth::user()->email_verified_at)
+            <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between shadow-lg gap-4">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    <div>
+                        <span class="text-yellow-800 font-bold block sm:inline">Tài khoản chưa xác thực email.</span>
+                        <span class="text-yellow-700 text-sm block sm:inline">Vui lòng xác thực để sử dụng đầy đủ tính năng.</span>
                     </div>
                 </div>
+                <form method="POST" action="{{ route('email.resend') }}">
+                    @csrf
+                    <button class="whitespace-nowrap text-white bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm font-bold transition shadow-md">
+                        Gửi lại Email
+                    </button>
+                </form>
+            </div>
+        @endif
 
-                <!-- Achievements -->
-                @if(count($achievements) > 0)
-                    <div class="bg-white rounded-3xl shadow-2xl p-8 mt-8 border border-purple-100 card-hover">
-                        <h3 class="text-2xl font-bold text-purple-800 mb-6 text-center">
-                            <i class="fas fa-trophy text-yellow-500"></i> Thành Tựu
-                        </h3>
-                        <div class="space-y-4">
-                            @foreach($achievements as $ach)
-                                <div class="flex items-center gap-4 p-4 rounded-2xl {{ 
-                                    $ach['color'] == 'bronze' ? 'badge-bronze' : 
-                                    ($ach['color'] == 'silver' ? 'badge-silver' : 
-                                    ($ach['color'] == 'gold' ? 'badge-gold' : 'badge-star')) 
-                                }}">
-                                    <i class="{{ $ach['icon'] }} text-3xl"></i>
-                                    <div>
-                                        <div class="font-bold">{{ $ach['name'] }}</div>
-                                        <div class="text-sm">{{ $ach['description'] }}</div>
-                                    </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 sticky top-24">
+                    <div class="p-8 text-center border-b border-gray-100">
+                        <div class="relative inline-block">
+                            <img src="{{ $profile->user->avatar_url ? asset('storage/' . $profile->user->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($profile->user->first_name . ' ' . $profile->user->last_name) . '&background=8b5cf6&color=fff&size=200' }}"
+                                alt="Avatar" class="w-40 h-40 rounded-full border-4 border-white shadow-2xl object-cover">
+                            
+                            {{-- Badge xác thực --}}
+                            @if($profile->user->email_verified_at)
+                                <div class="absolute bottom-2 right-2 bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-md" title="Đã xác thực">
+                                    <i class="fas fa-check text-sm"></i>
                                 </div>
-                            @endforeach
+                            @else
+                                <div class="absolute bottom-2 right-2 bg-yellow-500 text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-md" title="Chưa xác thực">
+                                    <i class="fas fa-exclamation text-sm"></i>
+                                </div>
+                            @endif
+                        </div>
+
+                        <h1 class="mt-4 text-2xl font-bold text-gray-900">{{ $profile->user->first_name }} {{ $profile->user->last_name }}</h1>
+                        <p class="text-purple-600 font-medium">{{ $profile->occupation ?? 'Tình nguyện viên' }}</p>
+
+                        @if($profile->preferred_location)
+                            <p class="mt-2 text-gray-500 text-sm flex items-center justify-center gap-1">
+                                <i class="fas fa-map-marker-alt"></i> {{ $profile->preferred_location }}
+                            </p>
+                        @endif
+                    </div>
+
+                    <div class="grid grid-cols-2 divide-x divide-gray-100 bg-gray-50">
+                        <div class="p-6 text-center group hover:bg-purple-50 transition cursor-default">
+                            <span class="block text-3xl font-extrabold text-gray-800 group-hover:text-purple-600 transition">{{ $stats['total_hours'] ?? 0 }}</span>
+                            <span class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Giờ đóng góp</span>
+                        </div>
+                        <div class="p-6 text-center group hover:bg-yellow-50 transition cursor-default">
+                            <span class="block text-3xl font-extrabold text-gray-800 group-hover:text-yellow-600 transition flex items-center justify-center gap-1">
+                                {{ number_format($stats['rating'] ?? 0, 1) }} <i class="fas fa-star text-sm text-yellow-400"></i>
+                            </span>
+                            <span class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Đánh giá</span>
                         </div>
                     </div>
-                @endif
+
+                    <div class="p-8 space-y-6">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Liên hệ</h3>
+                            <ul class="space-y-3 text-sm text-gray-600">
+                                <li class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
+                                        <i class="fas fa-envelope"></i>
+                                    </div>
+                                    <span class="truncate" title="{{ $profile->user->email }}">{{ $profile->user->email }}</span>
+                                </li>
+                                @if($profile->user->phone)
+                                    <li class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
+                                            <i class="fas fa-phone"></i>
+                                        </div>
+                                        <span>{{ $profile->user->phone }}</span>
+                                    </li>
+                                @endif
+                            </ul>
+                        </div>
+
+                        @if(isset($achievements) && count($achievements) > 0)
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Huy hiệu</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($achievements as $ach)
+                                        <div class="bg-yellow-50 border border-yellow-100 text-yellow-800 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 cursor-help" title="{{ $ach['description'] ?? '' }}">
+                                            <span>{!! $ach['icon'] ?? '<i class="fas fa-medal"></i>' !!}</span>
+                                            <span class="font-semibold">{{ $ach['title'] ?? $ach['name'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
 
-            <!-- Right: Detailed Info -->
             <div class="lg:col-span-2 space-y-8">
 
-                <!-- Bio -->
-                @if($profile->bio)
-                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
-                        <h3 class="text-2xl font-bold text-purple-800 mb-6">
-                            <i class="fas fa-quote-left text-purple-500"></i> Giới Thiệu
-                        </h3>
-                        <p class="text-gray-700 leading-relaxed text-lg bg-purple-50 p-8 rounded-2xl border-l-4 border-purple-600">
-                            {{ $profile->bio }}
-                        </p>
-                    </div>
-                @endif
+                <div class="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <i class="fas fa-user-circle text-purple-600"></i> Giới thiệu
+                    </h2>
+                    @if($profile->bio)
+                        <p class="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{{ $profile->bio }}</p>
+                    @else
+                        <div class="text-center py-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                            <p class="text-gray-500 mb-4">Bạn chưa có lời giới thiệu nào.</p>
+                            <a href="{{ route('volunteer.profile.edit') }}" class="text-purple-600 font-bold hover:underline">Thêm giới thiệu ngay</a>
+                        </div>
+                    @endif
+                </div>
 
-                <!-- Info Grid -->
                 <div class="grid md:grid-cols-2 gap-8">
-                    <!-- Occupation & Education -->
-                    <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl flex items-center justify-center text-white text-2xl">
-                                <i class="fas fa-briefcase"></i>
+                    
+                    <div class="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 h-full">
+                        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                            <i class="fas fa-tools text-orange-500"></i> Kỹ năng
+                        </h2>
+                        @php
+                            // Giải mã JSON từ DB
+                            $skillsArr = json_decode($profile->skills, true) ?? [];
+                        @endphp
+                        
+                        @if(!empty($skillsArr) && is_array($skillsArr) && count($skillsArr) > 0)
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($skillsArr as $skill)
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 font-medium text-sm border border-orange-100 shadow-sm">
+                                        {{ $skill }}
+                                    </span>
+                                @endforeach
                             </div>
-                            <h3 class="text-xl font-bold text-purple-800">Nghề Nghiệp</h3>
-                        </div>
-                        <p class="text-lg font-semibold text-gray-700">{{ $profile->occupation ?? 'Chưa cập nhật' }}</p>
-                        @if($profile->education_level)
-                            <p class="text-sm text-gray-600 mt-3">
-                                <i class="fas fa-graduation-cap"></i> {{ $profile->education_level }}
-                                @if($profile->university) - {{ $profile->university }} @endif
-                            </p>
+                        @else
+                            <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <p class="text-gray-400 italic text-sm">Chưa cập nhật kỹ năng</p>
+                            </div>
                         @endif
                     </div>
 
-                    <!-- Availability & Transport -->
-                    <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl">
-                                <i class="fas fa-clock"></i>
+                    <div class="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 h-full">
+                        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                            <i class="fas fa-heart text-pink-500"></i> Quan tâm
+                        </h2>
+                        @php
+                            // Giải mã JSON từ DB
+                            $interestsArr = json_decode($profile->interests, true) ?? [];
+                        @endphp
+
+                        @if(!empty($interestsArr) && is_array($interestsArr) && count($interestsArr) > 0)
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($interestsArr as $interest)
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full bg-pink-50 text-pink-700 font-medium text-sm border border-pink-100 shadow-sm">
+                                        {{ $interest }}
+                                    </span>
+                                @endforeach
                             </div>
-                            <h3 class="text-xl font-bold text-blue-800">Thời Gian & Di Chuyển</h3>
-                        </div>
-                        <p class="text-lg font-semibold">
-                            <span class="px-4 py-2 rounded-full bg-blue-100 text-blue-800">
-                                {{ $profile->availability ?? 'Chưa cập nhật' }}
-                            </span>
-                        </p>
-                        @if($profile->transportation)
-                            <p class="text-sm text-gray-600 mt-3">
-                                <i class="fas fa-car"></i> {{ $profile->transportation }}
-                            </p>
+                        @else
+                            <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <p class="text-gray-400 italic text-sm">Chưa cập nhật sở thích</p>
+                            </div>
                         @endif
                     </div>
                 </div>
 
-                <!-- Skills -->
-                @if($profile->skills)
-                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center text-white text-2xl">
-                                <i class="fas fa-tools"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-orange-800">Kỹ Năng</h3>
-                        </div>
-                        <div class="flex flex-wrap gap-3">
-                            @foreach(explode(',', $profile->skills) as $skill)
-                                <span class="px-5 py-3 rounded-full bg-orange-100 text-orange-800 font-bold text-sm shadow">
-                                    {{ trim($skill) }}
-                                </span>
-                            @endforeach
-                        </div>
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                    <h2 class="text-xl font-bold text-gray-900 p-8 pb-4 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-blue-600"></i> Thông tin bổ sung
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <tbody class="divide-y divide-gray-100">
+                                <tr class="hover:bg-gray-50 transition">
+                                    <th class="px-8 py-4 text-gray-500 font-medium w-1/3 whitespace-nowrap">Trình độ học vấn</th>
+                                    <td class="px-8 py-4 text-gray-800 font-semibold">
+                                        {{ $profile->education_level ?? '---' }}
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 transition">
+                                    <th class="px-8 py-4 text-gray-500 font-medium">Trường học</th>
+                                    <td class="px-8 py-4 text-gray-800 font-semibold">
+                                        {{ $profile->university ?? '---' }}
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 transition">
+                                    <th class="px-8 py-4 text-gray-500 font-medium">Phương tiện</th>
+                                    <td class="px-8 py-4 text-gray-800 font-semibold">
+                                        @if($profile->transportation)
+                                            <span class="inline-flex items-center gap-2">
+                                                <i class="fas fa-car text-gray-400"></i> {{ $profile->transportation }}
+                                            </span>
+                                        @else
+                                            ---
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 transition">
+                                    <th class="px-8 py-4 text-gray-500 font-medium">Thời gian rảnh</th>
+                                    <td class="px-8 py-4 text-gray-800 font-semibold">
+                                        @if($profile->availability)
+                                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs uppercase font-bold">
+                                                {{ $profile->availability }}
+                                            </span>
+                                        @else
+                                            ---
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-gray-50 transition">
+                                    <th class="px-8 py-4 text-gray-500 font-medium">Kinh nghiệm</th>
+                                    <td class="px-8 py-4 text-gray-800 font-semibold">
+                                        {{ $profile->volunteer_experience ?? 'Chưa cập nhật' }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                @endif
-
-                <!-- Interests -->
-                @if($profile->interests)
-                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center text-white text-2xl">
-                                <i class="fas fa-heart"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-pink-800">Sở Thích Tình Nguyện</h3>
-                        </div>
-                        <div class="flex flex-wrap gap-3">
-                            @foreach(explode(',', $profile->interests) as $interest)
-                                <span class="px-5 py-3 rounded-full bg-pink-100 text-pink-800 font-bold text-sm shadow">
-                                    {{ trim($interest) }}
-                                </span>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Experience -->
-                @if($profile->volunteer_experience)
-                    <div class="bg-white rounded-3xl shadow-2xl p-10 border border-purple-100 card-hover">
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white text-2xl">
-                                <i class="fas fa-hands-helping"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-emerald-800">Kinh Nghiệm Tình Nguyện</h3>
-                        </div>
-                        <div class="bg-emerald-50 p-8 rounded-2xl border-l-4 border-emerald-500">
-                            <p class="text-gray-700 leading-relaxed text-lg">{{ $profile->volunteer_experience }}</p>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Action Buttons -->
-                <div class="flex justify-center gap-6 mt-12">
-                    <a href="{{ route('volunteer.profile.edit') }}" 
-                       class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-10 py-5 rounded-2xl font-bold text-xl shadow-2xl hover:shadow-purple-500/50 transform hover:scale-105 transition duration-300 flex items-center gap-4">
-                        <i class="fas fa-edit"></i> Chỉnh Sửa Hồ Sơ
-                    </a>
-                    <a href="{{ route('volunteer.dashboard') }}" 
-                       class="bg-white text-purple-700 px-10 py-5 rounded-2xl font-bold text-xl border-4 border-purple-600 hover:bg-purple-600 hover:text-white transition transform hover:scale-105 shadow-2xl flex items-center gap-4">
-                        <i class="fas fa-home"></i> Về Dashboard
-                    </a>
                 </div>
+
             </div>
         </div>
     </div>
-</div>
 @endsection

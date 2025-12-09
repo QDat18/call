@@ -1,159 +1,194 @@
 {{-- resources/views/volunteer/favorites/_list.blade.php --}}
 @if($favorites->count() > 0)
-    <!-- Thanh chọn & xóa hàng loạt -->
-    <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-6 mb-8">
-        <form id="bulkForm" action="{{ route('volunteer.favorites.bulk-destroy') ?? '#' }}" method="POST">
+    
+    {{-- Bulk Action Bar --}}
+    <div class="bg-purple-50 rounded-xl p-4 mb-6 flex items-center justify-between border border-purple-100">
+        <div class="flex items-center gap-3">
+            <input type="checkbox" id="selectAll" class="w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer">
+            <label for="selectAll" class="font-bold text-gray-700 cursor-pointer select-none">Chọn tất cả</label>
+            <span class="text-gray-400">|</span>
+            <span class="text-sm text-gray-600">Đã chọn: <span id="selectedCount" class="font-bold text-purple-600">0</span></span>
+        </div>
+        
+        <form id="bulkForm" action="{{ route('volunteer.favorites.bulk-destroy') }}" method="POST">
             @csrf
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <input type="checkbox" id="selectAll" class="w-5 h-5 text-purple-600 rounded">
-                    <label for="selectAll" class="font-medium">Chọn tất cả</label>
-                    <span class="text-gray-500">(<span id="selectedCount">0</span> được chọn)</span>
-                </div>
-                <button type="submit" id="bulkDelete" disabled
-                        class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow transition disabled:opacity-50">
-                    <i class="fas fa-trash mr-2"></i> Xóa đã chọn
-                </button>
-            </div>
+            {{-- Input hidden nhận JSON ID từ JS --}}
+            <input type="hidden" name="favorite_ids" id="bulkInputIds">
+            
+            <button type="button" id="bulkDeleteBtn" disabled
+                class="px-4 py-2 bg-white text-gray-400 border border-gray-200 rounded-lg text-sm font-bold shadow-sm transition flex items-center gap-2 cursor-not-allowed
+                       data-[active=true]:bg-rose-600 data-[active=true]:text-white data-[active=true]:border-rose-600 data-[active=true]:cursor-pointer data-[active=true]:shadow-rose-200">
+                <i class="fas fa-trash-alt"></i> Xóa mục chọn
+            </button>
         </form>
     </div>
 
-    <!-- Grid card -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+    {{-- Grid Layout --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         @foreach($favorites as $favorite)
             @php $opp = $favorite->opportunity; @endphp
-            <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 border border-purple-100 dark:border-purple-900">
-                <!-- Ảnh + nút yêu thích -->
-                <div class="relative h-56">
+            
+            {{-- Semantic Tag: Article --}}
+            <article class="group bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative" id="fav-card-{{ $favorite->favorite_id }}">
+                
+                {{-- Image Container --}}
+                <div class="relative h-52 overflow-hidden rounded-t-2xl">
+                    {{-- Bulk Checkbox --}}
+                    <div class="absolute top-3 left-3 z-20">
+                        <input type="checkbox" value="{{ $favorite->favorite_id }}" class="bulk-checkbox w-6 h-6 text-purple-600 border-white rounded shadow-md cursor-pointer focus:ring-0">
+                    </div>
+
+                    {{-- Image with SEO Alt --}}
                     @if($opp->image)
-                        <img src="{{ asset('storage/' . $opp->image) }}" class="w-full h-full object-cover">
+                        <img src="{{ asset('storage/' . $opp->image) }}" 
+                             alt="Hình ảnh chiến dịch: {{ $opp->title }}" 
+                             loading="lazy"
+                             class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
                     @else
-                        <div class="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <i class="fas fa-hands-helping text-white text-6xl opacity-30"></i>
+                        <div class="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-300">
+                            <i class="fas fa-image text-4xl"></i>
                         </div>
                     @endif
 
-                    <!-- Nút bỏ yêu thích (AJAX) -->
-                    <button type="button" data-id="{{ $opp->opportunity_id }}"
-                            class="favorite-btn absolute top-4 right-4 w-12 h-12 bg-white/90 dark:bg-slate-900/90 rounded-full shadow-xl flex items-center justify-center text-red-500 hover:scale-110 transition">
-                        <i class="fas fa-heart text-xl"></i>
+                    {{-- Quick Delete Btn --}}
+                    <button type="button" onclick="deleteFavorite({{ $favorite->favorite_id }})" aria-label="Xóa khỏi yêu thích"
+                            class="absolute top-3 right-3 z-20 w-8 h-8 bg-white/90 backdrop-blur rounded-full text-rose-500 shadow-sm flex items-center justify-center hover:bg-rose-500 hover:text-white transition">
+                        <i class="fas fa-times"></i>
                     </button>
-
-                    <!-- Checkbox chọn -->
-                    <div class="absolute top-4 left-4">
-                        <input type="checkbox" name="favorite_ids[]" value="{{ $favorite->favorite_id }}"
-                               class="bulk-checkbox w-5 h-5 text-purple-600 rounded">
+                    
+                    {{-- Category Badge --}}
+                    <div class="absolute bottom-3 left-3 z-10">
+                        <span class="px-2 py-1 bg-gray-900/70 backdrop-blur text-white text-[10px] uppercase font-bold rounded-md tracking-wide">
+                            {{ $opp->category->category_name ?? 'Chung' }}
+                        </span>
                     </div>
                 </div>
 
-                <!-- Nội dung -->
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3 line-clamp-2">
-                        {{ $opp->title }}
-                    </h3>
+                {{-- Content --}}
+                <div class="p-5 flex flex-col flex-grow">
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-2 line-clamp-2 leading-tight group-hover:text-purple-600 transition">
+                        <a href="{{ route('opportunities.show', $opp->opportunity_id) }}" title="{{ $opp->title }}">
+                            {{ $opp->title }}
+                        </a>
+                    </h2>
 
-                    <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 text-sm mb-4">
-                        <i class="fas fa-building"></i>
-                        <span>{{ $opp->organization->organization_name }}</span>
+                    <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                        <i class="fas fa-building text-gray-400"></i>
+                        <span class="font-medium truncate">{{ $opp->organization->organization_name }}</span>
                     </div>
 
-                    <p class="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-5">
-                        {{ Str::limit(strip_tags($opp->description), 110) }}
-                    </p>
-
-                    <!-- Ghi chú -->
-                    <form action="{{ route('volunteer.favorites.notes', $favorite->favorite_id) }}" method="POST" class="mb-5">
-                        @csrf @method('PUT')
-                        <textarea name="notes" rows="2" placeholder="Ghi chú của bạn..."
-                                  class="w-full px-4 py-3 text-sm border border-purple-200 dark:border-purple-700 rounded-xl focus:ring-4 focus:ring-purple-100 dark:bg-slate-700 resize-none">{{ $favorite->notes }}</textarea>
-                        <div class="text-right mt-2">
-                            <button type="submit" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
-                                <i class="fas fa-save mr-1"></i> Lưu ghi chú
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Nút hành động -->
-                    <div class="flex justify-between items-center pt-4 border-t border-purple-100 dark:border-purple-800">
-                        <a href="{{ route('opportunities.show', $opp->opportunity_id) }}"
-                           class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:shadow-lg transition">
-                            Xem chi tiết
-                        </a>
-
-                        <form action="{{ route('volunteer.favorites.destroy', $favorite->favorite_id) }}" method="POST"
-                              onsubmit="return confirm('Xóa khỏi yêu thích?')">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="text-red-500 hover:text-red-700 text-xl">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                    {{-- Notes Form --}}
+                    <div class="mt-auto">
+                        <form action="{{ route('volunteer.favorites.notes', $favorite->favorite_id) }}" method="POST" class="relative group/note">
+                            @csrf @method('PUT')
+                            <label for="note-{{ $favorite->favorite_id }}" class="sr-only">Ghi chú</label>
+                            <textarea id="note-{{ $favorite->favorite_id }}" name="notes" rows="2" 
+                                      class="w-full bg-gray-50 border-0 rounded-lg p-3 text-sm text-gray-700 focus:ring-2 focus:ring-purple-200 resize-none placeholder-gray-400 transition"
+                                      placeholder="Thêm ghi chú..." onblur="this.form.submit()">{{ $favorite->notes }}</textarea>
+                            <div class="absolute bottom-2 right-2 text-purple-400 text-xs opacity-0 group-hover/note:opacity-100 transition pointer-events-none">
+                                <i class="fas fa-save"></i> Tự động lưu
+                            </div>
                         </form>
                     </div>
+
+                    {{-- CTA --}}
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+                         <a href="{{ route('opportunities.show', $opp->opportunity_id) }}" 
+                           class="flex-1 text-center py-2.5 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 shadow-md shadow-purple-200 transition">
+                            Ứng tuyển
+                        </a>
+                    </div>
                 </div>
-            </div>
+            </article>
         @endforeach
     </div>
 
-    <!-- Phân trang -->
-    <div class="mt-12 flex justify-center">
-        {{ $favorites->appends(request()->query())->links('pagination::tailwind') }}
-    </div>
+    {{-- Pagination (Chuẩn SEO: dùng thẻ nav) --}}
+    <nav aria-label="Phân trang" class="mt-12">
+        {{ $favorites->appends(request()->query())->links() }}
+    </nav>
 
 @else
-    <!-- Empty State đẹp lung linh -->
-    <div class="text-center py-24 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl">
-        <i class="fas fa-heart-broken text-9xl text-purple-200 dark:text-purple-800 mb-8"></i>
-        <h2 class="text-4xl font-bold text-gray-700 dark:text-gray-300 mb-4">
-            Chưa có cơ hội nào được yêu thích
-        </h2>
-        <p class="text-xl text-gray-500 dark:text-gray-400 mb-10">
-            Hãy khám phá và lưu lại những cơ hội bạn thấy thú vị!
-        </p>
+    {{-- Empty State --}}
+    <div class="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+        <div class="w-32 h-32 mx-auto bg-purple-50 rounded-full flex items-center justify-center mb-6">
+            <i class="fas fa-heart-broken text-5xl text-purple-200"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Danh sách đang trống</h2>
+        <p class="text-gray-500 mb-8 max-w-md mx-auto">Bạn chưa lưu cơ hội nào. Hãy khám phá và thả tim cho chiến dịch bạn quan tâm nhé.</p>
         <a href="{{ route('opportunities.index') }}" 
-           class="inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-2xl hover:shadow-2xl transition transform hover:scale-105">
-            <i class="fas fa-search"></i> Tìm kiếm ngay
+           class="inline-flex items-center gap-2 px-8 py-3 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 hover:-translate-y-1 transition">
+            <i class="fas fa-search"></i> Tìm cơ hội mới
         </a>
     </div>
 @endif
 
+{{-- JavaScript --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.bulk-checkbox');
-    const bulkBtn = document.getElementById('bulkDelete');
+    const bulkBtn = document.getElementById('bulkDeleteBtn');
     const countEl = document.getElementById('selectedCount');
+    const bulkInput = document.getElementById('bulkInputIds');
+    const bulkForm = document.getElementById('bulkForm');
 
-    selectAll?.addEventListener('change', () => {
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        updateCount();
-    });
-    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+    function updateBulkState() {
+        const checkedBoxes = document.querySelectorAll('.bulk-checkbox:checked');
+        const count = checkedBoxes.length;
+        countEl.textContent = count;
+        
+        if(count > 0) {
+            bulkBtn.setAttribute('data-active', 'true');
+            bulkBtn.disabled = false;
+        } else {
+            bulkBtn.removeAttribute('data-active');
+            bulkBtn.disabled = true;
+        }
 
-    function updateCount() {
-        const checked = document.querySelectorAll('.bulk-checkbox:checked').length;
-        countEl.textContent = checked;
-        bulkBtn.disabled = checked === 0;
+        // Tạo mảng ID JSON để gửi về Controller
+        const ids = Array.from(checkedBoxes).map(cb => cb.value);
+        bulkInput.value = JSON.stringify(ids); 
     }
 
-    // AJAX bỏ yêu thích
-    document.querySelectorAll('.favorite-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            fetch("{{ route('volunteer.favorites.toggle') }}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ opportunity_id: this.dataset.id })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.action === 'removed') {
-                    this.closest('.bg-white, .dark\\:bg-slate-800').style.opacity = '0';
-                    setTimeout(() => this.closest('.bg-white, .dark\\:bg-slate-800').parentElement.remove(), 400);
-                }
-            });
+    if(selectAll) {
+        selectAll.addEventListener('change', () => {
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBulkState();
         });
-    });
+        checkboxes.forEach(cb => cb.addEventListener('change', updateBulkState));
+        
+        bulkBtn.addEventListener('click', function() {
+            if(confirm(`Bạn có chắc muốn xóa ${countEl.textContent} mục đã chọn?`)) {
+                bulkForm.submit();
+            }
+        });
+    }
 });
+
+// Single Delete Function (AJAX)
+function deleteFavorite(id) {
+    if(!confirm('Xóa mục này khỏi danh sách yêu thích?')) return;
+
+    // Dùng fetch để gọi Route Delete
+    fetch(`{{ url('/volunteer/favorites') }}/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if(response.ok) {
+            const card = document.getElementById(`fav-card-${id}`);
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.9)';
+            setTimeout(() => location.reload(), 300); // Reload để cập nhật pagination/count
+        } else {
+            alert('Lỗi khi xóa. Vui lòng thử lại.');
+        }
+    });
+}
 </script>

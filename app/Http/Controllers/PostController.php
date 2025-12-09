@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\PostMedia;
+use App\Models\CommentLike;
 
 class PostController extends Controller
 {
@@ -447,6 +448,68 @@ class PostController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Comment deleted successfully'
+        ]);
+    }
+
+    public function toggleCommentLike($id)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please login to like comments'
+            ], 401);
+        }
+
+        $comment = PostComment::findOrFail($id);
+
+        $like = CommentLike::where('comment_id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        $liked = false;
+
+        if ($like) {
+            // Nếu đã like rồi thì unlike
+            $like->delete();
+            // Nếu bảng post_comments có cột likes_count thì giảm
+            if (\Schema::hasColumn('post_comments', 'likes_count')) {
+                $comment->decrement('likes_count');
+            }
+            $liked = false;
+        } else {
+            // Nếu chưa like thì tạo mới
+            CommentLike::create([
+                'comment_id' => $id,
+                'user_id' => Auth::id()
+            ]);
+
+            // Nếu bảng post_comments có cột likes_count thì tăng
+            if (\Schema::hasColumn('post_comments', 'likes_count')) {
+                $comment->increment('likes_count');
+            }
+            $liked = true;
+
+            // Thông báo cho người viết comment (trừ khi tự like chính mình)
+            if ($comment->user_id !== Auth::id()) {
+                Notification::create([
+                    'user_id' => $comment->user_id,
+                    'notification_type' => 'System',
+                    'title' => 'Someone liked your comment',
+                    'content' => Auth::user()->first_name . ' liked your comment',
+                    'related_id' => $comment->post_id, // Link về bài viết chứa comment
+                    'related_type' => 'post',
+                    'priority' => 'low'
+                ]);
+            }
+        }
+
+        // Lấy lại số lượng like mới nhất
+        $likesCount = CommentLike::where('comment_id', $id)->count();
+
+        return response()->json([
+            'success' => true,
+            'liked' => $liked,
+            'likes_count' => $likesCount
         ]);
     }
 

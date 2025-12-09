@@ -1,228 +1,224 @@
 @extends('layouts.app')
 
-@section('title', $user->first_name . ' ' . $user->last_name . ' - Profile')
+@section('title', $user->first_name . ' ' . $user->last_name)
 
 @section('content')
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-    <div class="max-w-4xl mx-auto px-4">
-        
-        <!-- Profile Header -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-                <!-- Avatar -->
-                <div class="relative">
- <img src="{{ $user->avatar_url ? asset('storage/' . $user->avatar_url) : '/images/default-avatar.png' }}" 
-     class="w-40 h-40 rounded-full border-4 border-white dark:border-gray-800 shadow-lg">
-                    @if($user->user_type === 'Organization')
-                    <div class="absolute -bottom-2 -right-2 bg-green-500 text-white p-1 rounded-full">
-                        <i class="fas fa-building text-xs"></i>
-                    </div>
-                    @elseif($user->user_type === 'Admin')
-                    <div class="absolute -bottom-2 -right-2 bg-purple-500 text-white p-1 rounded-full">
-                        <i class="fas fa-crown text-xs"></i>
-                    </div>
-                    @endif
-                </div>
-
-                <!-- User Info -->
-                <div class="flex-1 text-center md:text-left">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                {{ $user->first_name }} {{ $user->last_name }}
-                            </h1>
-                            <div class="flex items-center justify-center md:justify-start space-x-2 mt-1">
-                                @if($user->user_type === 'Organization')
-                                <span class="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm font-medium rounded-full">
-                                    <i class="fas fa-building mr-1"></i>Organization
-                                </span>
-                                @elseif($user->user_type === 'Admin')
-                                <span class="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-sm font-medium rounded-full">
-                                    <i class="fas fa-crown mr-1"></i>Administrator
-                                </span>
-                                @else
-                                <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm font-medium rounded-full">
-                                    <i class="fas fa-user mr-1"></i>Volunteer
-                                </span>
-                                @endif
-                                
-                                <span class="text-sm text-gray-500 dark:text-gray-400">
-                                    Joined {{ $user->created_at->format('M Y') }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Stats -->
-                        <div class="flex items-center space-x-6 mt-4 md:mt-0">
-                            <div class="text-center">
-                                <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    {{ $user->posts_count }}
-                                </div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">Posts</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                    {{ $user->comments_count }}
-                                </div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">Comments</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bio -->
-                    @if($user->bio)
-                    <p class="mt-4 text-gray-600 dark:text-gray-300 leading-relaxed">
-                        {{ $user->bio }}
-                    </p>
-                    @endif
-
-                    <!-- Contact Info (for organizations) -->
-                    @if($user->user_type === 'Organization')
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        @if($user->website)
-                        <a href="{{ $user->website }}" target="_blank" 
-                           class="inline-flex items-center space-x-1 px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                            <i class="fas fa-globe"></i>
-                            <span>Website</span>
-                        </a>
-                        @endif
-                        
-                        @if($user->phone)
-                        <div class="inline-flex items-center space-x-1 px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
-                            <i class="fas fa-phone"></i>
-                            <span>{{ $user->phone }}</span>
-                        </div>
-                        @endif
-                    </div>
-                    @endif
-                </div>
-            </div>
+<div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+    
+    {{-- Cover & Profile Header --}}
+    <div class="bg-white dark:bg-gray-800 shadow-sm">
+        {{-- Cover Photo --}}
+        <div class="h-80 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 relative overflow-hidden">
+            <div class="absolute inset-0 bg-black/10"></div>
         </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Main Content - User's Posts -->
-            <div class="lg:col-span-2 space-y-6">
+        
+        {{-- Profile Info --}}
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between -mt-8 pb-4 border-b border-gray-200 dark:border-gray-700">
                 
-                <!-- Posts Header -->
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        Recent Posts
-                    </h2>
-                    
-                    <!-- Sort Options -->
-                    <div class="flex items-center space-x-2">
-                        <select class="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-1 focus:ring-2 focus:ring-indigo-500">
-                            <option value="newest">Newest First</option>
-                            <option value="popular">Most Popular</option>
-                        </select>
+                {{-- Avatar & Name --}}
+                <div class="flex flex-col md:flex-row items-center md:items-end gap-4">
+                    <div class="relative">
+                        <img src="{{ $user->avatar_url ? asset('storage/' . $user->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode($user->first_name.' '.$user->last_name).'&background=random&size=256' }}" 
+                             class="w-40 h-40 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg">
+                        
+                        {{-- User Type Badge --}}
+                        <div class="absolute bottom-2 right-2">
+                            @if($user->user_type === 'Organization')
+                                <div class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800" title="Tổ chức">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                            @elseif($user->user_type === 'Admin')
+                                <div class="w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800" title="Quản trị viên">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                            @else
+                                <div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800" title="Tình nguyện viên">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                </div>
 
-                <!-- Posts List -->
-                @forelse($posts as $post)
-                    @include('posts.components.post-card', ['post' => $post, 'compact' => true])
-                @empty
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
-                        <i class="fas fa-edit text-gray-300 dark:text-gray-600 text-4xl mb-4"></i>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">No posts yet</h3>
-                        <p class="text-gray-600 dark:text-gray-400">
-                            {{ $user->first_name }} hasn't shared any posts with the community yet.
+                    <div class="text-center md:text-left mb-3">
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                            {{ $user->first_name }} {{ $user->last_name }}
+                        </h1>
+                        
+                        <p class="text-gray-500 dark:text-gray-400 mt-1">
+                            {{ $user->posts_count }} bài viết
                         </p>
+                        
+                        @if($user->city)
+                        <div class="flex items-center justify-center md:justify-start gap-2 text-sm text-gray-600 dark:text-gray-400 mt-2">
+                            <i class="fas fa-map-marker-alt text-red-500"></i>
+                            <span>{{ $user->city }}</span>
+                        </div>
+                        @endif
                     </div>
-                @endforelse
-
-                <!-- Pagination -->
-                @if($posts->hasPages())
-                <div class="mt-6">
-                    {{ $posts->links() }}
                 </div>
-                @endif
-
+                
+                {{-- Action Buttons --}}
+                <div class="flex gap-2 mb-3 justify-center md:justify-end">
+                    @auth
+                        @if(Auth::id() !== $user->user_id)
+                            <button class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                <i class="fas fa-user-plus"></i> Kết bạn
+                            </button>
+                            <button class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                <i class="fas fa-comment"></i> Nhắn tin
+                            </button>
+                            <button class="w-10 h-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition flex items-center justify-center">
+                                <i class="fas fa-ellipsis-h text-gray-700 dark:text-gray-300"></i>
+                            </button>
+                        @else
+                            <a href="{{ route('profile') }}" 
+                               class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân
+                            </a>
+                        @endif
+                    @endauth
+                </div>
             </div>
 
-            <!-- Sidebar -->
-            <div class="space-y-6">
-                
-                <!-- User Stats Card -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Activity Stats</h3>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Total Posts</span>
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $user->posts_count }}</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Total Comments</span>
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $user->comments_count }}</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Post Likes</span>
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $user->total_likes }}</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Member Since</span>
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $user->created_at->format('M Y') }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Most Popular Post -->
-                @if($mostPopularPost)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-3">Most Popular Post</h3>
-                    <a href="{{ route('posts.show', $mostPopularPost->post_id) }}" 
-                       class="block p-3 bg-gray-50 dark:bg-gray-750 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                        <p class="font-medium text-gray-900 dark:text-gray-100 text-sm line-clamp-2 mb-2">
-                            {{ $mostPopularPost->title ?: Str::limit($mostPopularPost->content, 80) }}
-                        </p>
-                        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ $mostPopularPost->published_at->diffForHumans() }}</span>
-                            <div class="flex items-center space-x-2">
-                                <span><i class="fas fa-heart mr-1"></i>{{ $mostPopularPost->likes_count }}</span>
-                                <span><i class="fas fa-comment mr-1"></i>{{ $mostPopularPost->comments_count }}</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                @endif
-
-                <!-- Recent Activity -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-3">Recent Activity</h3>
-                    <div class="space-y-3">
-                        @foreach($recentActivity as $activity)
-                        <div class="flex items-start space-x-2 text-sm">
-                            <i class="fas fa-{{ $activity['icon'] }} text-{{ $activity['color'] }}-500 mt-0.5"></i>
-                            <div>
-                                <p class="text-gray-700 dark:text-gray-300">{{ $activity['description'] }}</p>
-                                <p class="text-gray-500 dark:text-gray-400 text-xs">{{ $activity['time'] }}</p>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-
+            {{-- Navigation Tabs --}}
+            <div class="flex gap-2 pt-2 overflow-x-auto">
+                <a href="#" class="px-4 py-3 text-blue-600 border-b-4 border-blue-600 font-semibold whitespace-nowrap">Bài viết</a>
+                <a href="#" class="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg font-semibold whitespace-nowrap">Giới thiệu</a>
+                <a href="#" class="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg font-semibold whitespace-nowrap">Bạn bè</a>
+                <a href="#" class="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg font-semibold whitespace-nowrap">Ảnh</a>
+                <a href="#" class="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg font-semibold whitespace-nowrap">Video</a>
             </div>
         </div>
     </div>
+
+    {{-- Content Grid --}}
+    <div class="max-w-6xl mx-auto px-4 py-4">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            
+            {{-- Left Sidebar - Intro --}}
+            <div class="lg:col-span-2 space-y-4">
+                
+                {{-- Intro Card --}}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Giới thiệu</h2>
+                    
+                    @if($user->bio)
+                    <p class="text-gray-700 dark:text-gray-300 mb-4 text-center">{{ $user->bio }}</p>
+                    @endif
+
+                    <div class="space-y-3">
+                        @if($user->city)
+                        <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-map-marker-alt text-gray-400 w-5"></i>
+                            <span>Sống tại <strong>{{ $user->city }}</strong></span>
+                        </div>
+                        @endif
+
+                        @if($user->user_type === 'Organization' && $user->website)
+                        <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-globe text-gray-400 w-5"></i>
+                            <a href="{{ $user->website }}" target="_blank" class="text-blue-600 hover:underline">{{ $user->website }}</a>
+                        </div>
+                        @endif
+
+                        @if($user->user_type === 'Organization' && $user->phone)
+                        <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-phone text-gray-400 w-5"></i>
+                            <span>{{ $user->phone }}</span>
+                        </div>
+                        @endif
+
+                        <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+                            <i class="fas fa-clock text-gray-400 w-5"></i>
+                            <span>Tham gia {{ $user->created_at->format('M Y') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Stats Card --}}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $user->posts_count }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Bài viết</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $user->comments_count }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Bình luận</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $user->total_likes ?? 0 }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Lượt thích</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Photos Card (Placeholder) --}}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Ảnh</h3>
+                        <a href="#" class="text-blue-600 hover:underline text-sm font-semibold">Xem tất cả</a>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        @for($i = 0; $i < 9; $i++)
+                        <div class="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                        @endfor
+                    </div>
+                </div>
+
+                {{-- Activity Card --}}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <h3 class="font-bold text-gray-900 dark:text-white mb-4">Hoạt động gần đây</h3>
+                    <div class="space-y-4">
+                        @forelse($recentActivity ?? [] as $activity)
+                            <div class="flex gap-3 items-start">
+                                <i class="fas fa-circle text-[8px] text-green-500 mt-2"></i>
+                                <div>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300">{{ $activity['description'] }}</p>
+                                    <span class="text-xs text-gray-400">{{ $activity['time'] }}</span>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-sm text-gray-500 italic text-center py-4">Chưa có hoạt động nào</p>
+                        @endforelse
+                    </div>
+                </div>
+
+            </div>
+
+            {{-- Main Content - Posts --}}
+            <div class="lg:col-span-3 space-y-4">
+                
+                {{-- Filter Buttons --}}
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold text-sm">Bài viết</button>
+                        <button class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg font-semibold text-sm">Đánh giá</button>
+                    </div>
+                </div>
+
+                {{-- Posts List --}}
+                @forelse($posts as $post)
+                    @include('posts.components.post-card', ['post' => $post])
+                @empty
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+                        <i class="fas fa-pen-fancy text-5xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Chưa có bài viết nào</h3>
+                        <p class="text-gray-500 dark:text-gray-400">Người dùng này chưa chia sẻ nội dung nào.</p>
+                    </div>
+                @endforelse
+
+                {{-- Pagination --}}
+                @if($posts->hasPages())
+                    <div class="mt-4">
+                        {{ $posts->links() }}
+                    </div>
+                @endif
+
+            </div>
+
+        </div>
+    </div>
 </div>
-
-<!-- Report Modal (reuse from posts) -->
-@include('posts.components.report-modal')
 @endsection
-
-@push('scripts')
-<script>
-// Additional scripts for user profile page can go here
-function followUser(userId) {
-    // Implement follow functionality
-    console.log('Follow user:', userId);
-}
-
-function sendMessage(userId) {
-    // Implement message functionality
-    console.log('Message user:', userId);
-}
-</script>
-@endpush

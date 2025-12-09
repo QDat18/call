@@ -340,6 +340,8 @@ body {
 
 #message-form {
     display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .input-wrapper {
@@ -378,6 +380,7 @@ body {
     flex: 1;
     display: flex;
     align-items: center;
+    position: relative;
 }
 
 .message-input {
@@ -391,6 +394,7 @@ body {
     padding: 8px 15px;
     line-height: 1.5;
     color: var(--dark-color);
+    min-height: 40px;
 }
 
 .message-input:focus {
@@ -398,12 +402,22 @@ body {
 }
 
 .emoji-btn {
-    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
     background: transparent;
-    font-size: 20px;
+    border: none;
     cursor: pointer;
-    margin: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
     color: #eab308;
+    position: relative;
+}
+
+.emoji-btn:hover {
+    background: rgba(234, 179, 8, 0.1);
 }
 
 .send-btn {
@@ -417,8 +431,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 10px;
     transition: all 0.3s;
+    flex-shrink: 0;
 }
 
 .send-btn:hover {
@@ -429,6 +443,106 @@ body {
 .send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Emoji Picker - Moved to right side */
+.emoji-picker {
+    position: absolute;
+    bottom: 50px;
+    right: 0;
+    width: 320px;
+    max-height: 350px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+}
+
+.emoji-picker.show {
+    display: block;
+    animation: emojiPickerSlide 0.3s ease-out;
+}
+
+@keyframes emojiPickerSlide {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.emoji-picker-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    background: var(--light-color);
+    overflow-x: auto;
+}
+
+.emoji-category-btn {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: var(--dark-color);
+    white-space: nowrap;
+}
+
+.emoji-category-btn:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.emoji-category-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.emoji-picker-body {
+    height: 250px;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+}
+
+.emoji-item {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.emoji-item:hover {
+    background: var(--light-color);
+    transform: scale(1.2);
+}
+
+.emoji-picker-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: #6b7280;
+    background: var(--light-color);
+    text-align: center;
 }
 
 /* Incoming Call Modal */
@@ -645,8 +759,22 @@ body {
     .message-text { font-size: 14px; }
     .message-time { font-size: 10px; }
     .input-area { padding: 12px 15px; }
+    #message-form { gap: 8px; }
     .input-btn { width: 30px; height: 30px; }
-    .send-btn { width: 35px; height: 35px; margin-left: 8px; }
+    .emoji-btn { width: 30px; height: 30px; }
+    .send-btn { width: 35px; height: 35px; }
+    .message-input { 
+        min-height: 35px;
+        padding: 6px 12px;
+    }
+    .emoji-picker { 
+        width: 280px; 
+        right: 0;
+        bottom: 45px;
+    }
+    .emoji-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
 }
 </style>
 @endpush
@@ -682,24 +810,12 @@ body {
         </div>
 
         <div class="header-actions">
-            @if($conversation->type === 'direct')
-                {{-- Call buttons for direct chat --}}
+            @if($otherUser)
                 <button id="start-voice-call" class="action-btn" title="Voice Call">
                     <i class="fas fa-phone"></i>
                 </button>
                 <button id="start-video-call" class="action-btn" title="Video Call">
                     <i class="fas fa-video"></i>
-                </button>
-            @else
-                {{-- Group call buttons for group chat --}}
-                <button id="start-group-voice-call" class="action-btn" title="Group Voice Call">
-                    <i class="fas fa-phone"></i>
-                </button>
-                <button id="start-group-video-call" class="action-btn" title="Group Video Call">
-                    <i class="fas fa-video"></i>
-                </button>
-                <button id="group-info-btn" class="action-btn" title="Group Info">
-                    <i class="fas fa-users"></i>
                 </button>
             @endif
         </div>
@@ -732,7 +848,7 @@ body {
                     <div class="message-content">
                         <div class="message-bubble">
                             @if($message->content)
-                                <p class="message-text">{{ $message->content }}</p>
+                                <p class="message-text">{!! nl2br(e($message->content)) !!}</p>
                             @endif
                             @if($message->attachment_url)
                                 <div class="message-attachment">
@@ -795,13 +911,18 @@ body {
                               class="message-input"
                               placeholder="Type a message..."
                               rows="1"></textarea>
-                    <button type="button" class="emoji-btn" title="Emoji">😊</button>
                 </div>
-
-                <button type="submit" class="send-btn" id="send-btn">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
             </div>
+            
+            <!-- Emoji Button - moved outside input wrapper -->
+            <button type="button" class="emoji-btn" id="emoji-toggle-btn" title="Emoji">
+                😊
+            </button>
+            
+            <!-- Send Button -->
+            <button type="submit" class="send-btn" id="send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </form>
     </div>
 </div>
@@ -835,6 +956,184 @@ window.chatConfig = {
 
 console.log('💬 Chat configuration:', window.chatConfig);
 
+// Emoji data
+const emojiCategories = {
+    people: ['😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '🥱', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '🥴', '😠', '😡', '🤬', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '😇', '🥳', '🥺', '🤠', '🤡', '🤥', '🤫', '🤭', '🧐'],
+    animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🐇', '🦝', '🦨', '🦦', '🦥', '🐁', '🐀', '🦔'],
+    food: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯'],
+    activities: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸', '🥌', '🎿', '⛷', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖', '🏵', '🎗', '🎫', '🎟', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟', '🎯', '🎳', '🎮', '🎰'],
+    objects: ['💡', '🔦', '🕯', '🪔', '🧯', '🛢', '💸', '💵', '💴', '💶', '💷', '💰', '💎', '🪙', '💳', '💻', '🖥', '🖨', '⌨️', '🖱', '🖲', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽', '🎞', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙', '🎚', '🎛', '🧭', '⏱', '⏲', '⏰', '🕰', '⌛', '⏳', '📡', '🔋', '🔌', '💻', '🖨', '🖱', '🖲', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽', '🎞', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙', '🎚', '🎛', '🧭', '⏱', '⏲', '⏰', '🕰', '⌛', '⏳', '📡', '🔋', '🔌']
+};
+
+// Emoji Picker Manager
+class EmojiPickerManager {
+    constructor() {
+        this.picker = null;
+        this.createPicker();
+        this.toggleBtn = document.getElementById('emoji-toggle-btn');
+        this.messageInput = document.getElementById('message-input');
+        this.isPickerVisible = false;
+        
+        this.init();
+    }
+    
+    createPicker() {
+        // Create emoji picker element
+        this.picker = document.createElement('div');
+        this.picker.id = 'emoji-picker';
+        this.picker.className = 'emoji-picker';
+        this.picker.innerHTML = `
+            <div class="emoji-picker-header">
+                <button class="emoji-category-btn active" data-category="people">😀</button>
+                <button class="emoji-category-btn" data-category="animals">🐶</button>
+                <button class="emoji-category-btn" data-category="food">🍎</button>
+                <button class="emoji-category-btn" data-category="activities">⚽</button>
+                <button class="emoji-category-btn" data-category="objects">💡</button>
+            </div>
+            <div class="emoji-picker-body">
+                <div class="emoji-grid" id="emoji-grid">
+                    <!-- Emojis will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="emoji-picker-footer">
+                Click an emoji to insert
+            </div>
+        `;
+        
+        // Append to body
+        document.body.appendChild(this.picker);
+        
+        // Get references to internal elements
+        this.emojiGrid = this.picker.querySelector('#emoji-grid');
+        this.categoryButtons = this.picker.querySelectorAll('.emoji-category-btn');
+    }
+    
+    init() {
+        // Toggle picker visibility
+        this.toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.togglePicker();
+        });
+        
+        // Load default category
+        this.loadCategory('people');
+        
+        // Setup category buttons
+        this.categoryButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const category = btn.dataset.category;
+                this.loadCategory(category);
+                
+                // Update active state
+                this.categoryButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+        
+        // Close picker when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.isPickerVisible && 
+                !this.picker.contains(e.target) && 
+                e.target !== this.toggleBtn) {
+                this.hidePicker();
+            }
+        });
+        
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isPickerVisible) {
+                this.hidePicker();
+            }
+        });
+    }
+    
+    loadCategory(category) {
+        const emojis = emojiCategories[category] || [];
+        this.emojiGrid.innerHTML = '';
+        
+        emojis.forEach(emoji => {
+            const emojiElement = document.createElement('div');
+            emojiElement.className = 'emoji-item';
+            emojiElement.textContent = emoji;
+            emojiElement.title = `Emoji: ${emoji}`;
+            
+            emojiElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.insertEmoji(emoji);
+            });
+            
+            this.emojiGrid.appendChild(emojiElement);
+        });
+    }
+    
+    insertEmoji(emoji) {
+        const input = this.messageInput;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const text = input.value;
+        
+        // Insert emoji at cursor position
+        input.value = text.substring(0, start) + emoji + text.substring(end);
+        
+        // Move cursor after inserted emoji
+        input.selectionStart = input.selectionEnd = start + emoji.length;
+        
+        // Focus back on input
+        input.focus();
+        
+        // Trigger input event for auto-resize
+        input.dispatchEvent(new Event('input'));
+        
+        // Close picker after insertion
+        this.hidePicker();
+    }
+    
+    togglePicker() {
+        if (this.isPickerVisible) {
+            this.hidePicker();
+        } else {
+            this.showPicker();
+        }
+    }
+    
+    showPicker() {
+        // Position picker relative to emoji button
+        const buttonRect = this.toggleBtn.getBoundingClientRect();
+        const pickerWidth = 320;
+        
+        // Calculate position
+        let left = buttonRect.left + window.scrollX;
+        let bottom = window.innerHeight - buttonRect.top + 10;
+        
+        // Adjust if picker would go off screen on the right
+        if (left + pickerWidth > window.innerWidth) {
+            left = window.innerWidth - pickerWidth - 10;
+        }
+        
+        // Adjust if picker would go off screen on the left
+        if (left < 10) {
+            left = 10;
+        }
+        
+        // Set position
+        this.picker.style.position = 'fixed';
+        this.picker.style.left = left + 'px';
+        this.picker.style.bottom = bottom + 'px';
+        this.picker.style.right = 'auto';
+        this.picker.style.top = 'auto';
+        
+        // Show picker
+        this.picker.classList.add('show');
+        this.isPickerVisible = true;
+    }
+    
+    hidePicker() {
+        this.picker.classList.remove('show');
+        this.isPickerVisible = false;
+    }
+}
+
 // Video Call Manager
 class VideoCallManager {
     constructor() {
@@ -847,8 +1146,6 @@ class VideoCallManager {
     setupCallButtons() {
         const videoBtn = document.getElementById('start-video-call');
         const voiceBtn = document.getElementById('start-voice-call');
-        const groupVideoBtn = document.getElementById('start-group-video-call');
-        const groupVoiceBtn = document.getElementById('start-group-voice-call');
 
         if (videoBtn) {
             videoBtn.addEventListener('click', () => this.initiateCall('video'));
@@ -856,14 +1153,6 @@ class VideoCallManager {
 
         if (voiceBtn) {
             voiceBtn.addEventListener('click', () => this.initiateCall('audio'));
-        }
-
-        if (groupVideoBtn) {
-            groupVideoBtn.addEventListener('click', () => this.initiateCall('video'));
-        }
-
-        if (groupVoiceBtn) {
-            groupVoiceBtn.addEventListener('click', () => this.initiateCall('audio'));
         }
     }
 
@@ -1078,8 +1367,73 @@ class VideoCallManager {
     }
 }
 
+// Chat Input Manager
+class ChatInputManager {
+    constructor() {
+        this.messageInput = document.getElementById('message-input');
+        this.messageForm = document.getElementById('message-form');
+        this.sendBtn = document.getElementById('send-btn');
+        
+        this.init();
+    }
+    
+    init() {
+        // Auto-resize textarea
+        this.messageInput.addEventListener('input', () => {
+            this.autoResizeTextarea();
+        });
+        
+        // Form submission
+        this.messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.sendMessage();
+        });
+        
+        // Enable/disable send button based on input
+        this.messageInput.addEventListener('input', () => {
+            this.sendBtn.disabled = !this.messageInput.value.trim();
+        });
+        
+        // Submit on Ctrl+Enter
+        this.messageInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+        
+        // Initial disable
+        this.sendBtn.disabled = true;
+    }
+    
+    autoResizeTextarea() {
+        const textarea = this.messageInput;
+        textarea.style.height = 'auto';
+        const maxHeight = 150;
+        textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + 'px';
+    }
+    
+    async sendMessage() {
+        const content = this.messageInput.value.trim();
+        if (!content) return;
+        
+        // Add sending logic here
+        console.log('Sending message:', content);
+        
+        // Clear input
+        this.messageInput.value = '';
+        this.autoResizeTextarea();
+        this.sendBtn.disabled = true;
+        
+        // You would typically make an AJAX request here
+        // await fetch('/api/messages/send', { ... })
+    }
+}
+
 // Initialize
 let videoCallManager;
+let emojiPickerManager;
+let chatInputManager;
 
 async function initializeApp() {
     console.log('🚀 Initializing app...');
@@ -1089,6 +1443,10 @@ async function initializeApp() {
         console.error('❌ Missing conversationId');
         return;
     }
+
+    // Initialize managers
+    emojiPickerManager = new EmojiPickerManager();
+    chatInputManager = new ChatInputManager();
 
     // Wait for Echo
     let attempts = 0;

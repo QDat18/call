@@ -3,68 +3,91 @@
 @section('title', 'Community Feed')
 
 @section('content')
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div class="max-w-7xl mx-auto px-4">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div class="max-w-[1440px] mx-auto px-4 py-4">
+            <div class="grid grid-cols-12 gap-4">
 
-            <!-- Page Header -->
-            <div class="mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 dark:text-gray-100">Community Feed</h1>
-                <p class="text-gray-600 dark:text-gray-400 mt-2">Connect with volunteers and organizations making a
-                    difference</p>
-            </div>
+                <!-- Left Sidebar - Fixed Position -->
+                <div class="col-span-3 hidden lg:block">
+                    <div class="sticky top-20 space-y-2">
+                        @auth
+                        <!-- User Quick Profile -->
+                        <a href="{{ route('profile') }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                            <img src="{{ Auth::user()->avatar_url ? asset('storage/'.Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->first_name) }}" 
+                                 class="w-9 h-9 rounded-full object-cover">
+                            <span class="font-semibold text-gray-900 dark:text-white text-sm">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</span>
+                        </a>
+                        @endauth
 
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <!-- Navigation Links -->
+                        <a href="{{ route('connections.index', ['status' => 'accepted']) }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                            <div class="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                                <i class="fas fa-user-friends text-blue-600 text-lg"></i>
+                            </div>
+                            <span class="font-semibold text-gray-900 dark:text-white text-sm">Bạn bè</span>
+                        </a>
 
-                <!-- Left Sidebar - Filters -->
-                <div class="lg:col-span-1">
-                    @include('posts.components.filter-sidebar')
+                        <a href="#" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                            <div class="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                                <i class="fas fa-users text-blue-600 text-lg"></i>
+                            </div>
+                            <span class="font-semibold text-gray-900 dark:text-white text-sm">Nhóm</span>
+                        </a>
+
+                        <a href="#" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                            <div class="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                                <i class="fas fa-bookmark text-purple-600 text-lg"></i>
+                            </div>
+                            <span class="font-semibold text-gray-900 dark:text-white text-sm">Đã lưu</span>
+                        </a>
+
+                        <a href="#" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                            <div class="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                                <i class="fas fa-calendar-alt text-red-600 text-lg"></i>
+                            </div>
+                            <span class="font-semibold text-gray-900 dark:text-white text-sm">Sự kiện</span>
+                        </a>
+
+                        <hr class="border-gray-300 dark:border-gray-700 my-2">
+
+                        <div class="px-2">
+                            <h3 class="text-gray-500 dark:text-gray-400 font-semibold text-xs mb-2">CHIẾN DỊCH CỦA BẠN</h3>
+                            <!-- Add shortcuts here -->
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Main Feed -->
-                <div class="lg:col-span-2 space-y-6">
+                <!-- Main Feed - Center -->
+                <div class="col-span-12 lg:col-span-6 space-y-4">
 
-                    <!-- Create Post Quick Action (for logged in users) -->
-                    @auth
-                        @include('posts.components.create-post-quick')
-                    @endauth
-
-                    <!-- Pinned Posts -->
-                    {{-- @if($pinnedPosts->count() > 0)
-                    @include('posts.components.pinned-posts', ['pinnedPosts' => $pinnedPosts])
-                    @endif --}}
+                    <!-- Campaign Slider -->
                     @if($pinnedCampaigns->isNotEmpty())
-                        {{-- ƯU TIÊN 1: HIỂN THỊ SLIDER CHIẾN DỊCH QUYÊN GÓP --}}
-                        <div class="mb-6">
-                            <div class="swiper main-campaign-slider" style="border-radius: 8px; overflow: hidden;">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div class="swiper main-campaign-slider rounded-lg overflow-hidden">
                                 <div class="swiper-wrapper">
                                     @foreach($pinnedCampaigns as $campaign)
                                         <div class="swiper-slide">
-                                            <div class="relative bg-gradient-to-r from-red-500 to-pink-600 text-white p-6"
-                                                style="background-image: url('{{ $campaign->banner_image_url ? asset('storage/' . $campaign->banner_image_url) : '' }}'); background-size: cover; background-position: center;">
-
-                                                <div class="absolute inset-0 bg-black opacity-40"></div>
-
-                                                <div class="relative z-10">
-                                                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">KÊU
-                                                        GỌI QUYÊN GÓP</span>
-                                                    <h2 class="text-2xl font-bold mt-2">{{ $campaign->title }}</h2>
-
+                                            <div class="relative h-64" style="background-image: url('{{ $campaign->banner_image_url ? asset('storage/' . $campaign->banner_image_url) : '' }}'); background-size: cover; background-position: center;">
+                                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                                                <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+                                                    <span class="inline-block px-3 py-1 bg-red-600 rounded-full text-xs font-bold mb-2">QUYÊN GÓP</span>
+                                                    <h2 class="text-2xl font-bold mb-3">{{ $campaign->title }}</h2>
+                                                    
                                                     @php
                                                         $progress = ($campaign->current_amount > 0 && $campaign->target_amount > 0)
                                                             ? ($campaign->current_amount / $campaign->target_amount) * 100 : 0;
                                                         $progress = min($progress, 100);
                                                     @endphp
-                                                    <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
-                                                        <div class="bg-yellow-400 h-2.5 rounded-full"
-                                                            style="width: {{ $progress }}%"></div>
+                                                    
+                                                    <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                                                        <div class="bg-green-500 h-2 rounded-full" style="width: {{ $progress }}%"></div>
                                                     </div>
-                                                    <div class="flex justify-between text-xs mt-2">
-                                                        <span>Đã đạt: {{ number_format($campaign->current_amount) }} VNĐ</span>
-                                                        <span>Mục tiêu: {{ number_format($campaign->target_amount) }} VNĐ</span>
+                                                    <div class="flex justify-between text-sm mb-3">
+                                                        <span>{{ number_format($campaign->current_amount) }} VNĐ</span>
+                                                        <span>{{ number_format($campaign->target_amount) }} VNĐ</span>
                                                     </div>
-
-                                                    <a href="{{ route('campaign.show', $campaign->id) }}"
-                                                        class="inline-block bg-white text-red-600 font-bold px-6 py-2 rounded-full mt-4 hover:bg-gray-100 text-sm">
+                                                    
+                                                    <a href="{{ route('campaign.show', $campaign->id) }}" class="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold transition">
                                                         Quyên góp ngay
                                                     </a>
                                                 </div>
@@ -75,59 +98,93 @@
                                 <div class="swiper-pagination"></div>
                             </div>
                         </div>
-
-                    @elseif($pinnedPosts->isNotEmpty())
-                        {{-- ƯU TIÊN 2: NẾU KHÔNG CÓ CHIẾN DỊCH, HIỂN THỊ BÀI GHIM CŨ --}}
-                        @include('posts.components.pinned-posts', ['pinnedPosts' => $pinnedPosts])
                     @endif
+
+                    <!-- Create Post Card -->
+                    @auth
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                            <div class="flex gap-3 mb-3">
+                                <img src="{{ Auth::user()->avatar_url ? asset('storage/'.Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->first_name) }}" 
+                                     class="w-10 h-10 rounded-full object-cover">
+                                <a href="{{ route('posts.create') }}" class="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full px-4 py-2.5 text-left text-gray-500 dark:text-gray-400 transition cursor-pointer">
+                                    Bạn đang nghĩ gì?
+                                </a>
+                            </div>
+                            <hr class="border-gray-200 dark:border-gray-700 mb-3">
+                            <div class="grid grid-cols-3 gap-2">
+                                <a href="{{ route('posts.create') }}" class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                    <i class="fas fa-video text-red-500 text-xl"></i>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">Video trực tiếp</span>
+                                </a>
+                                <a href="{{ route('posts.create') }}" class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                    <i class="fas fa-image text-green-500 text-xl"></i>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">Ảnh/video</span>
+                                </a>
+                                <a href="{{ route('posts.create') }}" class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                    <i class="fas fa-smile text-yellow-500 text-xl"></i>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">Cảm xúc</span>
+                                </a>
+                            </div>
+                        </div>
+                    @endauth
+
                     <!-- Posts Feed -->
                     @forelse($posts as $post)
                         @include('posts.components.post-card', ['post' => $post])
                     @empty
-                        @include('posts.components.empty-state')
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+                            <i class="fas fa-inbox text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Chưa có bài viết nào</h3>
+                            <p class="text-gray-500 dark:text-gray-400">Hãy là người đầu tiên chia sẻ điều gì đó!</p>
+                        </div>
                     @endforelse
 
                     <!-- Pagination -->
                     @if($posts->hasPages())
-                        <div class="mt-6">
+                        <div class="mt-4">
                             {{ $posts->links() }}
                         </div>
                     @endif
 
                 </div>
 
-                <!-- Right Sidebar -->
-                <div class="lg:col-span-1 space-y-6">
-                    @include('posts.components.trending-sidebar')
-                    @include('posts.components.top-contributors')
-                    @include('posts.components.quick-stats')
+                <!-- Right Sidebar - Contacts & Trending -->
+                <div class="col-span-3 hidden lg:block">
+                    <div class="sticky top-20 space-y-4">
+                        <!-- Sponsored / Trending -->
+                        <div>
+                            <h3 class="text-gray-500 dark:text-gray-400 font-semibold text-sm px-2 mb-2">NỔI BẬT</h3>
+                            @include('posts.components.trending-sidebar')
+                        </div>
+
+                        <hr class="border-gray-300 dark:border-gray-700">
+
+                        <!-- Contacts -->
+                        <div>
+                            <div class="flex items-center justify-between px-2 mb-2">
+                                <h3 class="text-gray-500 dark:text-gray-400 font-semibold text-sm">NGƯỜI LIÊN HỆ</h3>
+                                <i class="fas fa-ellipsis-h text-gray-500 text-sm cursor-pointer"></i>
+                            </div>
+                            @include('posts.components.top-contributors')
+                        </div>
+                    </div>
                 </div>
 
             </div>
         </div>
     </div>
 
-    <!-- Report Modal -->
     @include('posts.components.report-modal')
-
-    <!-- Share Modal -->
     @include('posts.components.share-modal')
 
     @push('scripts')
-        {{--
-        <script src="{{ asset('js/posts.js') }}"></script> --}}
-    @endpush
-
-    @push('scripts')
-        {{-- Thêm thư viện Swiper (bạn có thể đưa vào layout chính) --}}
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                // Khởi tạo Swiper
                 const swiper = new Swiper('.main-campaign-slider', {
-                    loop: {{ $pinnedCampaigns->count() > 1 ? 'true' : 'false' }}, // Chỉ lặp nếu có nhiều hơn 1 slide
+                    loop: {{ $pinnedCampaigns->count() > 1 ? 'true' : 'false' }},
                     autoplay: {
                         delay: 5000,
                         disableOnInteraction: false
@@ -138,82 +195,71 @@
                     },
                 });
             });
+
             async function toggleLike(postId) {
-            try {
-                const response = await fetch(`/posts/${postId}/like`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
+                try {
+                    const response = await fetch(`/posts/${postId}/like`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        if(data.message) alert(data.message);
+                        else window.location.href = '{{ route("login") }}';
                     }
-                });
-                const data = await response.json();
+                } catch (error) {
+                    console.error('Error liking post:', error);
+                }
+            }
+
+            async function toggleBookmark(postId) {
+                try {
+                    const response = await fetch(`/posts/${postId}/bookmark`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        if(data.message) alert(data.message);
+                        else window.location.href = '{{ route("login") }}';
+                    }
+                } catch (error) {
+                    console.error('Error bookmarking post:', error);
+                }
+            }
+
+            async function deletePost(postId) {
+                if (!confirm('Bạn có chắc chắn muốn xóa bài viết này?')) return;
                 
-                if (data.success) {
-                    // Reload để cập nhật lại số like và màu nút
-                    // (Hoặc bạn có thể viết JS để update DOM trực tiếp nếu muốn mượt hơn)
-                    location.reload(); 
-                } else {
-                    // Nếu chưa đăng nhập (lỗi 401) hoặc lỗi khác
-                    if(data.message) alert(data.message);
-                    else window.location.href = '{{ route("login") }}';
-                }
-            } catch (error) {
-                console.error('Error liking post:', error);
-            }
-        }
-
-        // 2. Xử lý Bookmark (Lưu bài)
-        async function savePost(postId) {
-             // Hàm này dùng cho nút Save trong dropdown menu hoặc footer
-             toggleBookmark(postId);
-        }
-
-        async function toggleBookmark(postId) {
-            try {
-                const response = await fetch(`/posts/${postId}/bookmark`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
+                try {
+                    const response = await fetch(`/posts/${postId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        location.reload();
                     }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    location.reload();
-                } else {
-                    if(data.message) alert(data.message);
-                    else window.location.href = '{{ route("login") }}';
+                } catch (error) {
+                    console.error(error);
+                    alert('Đã xảy ra lỗi');
                 }
-            } catch (error) {
-                console.error('Error bookmarking post:', error);
             }
-        }
-
-        // 3. Dropdown Actions (Ghim, Xóa...)
-        // Những hàm này cần thiết nếu bạn dùng post-card ở trang index
-        async function deletePost(postId) {
-            if (!confirm('Are you sure you want to delete this post?')) return;
-            
-            try {
-                const response = await fetch(`/posts/${postId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
-                    }
-                });
-                const data = await response.json();
-                if (data.success) {
-                    location.reload();
-                }
-            } catch (error) {
-                console.error(error);
-                alert('An error occurred');
-            }
-        }
-
         </script>
     @endpush
 @endsection

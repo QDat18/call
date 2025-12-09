@@ -13,7 +13,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Facades\Cache;
+use App\Mail\ResetPasswordEmail;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
@@ -123,47 +127,81 @@ class UserController extends Controller
         return view('user.change-password', compact('user'));
     }
 
+    public function sendResetLinkEmail(Request $request)
+    {
+        $user = Auth::user();
+
+        // 1. Tạo token ngẫu nhiên
+        $token = Str::random(60);
+
+        // 2. Lưu token và thời gian hết hạn vào bảng users
+        $user->forceFill([
+            'reset_password_token' => $token,
+            'reset_password_token_expires_at' => now()->addMinutes(60), // Hết hạn sau 60 phút
+        ])->save();
+
+        // 3. Gửi email
+        try {
+            Mail::to($user->email)->send(new ResetPasswordEmail($user, $token));
+            return back()->with('success', 'Đã gửi liên kết đặt lại mật khẩu đến email của bạn!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Lỗi gửi mail: ' . $e->getMessage());
+        }
+    }
+
     public function changePassword(Request $request)
     {
-        /** @var User $user */
+        $user = Auth::user();
+
+        // 1. Validate dữ liệu đầu vào (Thêm verification_code)
         $validator = Validator::make($request->all(), [
             'current_password' => 'required',
-            'new_password' => 'required|string|min:8|confirmed',
+            'new_password' => 'required|string|min:8|confirmed|different:current_password',
+            'verification_code' => 'required|numeric', // Bắt buộc nhập mã
         ], [
-            'current_password.required' => 'Current password is required',
-            'new_password.required' => 'New password is required',
-            'new_password.min' => 'New password must be at least 8 characters',
-            'new_password.confirmed' => 'Password confirmation does not match',
+            'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại.',
+            'new_password.required' => 'Vui lòng nhập mật khẩu mới.',
+            'new_password.min' => 'Mật khẩu mới phải có ít nhất 8 ký tự.',
+            'new_password.confirmed' => 'Xác nhận mật khẩu không khớp.',
+            'new_password.different' => 'Mật khẩu mới không được trùng với mật khẩu cũ.',
+            'verification_code.required' => 'Vui lòng nhập mã xác thực từ email.',
+            'verification_code.numeric' => 'Mã xác thực phải là số.',
         ]);
 
         if ($validator->fails()) {
             return redirect()->back()
-                ->withErrors($validator);
+                ->withErrors($validator)
+                ->withInput(); // Giữ lại input để user không phải nhập lại từ đầu
         }
 
-        $user = Auth::user();
-
-        // Check if current password is correct
+        // 2. Kiểm tra mật khẩu hiện tại có đúng không
         if (!Hash::check($request->current_password, $user->password)) {
             return redirect()->back()
-                ->with('error', 'Current password is incorrect');
+                ->withErrors(['current_password' => 'Mật khẩu hiện tại không chính xác.']);
         }
 
-        // Check if new password is same as current
-        if (Hash::check($request->new_password, $user->password)) {
+        // 3. LOGIC MỚI: Kiểm tra mã OTP từ Cache
+        // Key này phải khớp với key bạn đã lưu trong hàm sendVerificationCode ('password_code_' . $user->user_id)
+        $cachedCode = Cache::get('password_code_' . $user->user_id);
+
+        if (!$cachedCode || $cachedCode != $request->verification_code) {
             return redirect()->back()
-                ->with('error', 'New password must be different from current password');
+                ->withErrors(['verification_code' => 'Mã xác thực không đúng hoặc đã hết hạn.'])
+                ->withInput();
         }
 
-        // Update password
+        // 4. Cập nhật mật khẩu mới
+        /** @var User $user */
         $user->update([
             'password' => Hash::make($request->new_password)
         ]);
 
-        return redirect()->route('user.profile')
-            ->with('success', 'Password changed successfully!');
-    }
+        // 5. Quan trọng: Xóa mã khỏi cache để không dùng lại được
+        Cache::forget('password_code_' . $user->user_id);
 
+        return redirect()->route('profile') // Hoặc route nào bạn muốn
+            ->with('success', 'Đổi mật khẩu thành công!');
+    }
     /**
      * Deactivate account
      */

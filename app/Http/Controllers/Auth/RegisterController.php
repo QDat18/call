@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -38,9 +39,10 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'date_of_birth' => 'nullable|date|before:today',
             'gender' => 'nullable|in:Male,Female,Other',
-            'city' => 'required|string|max:50',
-            'district' => 'nullable|string|max:50',
-            'address' => 'nullable|string',
+            'city_name' => 'required|string|max:50',
+            'city' => 'required',
+            'district' => 'required|string|max:50',
+            'address' => 'required|string',
             'terms' => 'required|accepted',
         ]);
 
@@ -60,7 +62,7 @@ class RegisterController extends Controller
             'date_of_birth' => $request->date_of_birth,
             'gender' => $request->gender,
             'country' => 'Vietnam',
-            'city' => $request->city,
+            'city' => $request->city_name,
             'district' => $request->district,
             'address' => $request->address,
             'user_type' => $request->user_type,
@@ -75,7 +77,7 @@ class RegisterController extends Controller
 
         // Generate OTP (6 digits)
         $otp = rand(100000, 999999);
-        
+
         // Store OTP in session (expires in 10 minutes)
         session([
             'otp' => $otp,
@@ -100,7 +102,7 @@ class RegisterController extends Controller
     public function showVerificationNotice($userId)
     {
         $user = User::findOrFail($userId);
-        
+
         if ($user->email_verified_at) {
             return redirect()->route('profile.complete', ['user_id' => $userId]);
         }
@@ -213,7 +215,7 @@ class RegisterController extends Controller
 
         // Generate new OTP
         $otp = rand(100000, 999999);
-        
+
         // Store in session
         session([
             'otp' => $otp,

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany; // <--- Thêm dòng này
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\User;
 
 class VolunteerProfile extends Model
@@ -32,7 +32,8 @@ class VolunteerProfile extends Model
     ];
 
     protected $casts = [
-        'skills' => 'array',
+        // 'skills' => 'array',      <-- XÓA DÒNG NÀY
+        // 'interests' => 'array',   <-- XÓA DÒNG NÀY
         'total_volunteer_hours' => 'integer',
         'volunteer_rating' => 'decimal:2',
         'created_at' => 'datetime',
@@ -44,18 +45,11 @@ class VolunteerProfile extends Model
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    /**
-     * Định nghĩa mối quan hệ Applications.
-     * Dùng 'user_id' của bảng này để so khớp với 'volunteer_id' của bảng applications.
-     */
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class, 'volunteer_id', 'user_id');
     }
 
-    /**
-     * Định nghĩa mối quan hệ Activities (nếu cần dùng).
-     */
     public function activities(): HasMany
     {
         return $this->hasMany(VolunteerActivity::class, 'volunteer_id', 'user_id');
@@ -71,48 +65,11 @@ class VolunteerProfile extends Model
 
         $completed = 0;
         foreach ($fields as $field) {
-            if (!empty($this->$field)) {
+            if (!empty($this->$field) && $this->$field != '[]') {
                 $completed++;
             }
         }
 
-        return (int) (($completed / count($fields)) * 100);
-    }
-
-    public function addHours(float $hours): void
-    {
-        $this->increment('total_volunteer_hours', $hours);
-    }
-
-    public function updateRating(float $newRating, int $reviewCount): void
-    {
-        $currentTotal = (float) $this->volunteer_rating * ($reviewCount - 1);
-        $this->volunteer_rating = ($currentTotal + $newRating) / $reviewCount;
-        $this->save();
-    }
-
-    public function hasSkill(string $skill): bool
-    {
-        return in_array($skill, $this->skills ?? []);
-    }
-
-    public function addSkill(string $skill): void
-    {
-        $skills = $this->skills ?? [];
-        if (!in_array($skill, $skills)) {
-            $skills[] = $skill;
-            $this->skills = $skills;
-            $this->save();
-        }
-    }
-
-    public function removeSkill(string $skill): void
-    {
-        $skills = $this->skills ?? [];
-        if (($key = array_search($skill, $skills)) !== false) {
-            unset($skills[$key]);
-            $this->skills = array_values($skills);
-            $this->save();
-        }
+        return count($fields) > 0 ? (int) (($completed / count($fields)) * 100) : 0;
     }
 }

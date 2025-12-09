@@ -3,99 +3,76 @@
 @section('title', 'Kết Quả Tìm Kiếm - Volunteer Connect')
 
 @section('content')
-<div class="container py-4">
-    
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="display-6 fw-bold mb-2">
-                        <i class="fas fa-search text-primary"></i> Kết Quả Tìm Kiếm
-                    </h1>
-                    <p class="text-muted">Kết quả tìm kiếm cho từ khóa của bạn</p>
-                </div>
-                <a href="{{ route('search.advanced') }}" class="btn btn-outline-primary">
-                    <i class="fas fa-sliders-h me-2"></i>Tìm Kiếm Nâng Cao
-                </a>
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {{-- Header & Sort --}}
+        <div class="flex flex-col md:flex-row justify-between items-end md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-search text-indigo-600"></i> Kết Quả Tìm Kiếm
+                </h1>
+                <p class="text-gray-500 mt-2">
+                    @if($opportunities->total() > 0)
+                        Tìm thấy <strong class="text-indigo-600">{{ $opportunities->total() }}</strong> kết quả
+                        @if(request('q')) cho "<strong>{{ request('q') }}</strong>" @endif
+                    @else
+                        Không tìm thấy kết quả nào
+                    @endif
+                </p>
+            </div>
+            
+            {{-- Sorting --}}
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500 font-medium">Sắp xếp:</span>
+                <form id="sortForm" action="{{ route('search') }}" method="GET">
+                    {{-- Giữ lại các filter hiện có khi sort --}}
+                    @foreach(request()->except(['sort', 'page']) as $key => $value)
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endforeach
+                    
+                    <select name="sort" onchange="document.getElementById('sortForm').submit()" 
+                            class="px-4 py-2 pr-8 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white shadow-sm">
+                        <option value="latest" {{ request('sort', 'latest') == 'latest' ? 'selected' : '' }}>Mới nhất</option>
+                        <option value="popular" {{ request('sort') == 'popular' ? 'selected' : '' }}>Phổ biến nhất</option>
+                        <option value="deadline" {{ request('sort') == 'deadline' ? 'selected' : '' }}>Hạn nộp đơn</option>
+                        <option value="nearest" {{ request('sort') == 'nearest' ? 'selected' : '' }}>Bắt đầu sớm</option>
+                    </select>
+                </form>
             </div>
         </div>
-    </div>
 
-    <!-- Search Summary -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 bg-light">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h5 class="mb-2">
-                                @if($opportunities->total() > 0)
-                                    Tìm thấy <strong class="text-primary">{{ $opportunities->total() }}</strong> kết quả 
-                                    @if(request('q'))
-                                        cho "<strong>{{ request('q') }}</strong>"
-                                    @endif
-                                @else
-                                    Không tìm thấy kết quả 
-                                    @if(request('q'))
-                                        cho "<strong>{{ request('q') }}</strong>"
-                                    @endif
-                                @endif
-                            </h5>
-                            @if($opportunities->total() > 0)
-                            <p class="text-muted mb-0">
-                                Hiển thị {{ $opportunities->firstItem() }}-{{ $opportunities->lastItem() }} trên {{ $opportunities->total() }} kết quả
-                            </p>
-                            @endif
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="d-flex align-items-center justify-content-md-end gap-3">
-                                <span class="text-muted small">Sắp xếp:</span>
-                                <select class="form-select form-select-sm w-auto" onchange="updateSort(this.value)">
-                                    <option value="latest" {{ request('sort', 'latest') == 'latest' ? 'selected' : '' }}>Mới nhất</option>
-                                    <option value="popular" {{ request('sort') == 'popular' ? 'selected' : '' }}>Phổ biến nhất</option>
-                                    <option value="deadline" {{ request('sort') == 'deadline' ? 'selected' : '' }}>Hạn nộp đơn</option>
-                                    <option value="nearest" {{ request('sort') == 'nearest' ? 'selected' : '' }}>Bắt đầu sớm nhất</option>
-                                </select>
-                            </div>
-                        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            {{-- SIDEBAR FILTERS --}}
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
+                    <div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
+                        <i class="fas fa-filter text-indigo-600"></i>
+                        <h2 class="font-bold text-gray-800">Bộ Lọc</h2>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row">
-        <!-- Sidebar Filters -->
-        <div class="col-lg-3 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <h6 class="mb-0">
-                        <i class="fas fa-filter text-primary me-2"></i>Bộ Lọc
-                    </h6>
-                </div>
-                <div class="card-body">
                     <form action="{{ route('search') }}" method="GET" id="resultsFilterForm">
                         <input type="hidden" name="q" value="{{ request('q') }}">
+                        <input type="hidden" name="sort" value="{{ request('sort') }}">
                         
-                        <!-- Category -->
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small">Danh Mục</label>
-                            <select class="form-select form-select-sm" name="category" onchange="this.form.submit()">
+                        {{-- Category --}}
+                        <div class="mb-5">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Danh Mục</label>
+                            <select name="category" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                                 <option value="">Tất cả danh mục</option>
                                 @foreach($categories ?? [] as $category)
-                                <option value="{{ $category->category_id }}" 
-                                        {{ request('category') == $category->category_id ? 'selected' : '' }}>
+                                <option value="{{ $category->category_id }}" {{ request('category') == $category->category_id ? 'selected' : '' }}>
                                     {{ $category->category_name }}
                                 </option>
                                 @endforeach
                             </select>
                         </div>
 
-                        <!-- Location -->
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small">Địa Điểm</label>
-                            <select class="form-select form-select-sm" name="location" onchange="this.form.submit()">
+                        {{-- Location --}}
+                        <div class="mb-5">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Địa Điểm</label>
+                            <select name="location" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                                 <option value="">Tất cả địa điểm</option>
                                 <option value="Hà Nội" {{ request('location') == 'Hà Nội' ? 'selected' : '' }}>Hà Nội</option>
                                 <option value="Hồ Chí Minh" {{ request('location') == 'Hồ Chí Minh' ? 'selected' : '' }}>Hồ Chí Minh</option>
@@ -104,10 +81,10 @@
                             </select>
                         </div>
 
-                        <!-- Experience Level -->
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small">Kinh Nghiệm</label>
-                            <select class="form-select form-select-sm" name="experience_needed" onchange="this.form.submit()">
+                        {{-- Experience --}}
+                        <div class="mb-5">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Kinh Nghiệm</label>
+                            <select name="experience_needed" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                                 <option value="">Tất cả cấp độ</option>
                                 <option value="No experience" {{ request('experience_needed') == 'No experience' ? 'selected' : '' }}>Không yêu cầu</option>
                                 <option value="Some experience" {{ request('experience_needed') == 'Some experience' ? 'selected' : '' }}>Có chút kinh nghiệm</option>
@@ -115,10 +92,10 @@
                             </select>
                         </div>
 
-                        <!-- Time Commitment -->
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small">Thời Gian</label>
-                            <select class="form-select form-select-sm" name="time_commitment" onchange="this.form.submit()">
+                        {{-- Time --}}
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Thời Gian</label>
+                            <select name="time_commitment" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                                 <option value="">Tất cả thời gian</option>
                                 <option value="1-2 hours" {{ request('time_commitment') == '1-2 hours' ? 'selected' : '' }}>1-2 giờ/tuần</option>
                                 <option value="3-5 hours" {{ request('time_commitment') == '3-5 hours' ? 'selected' : '' }}>3-5 giờ/tuần</option>
@@ -127,453 +104,125 @@
                             </select>
                         </div>
 
-                        <!-- Quick Actions -->
-                        <div class="d-grid gap-2">
-                            <a href="{{ route('search.advanced') }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-sliders-h me-1"></i>Bộ Lọc Nâng Cao
+                        {{-- Actions --}}
+                        <div class="grid gap-3">
+                            <a href="{{ route('search.advanced') }}" class="block w-full py-2 bg-indigo-50 text-indigo-600 font-bold text-center rounded-lg hover:bg-indigo-600 hover:text-white transition text-sm">
+                                <i class="fas fa-sliders-h mr-1"></i> Bộ Lọc Nâng Cao
                             </a>
-                            <a href="{{ route('search') }}?q={{ request('q') }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-redo me-1"></i>Đặt Lại
+                            <a href="{{ route('search') }}?q={{ request('q') }}" class="block w-full py-2 text-gray-500 font-medium text-center hover:text-gray-800 transition text-sm">
+                                <i class="fas fa-redo mr-1"></i> Đặt Lại
                             </a>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Search Tips -->
-            <div class="card border-0 bg-primary text-white mt-4">
-                <div class="card-body">
-                    <h6 class="mb-3">
-                        <i class="fas fa-lightbulb me-2"></i>Mẹo Tìm Kiếm
-                    </h6>
-                    <ul class="small ps-3 mb-0">
-                        <li>Sử dụng từ khóa cụ thể</li>
-                        <li>Thử các từ khóa đồng nghĩa</li>
-                        <li>Kiểm tra chính tả</li>
-                        <li>Sử dụng bộ lọc nâng cao</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Results -->
-        <div class="col-lg-9">
-            @if($opportunities->isNotEmpty())
-            
-            <!-- Results Grid -->
-            <div class="row g-4">
-                @foreach($opportunities as $opportunity)
-                <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 border-0 shadow-sm hover-card">
-                        <div class="card-body d-flex flex-column">
-                            <!-- Category Badge -->
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <span class="badge rounded-pill" style="background-color: {{ $opportunity->category->color ?? '#3B82F6' }}; color: white;">
-                                    <i class="{{ $opportunity->category->icon ?? 'fas fa-heart' }} me-1"></i>
-                                    {{ $opportunity->category->category_name ?? 'General' }}
-                                </span>
-                                <span class="badge bg-light text-dark small">
-                                    <i class="fas fa-eye me-1"></i>{{ $opportunity->view_count ?? 0 }}
-                                </span>
-                            </div>
-
-                            <!-- Title -->
-                            <h6 class="card-title mb-2">
-                                <a href="{{ route('opportunities.show', $opportunity->opportunity_id) }}" 
-                                   class="text-dark text-decoration-none">
-                                    {{ Str::limit($opportunity->title, 60) }}
-                                </a>
-                            </h6>
-
-                            <!-- Organization -->
-                            <p class="text-muted small mb-3">
-                                <i class="fas fa-building me-1"></i>
-                                {{ Str::limit($opportunity->organization->organization_name, 25) }}
-                            </p>
-
-                            <!-- Description -->
-                            <p class="card-text small text-muted mb-3 flex-grow-1">
-                                {{ Str::limit(strip_tags($opportunity->description), 80) }}
-                            </p>
-
-                            <!-- Skills Preview -->
-                            @if($opportunity->required_skills)
-                            <div class="mb-3">
-                                @foreach(explode(',', $opportunity->required_skills) as $skill)
-                                    @if($loop->index < 2)
-                                    <span class="badge bg-light text-dark border small mb-1">
-                                        <i class="fas fa-check text-success me-1"></i>{{ trim($skill) }}
+            {{-- RESULTS GRID --}}
+            <div class="lg:col-span-3">
+                @if($opportunities->isNotEmpty())
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @foreach($opportunities as $opportunity)
+                        <div class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col h-full">
+                            <div class="p-6 flex flex-col flex-grow">
+                                {{-- Top Badge --}}
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold text-white flex items-center gap-1 shadow-sm"
+                                          style="background-color: {{ $opportunity->category->color ?? '#3B82F6' }}">
+                                        <i class="{{ $opportunity->category->icon ?? 'fas fa-heart' }} mr-1"></i>
+                                        {{ $opportunity->category->category_name ?? 'General' }}
                                     </span>
-                                    @endif
-                                @endforeach
-                                @if(count(explode(',', $opportunity->required_skills)) > 2)
-                                    <span class="badge bg-light text-muted border small">+{{ count(explode(',', $opportunity->required_skills)) - 2 }} more</span>
+                                    <span class="text-xs text-gray-400 flex items-center bg-gray-50 px-2 py-1 rounded-full">
+                                        <i class="fas fa-eye mr-1"></i> {{ $opportunity->view_count ?? 0 }}
+                                    </span>
+                                </div>
+
+                                {{-- Title --}}
+                                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-indigo-600 transition">
+                                    <a href="{{ route('opportunities.show', $opportunity->opportunity_id) }}">
+                                        {{ Str::limit($opportunity->title, 60) }}
+                                    </a>
+                                </h3>
+                                
+                                {{-- Organization --}}
+                                <p class="text-sm text-gray-500 mb-3 flex items-center gap-2">
+                                    <i class="fas fa-building text-gray-400"></i> 
+                                    {{ Str::limit($opportunity->organization->organization_name, 25) }}
+                                </p>
+
+                                {{-- Description --}}
+                                <p class="text-sm text-gray-500 mb-4 line-clamp-3 flex-grow">
+                                    {{ Str::limit(strip_tags($opportunity->description), 100) }}
+                                </p>
+
+                                {{-- Skills (SỬA LỖI Ở ĐÂY) --}}
+                                @if($opportunity->required_skills)
+                                    @php
+                                        // Kiểm tra an toàn: nếu là chuỗi thì explode, nếu là mảng thì giữ nguyên
+                                        $rawSkills = $opportunity->required_skills;
+                                        $skills = is_array($rawSkills) ? $rawSkills : explode(',', $rawSkills);
+                                        $skills = array_filter($skills, function($v) { return !empty(trim($v)); });
+                                    @endphp
+
+                                    <div class="flex flex-wrap gap-1 mb-4">
+                                        @foreach($skills as $skill)
+                                            @if($loop->index < 2)
+                                            <span class="px-2 py-1 bg-green-50 text-green-700 text-xs rounded border border-green-100">
+                                                <i class="fas fa-check mr-1"></i>{{ trim($skill) }}
+                                            </span>
+                                            @endif
+                                        @endforeach
+                                        @if(count($skills) > 2)
+                                            <span class="px-2 py-1 bg-gray-50 text-gray-500 text-xs rounded border border-gray-100">
+                                                +{{ count($skills) - 2 }}
+                                            </span>
+                                        @endif
+                                    </div>
                                 @endif
-                            </div>
-                            @endif
 
-                            <!-- Meta Info -->
-                            <div class="d-flex flex-wrap gap-1 mb-3">
-                                <span class="badge bg-light text-dark small">
-                                    <i class="fas fa-map-marker-alt text-primary me-1"></i>
-                                    {{ Str::limit($opportunity->location, 12) }}
-                                </span>
-                                <span class="badge bg-light text-dark small">
-                                    <i class="fas fa-clock text-info me-1"></i>
-                                    {{ $opportunity->time_commitment }}
-                                </span>
-                            </div>
-
-                            <!-- Footer -->
-                            <div class="d-flex justify-content-between align-items-center mt-auto">
-                                <small class="text-muted">
-                                    {{ \Carbon\Carbon::parse($opportunity->created_at)->diffForHumans() }}
-                                </small>
-                                <a href="{{ route('opportunities.show', $opportunity->opportunity_id) }}" 
-                                   class="btn btn-primary btn-sm">
-                                    Chi Tiết
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-
-            <!-- Pagination -->
-            @if($opportunities->hasPages())
-            <div class="mt-5">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="text-muted small">
-                        Hiển thị {{ $opportunities->firstItem() }}-{{ $opportunities->lastItem() }} trên {{ $opportunities->total() }} kết quả
-                    </div>
-                    {{ $opportunities->appends(request()->query())->links() }}
-                </div>
-            </div>
-            @endif
-
-            @else
-            <!-- No Results -->
-            <div class="text-center py-5">
-                <div class="mb-4">
-                    <i class="fas fa-search fa-4x text-muted opacity-50"></i>
-                </div>
-                <h4 class="mb-3 text-muted">Không tìm thấy kết quả phù hợp</h4>
-                <p class="text-muted mb-4">Hãy thử các cách sau để tìm thấy cơ hội phù hợp:</p>
-                
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="row g-4">
-                            <div class="col-md-4">
-                                <div class="text-center">
-                                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                        <i class="fas fa-sync-alt text-primary"></i>
+                                {{-- Footer --}}
+                                <div class="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
+                                    <div class="flex flex-col text-xs text-gray-500 gap-1">
+                                        <span class="flex items-center"><i class="fas fa-map-marker-alt w-4 text-indigo-500"></i> {{ Str::limit($opportunity->location, 12) }}</span>
+                                        <span class="flex items-center"><i class="fas fa-clock w-4 text-orange-500"></i> {{ $opportunity->time_commitment }}</span>
                                     </div>
-                                    <h6>Thử từ khóa khác</h6>
-                                    <p class="small text-muted">Sử dụng từ khóa đơn giản hơn hoặc từ đồng nghĩa</p>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="text-center">
-                                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                        <i class="fas fa-sliders-h text-success"></i>
-                                    </div>
-                                    <h6>Điều chỉnh bộ lọc</h6>
-                                    <p class="small text-muted">Mở rộng phạm vi tìm kiếm với ít bộ lọc hơn</p>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="text-center">
-                                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                                        <i class="fas fa-compass text-info"></i>
-                                    </div>
-                                    <h6>Khám phá danh mục</h6>
-                                    <p class="small text-muted">Duyệt qua các danh mục phổ biến</p>
+                                    <a href="{{ route('opportunities.show', $opportunity->opportunity_id) }}" 
+                                       class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition shadow-md shadow-indigo-200">
+                                        Chi Tiết
+                                    </a>
                                 </div>
                             </div>
                         </div>
+                        @endforeach
                     </div>
-                </div>
-
-                <div class="mt-5">
-                    <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="{{ route('opportunities.index') }}" class="btn btn-primary">
-                            <i class="fas fa-th me-2"></i>Xem Tất Cả Cơ Hội
-                        </a>
-                        <a href="{{ route('search.advanced') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-sliders-h me-2"></i>Tìm Kiếm Nâng Cao
-                        </a>
-                        <a href="{{ route('search') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-redo me-2"></i>Tìm Lại
-                        </a>
+                    
+                    {{-- Pagination --}}
+                    @if($opportunities->hasPages())
+                    <div class="mt-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        {{ $opportunities->appends(request()->query())->links() }}
                     </div>
-                </div>
-            </div>
-            @endif
+                    @endif
 
-            <!-- Related Searches -->
-            @if($opportunities->isNotEmpty() && request('q'))
-            <div class="mt-5">
-                <div class="card border-0 bg-light">
-                    <div class="card-body">
-                        <h6 class="mb-3">Tìm kiếm liên quan:</h6>
-                        <div class="d-flex flex-wrap gap-2">
-                            @php
-                                $relatedSearches = [
-                                    request('q') . ' tình nguyện',
-                                    'cơ hội ' . request('q'),
-                                    'hoạt động ' . request('q'),
-                                    'dự án ' . request('q')
-                                ];
-                            @endphp
-                            @foreach($relatedSearches as $related)
-                            <a href="{{ route('search') }}?q={{ urlencode($related) }}" class="btn btn-outline-secondary btn-sm">
-                                {{ $related }}
+                @else
+                    {{-- No Results State --}}
+                    <div class="text-center py-16 bg-white rounded-3xl border border-dashed border-gray-200">
+                        <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-search text-gray-300 text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Không tìm thấy kết quả phù hợp</h3>
+                        <p class="text-gray-500 mb-8 max-w-md mx-auto">Hãy thử thay đổi từ khóa, giảm bớt bộ lọc hoặc chọn danh mục khác.</p>
+                        
+                        <div class="flex justify-center gap-4">
+                            <a href="{{ route('search') }}" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition">
+                                Xóa bộ lọc
                             </a>
-                            @endforeach
+                            <a href="{{ route('search.advanced') }}" class="px-6 py-2 bg-white text-indigo-600 border border-indigo-200 font-bold rounded-xl hover:bg-indigo-50 transition">
+                                Tìm nâng cao
+                            </a>
                         </div>
                     </div>
-                </div>
+                @endif
             </div>
-            @endif
-
         </div>
     </div>
-
 </div>
-
-@push('styles')
-<style>
-    .hover-card {
-        transition: all 0.3s ease;
-    }
-    
-    .hover-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
-    }
-
-    .card-title {
-        line-height: 1.4;
-    }
-
-    .badge {
-        font-size: 0.7rem;
-    }
-</style>
-@endpush
-
-@push('styles')
-<style>
-    /* Search Results Specific Styles */
-    .results-summary-card {
-        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-        border: 1px solid #bae6fd;
-        border-radius: 1rem;
-    }
-    
-    .result-card {
-        transition: all 0.3s ease;
-        border: 1px solid #e5e7eb;
-        background: white;
-        overflow: hidden;
-    }
-    
-    .result-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        border-color: #6366f1;
-    }
-    
-    .result-card-highlight {
-        border-left: 4px solid #6366f1;
-    }
-    
-    .pagination-custom .page-link {
-        border: 1px solid #d1d5db;
-        color: #6b7280;
-        padding: 0.5rem 1rem;
-        margin: 0 0.25rem;
-        border-radius: 0.5rem;
-        transition: all 0.2s;
-    }
-    
-    .pagination-custom .page-link:hover {
-        background: #6366f1;
-        color: white;
-        border-color: #6366f1;
-    }
-    
-    .pagination-custom .page-item.active .page-link {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        border-color: #6366f1;
-        color: white;
-    }
-    
-    .related-search-tag {
-        background: #f3f4f6;
-        border: 1px solid #d1d5db;
-        color: #6b7280;
-        transition: all 0.2s;
-    }
-    
-    .related-search-tag:hover {
-        background: #6366f1;
-        color: white;
-        border-color: #6366f1;
-        transform: translateY(-1px);
-    }
-    
-    .filter-sidebar {
-        background: #f9fafb;
-        border-radius: 1rem;
-        border: 1px solid #e5e7eb;
-    }
-    
-    .search-tips-card {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white;
-        border-radius: 1rem;
-        overflow: hidden;
-    }
-    
-    .search-tips-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-        transform: rotate(45deg);
-        animation: shine 3s infinite;
-    }
-    
-    @keyframes shine {
-        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-    }
-    
-    .no-results-illustration {
-        opacity: 0.6;
-        transition: opacity 0.3s;
-    }
-    
-    .no-results-illustration:hover {
-        opacity: 1;
-    }
-    
-    /* Loading states */
-    .result-skeleton {
-        background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
-    }
-    
-    @keyframes loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
-    
-    /* Sort dropdown */
-    .sort-dropdown {
-        border: 1px solid #d1d5db;
-        border-radius: 0.5rem;
-        background: white;
-        padding: 0.5rem;
-    }
-    
-    .sort-dropdown:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 1024px) {
-        .filter-sidebar {
-            margin-bottom: 2rem;
-        }
-        
-        .result-card {
-            margin-bottom: 1rem;
-        }
-    }
-    
-    /* Dark mode support */
-    .dark .results-summary-card {
-        background: linear-gradient(135deg, #1e3a8a, #1e40af);
-        border-color: #3730a3;
-    }
-    
-    .dark .result-card {
-        background: #1f2937;
-        border-color: #374151;
-    }
-    
-    .dark .filter-sidebar {
-        background: #1f2937;
-        border-color: #374151;
-    }
-    
-    .dark .sort-dropdown {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-    
-    .dark .related-search-tag {
-        background: #374151;
-        border-color: #4b5563;
-        color: #d1d5db;
-    }
-    
-    .dark .related-search-tag:hover {
-        background: #6366f1;
-        color: white;
-    }
-    
-    .dark .result-skeleton {
-        background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
-    }
-</style>
-@endpush
-
-@push('scripts')
-<script>
-function updateSort(sortValue) {
-    const form = document.getElementById('resultsFilterForm');
-    let sortInput = form.querySelector('[name="sort"]');
-    
-    if (!sortInput) {
-        sortInput = document.createElement('input');
-        sortInput.type = 'hidden';
-        sortInput.name = 'sort';
-        form.appendChild(sortInput);
-    }
-    
-    sortInput.value = sortValue;
-    form.submit();
-}
-
-// Update filter form with current search query
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchQuery = urlParams.get('q');
-    
-    if (searchQuery) {
-        const form = document.getElementById('resultsFilterForm');
-        let qInput = form.querySelector('[name="q"]');
-        
-        if (!qInput) {
-            qInput = document.createElement('input');
-            qInput.type = 'hidden';
-            qInput.name = 'q';
-            form.appendChild(qInput);
-        }
-        
-        qInput.value = searchQuery;
-    }
-});
-</script>
-@endpush
 @endsection

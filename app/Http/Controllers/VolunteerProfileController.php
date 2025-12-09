@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Models\VolunteerProfile;
 use App\Mail\OTPVerificationEmail;
@@ -61,23 +63,23 @@ class VolunteerProfileController extends Controller
 
         $profile = $user->volunteerProfile ?? VolunteerProfile::create(['user_id' => $user->user_id]);
 
-        // TỰ ĐỘNG TÍNH KỸ NĂNG & SỞ THÍCH (ĐÃ SỬA LỖI CỘT & RELATIONSHIP)
-        $autoSkills = VolunteerOpportunity::whereHas('favorites', function($q) use ($user) {
-                $q->where('user_id', $user->user_id); // favorites.user_id
+        // TỰ ĐỘNG TÍNH KỸ NĂNG & SỞ THÍCH
+        $autoSkills = VolunteerOpportunity::whereHas('favorites', function ($q) use ($user) {
+            $q->where('user_id', $user->user_id);
+        })
+            ->orWhereHas('applications', function ($q) use ($user) {
+                $q->where('volunteer_id', $user->user_id)
+                    ->where('status', 'Accepted');
             })
-            ->orWhereHas('applications', function($q) use ($user) {
-                $q->where('volunteer_id', $user->user_id) // applications.volunteer_id
-                  ->where('status', 'Accepted');
-            })
-            ->orWhereHas('volunteerActivities', function($q) use ($user) {
-                $q->where('volunteer_id', $user->user_id) // volunteer_activities.volunteer_id
-                  ->where('status', 'Verified');
+            ->orWhereHas('volunteerActivities', function ($q) use ($user) {
+                $q->where('volunteer_id', $user->user_id)
+                    ->where('status', 'Verified');
             })
             ->get()
             ->pluck('skills_required')
             ->filter()
             ->flatMap(function ($skills) {
-                return preg_split('/[,;]/', $skills); // Tách kỹ năng
+                return preg_split('/[,;]/', $skills);
             })
             ->map('trim')
             ->filter()
@@ -86,74 +88,96 @@ class VolunteerProfileController extends Controller
             ->values();
 
         $autoInterests = Category::whereHas('opportunities', function ($q) use ($user) {
-        $q->where(function ($sub) use ($user) {
-            // Cơ hội đã yêu thích
-            $sub->whereHas('favorites', fn($f) => $f->where('user_id', $user->user_id))
-                // Cơ hội đã được chấp nhận
-                ->orWhereHas('applications', fn($a) => $a->where('volunteer_id', $user->user_id)->where('status', 'Accepted'))
-                // Hoạt động đã hoàn thành
-                ->orWhereHas('volunteerActivities', fn($va) => $va->where('volunteer_id', $user->user_id)->where('status', 'Verified'));
-        });
-    })
-    ->select('categories.category_id')
-    ->selectRaw('categories.category_name')
-    ->selectRaw('categories.icon')
-    ->selectRaw('categories.description')
-    ->selectRaw('COUNT(*) as total_engagement')
-    ->groupBy('categories.category_id', 'categories.category_name', 'categories.icon', 'categories.description')
-    ->orderByDesc('total_engagement')
-    ->limit(10)
-    ->get();
+            $q->where(function ($sub) use ($user) {
+                $sub->whereHas('favorites', fn($f) => $f->where('user_id', $user->user_id))
+                    ->orWhereHas('applications', fn($a) => $a->where('volunteer_id', $user->user_id)->where('status', 'Accepted'))
+                    ->orWhereHas('volunteerActivities', fn($va) => $va->where('volunteer_id', $user->user_id)->where('status', 'Verified'));
+            });
+        })
+            ->select('categories.category_id')
+            ->selectRaw('categories.category_name')
+            ->selectRaw('categories.icon')
+            ->selectRaw('categories.description')
+            ->selectRaw('COUNT(*) as total_engagement')
+            ->groupBy('categories.category_id', 'categories.category_name', 'categories.icon', 'categories.description')
+            ->orderByDesc('total_engagement')
+            ->limit(10)
+            ->get();
+
         return view('volunteer.profile.edit-profile', compact('profile', 'autoSkills', 'autoInterests'));
     }
-public function update(Request $request)
+
+    public function update(Request $request)
     {
         $user = Auth::user();
 
-        // 1. Validation (Chỉ validate các trường có trong form)
-        $validatedData = $request->validate([
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        if (!$user->isVolunteer()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // 1. Validate
+        $validator = Validator::make($request->all(), [
+            'avatar' => 'nullable|image|max:2048',
             'occupation' => 'nullable|string|max:100',
             'education_level' => 'nullable|string',
-            'bio' => 'nullable|string|max:2000',
-            'skills' => 'nullable|string',
-            'interests' => 'nullable|string',
+            'university' => 'nullable|string|max:150',
+            'bio' => 'nullable|string|max:1000',
+            'preferred_location' => 'nullable|string|max:100',
+            'transportation' => 'nullable|string',
+            'availability' => 'nullable|string',
+            'volunteer_experience' => 'nullable|string',
+            'skills' => 'nullable|string',   // Nhận chuỗi từ form
+            'interests' => 'nullable|string' // Nhận chuỗi từ form
         ]);
 
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
         try {
-            // 2. Cập nhật Model USER (Chỉ avatar)
+            // 2. Avatar
             if ($request->hasFile('avatar')) {
-                // (Thêm logic xóa ảnh cũ nếu cần)
-                $path = $request->file('avatar')->store('avatars', 'public');
-                $user->avatar_url = $path;
-                $user->save();
+                if ($user->avatar_url && Storage::disk('public')->exists($user->avatar_url)) {
+                    Storage::disk('public')->delete($user->avatar_url);
+                }
+                $path = $request->file('avatar')->store('avatars/volunteers', 'public');
+                $user->update(['avatar_url' => $path]);
             }
 
-            // 3. Cập nhật Model VOLUNTEERPROFILE
-            // Sử dụng updateOrCreate để tự động tạo profile nếu nó chưa tồn tại
-            VolunteerProfile::updateOrCreate(
-                ['user_id' => $user->user_id], // Điều kiện tìm
-                [ // Dữ liệu để cập nhật hoặc tạo mới
-                    'occupation' => $validatedData['occupation'] ?? null,
-                    'education_level' => $validatedData['education_level'] ?? null,
-                    'bio' => $validatedData['bio'] ?? null,
-                    'skills' => $validatedData['skills'] ?? null,
-                    'interests' => $validatedData['interests'] ?? null,
-                ]
-            );
+            $profile = $user->volunteerProfile;
+            $skillsJson = '[]'; // Mặc định là mảng rỗng JSON
+            if ($request->skills) {
+                $skillsArray = array_values(array_filter(array_map('trim', explode(',', $request->skills))));
+                $skillsJson = json_encode($skillsArray, JSON_UNESCAPED_UNICODE);
+            }
 
-            // 4. Trả về JSON thành công
-            return response()->json([
-                'success' => true,
-                'message' => 'Cập nhật hồ sơ thành công!'
+            $interestsJson = '[]';
+            if ($request->interests) {
+                $interestsArray = array_values(array_filter(array_map('trim', explode(',', $request->interests))));
+                $interestsJson = json_encode($interestsArray, JSON_UNESCAPED_UNICODE);
+            }
+            $profile->update([
+                'occupation' => $request->occupation,
+                'education_level' => $request->education_level,
+                'university' => $request->university,
+                'bio' => $request->bio,
+                'preferred_location' => $request->preferred_location,
+                'transportation' => $request->transportation,
+                'availability' => $request->availability,
+                'volunteer_experience' => $request->volunteer_experience,
+
+                // Lưu chuỗi JSON đã mã hóa thủ công
+                'skills' => $skillsJson,
+                'interests' => $interestsJson
             ]);
 
-        } catch (\Exception $e) {
-            // 5. Trả về JSON lỗi
             return response()->json([
-                'success' => false,
-                'message' => 'Đã xảy ra lỗi máy chủ: ' . $e->getMessage()
-            ], 500); // Gửi mã 500
+                'success' => true,
+                'message' => 'Cập nhật thành công!',
+                'avatar_url' => $user->avatar_url ? asset('storage/' . $user->avatar_url) : null
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -433,58 +457,33 @@ public function update(Request $request)
             ->with('success', 'Xác thực tài khoản thành công!');
     }
     private function updateAutoSkillsAndInterests($user, $profile)
-{
-    // TỰ ĐỘNG HỌC KỸ NĂNG & SỞ THÍCH – CHẠY MƯỢT 100%
-$autoSkills = VolunteerOpportunity::whereHas('favorites', function($q) use ($user) {
-                $q->where('user_id', $user->user_id); // favorites.user_id
-            })
-            ->orWhereHas('applications', function($q) use ($user) {
-                $q->where('volunteer_id', $user->user_id) // applications.volunteer_id
-                  ->where('status', 'Accepted');
-            })
-            ->orWhereHas('volunteerActivities', function($q) use ($user) {
-                $q->where('volunteer_id', $user->user_id) // volunteer_activities.volunteer_id
-                  ->where('status', 'Verified');
-            })
-            ->get()
-            ->pluck('skills_required')
-            ->filter()
-            ->flatMap(function ($skills) {
-                return preg_split('/[,;]/', $skills); // Tách kỹ năng
-            })
-            ->map('trim')
-            ->filter()
-            ->unique()
-            ->take(15)
-            ->values();
+    {
+        // Nếu đã có dữ liệu (và không phải mảng rỗng) thì thôi
+        if (!empty($profile->skills) && $profile->skills !== '[]') return;
 
-        $autoInterests = Category::whereHas('opportunities', function ($q) use ($user) {
-        $q->where(function ($sub) use ($user) {
-            // Cơ hội đã yêu thích
-            $sub->whereHas('favorites', fn($f) => $f->where('user_id', $user->user_id))
-                // Cơ hội đã được chấp nhận
-                ->orWhereHas('applications', fn($a) => $a->where('volunteer_id', $user->user_id)->where('status', 'Accepted'))
-                // Hoạt động đã hoàn thành
-                ->orWhereHas('volunteerActivities', fn($va) => $va->where('volunteer_id', $user->user_id)->where('status', 'Verified'));
-        });
-    })
-    ->select('categories.category_id')
-    ->selectRaw('categories.category_name')
-    ->selectRaw('categories.icon')
-    ->selectRaw('categories.description')
-    ->selectRaw('COUNT(*) as total_engagement')
-    ->groupBy('categories.category_id', 'categories.category_name', 'categories.icon', 'categories.description')
-    ->orderByDesc('total_engagement')
-    ->limit(10)
-    ->get();
-    $newSkills = $autoSkills->implode(', ');
-        $newInterests = $autoInterests->pluck('category_name')->implode(', ');
+        $autoSkills = VolunteerOpportunity::whereHas('favorites', fn($q) => $q->where('user_id', $user->user_id))
+            ->get()->pluck('skills_required')
+            ->flatMap(fn($s) => preg_split('/[,;]/', $s))
+            ->map('trim')->filter()->unique()->values();
 
-        if ($profile->skills !== $newSkills || $profile->interests !== $newInterests) {
-            $profile->update([
-                'skills' => $newSkills,
-                'interests' => $newInterests,
-            ]);
+        $autoInterests = Category::limit(5)->pluck('category_name'); // Demo logic
+
+        $updates = [];
+
+        // SỬA: Dùng json_encode thay vì implode
+        if (empty($profile->skills) || $profile->skills == '[]') {
+            $updates['skills'] = json_encode($autoSkills->toArray(), JSON_UNESCAPED_UNICODE);
+        }
+
+        if (empty($profile->interests) || $profile->interests == '[]') {
+            $updates['interests'] = json_encode($autoInterests->toArray(), JSON_UNESCAPED_UNICODE);
+        }
+
+        if (!empty($updates)) {
+            // Update trực tiếp để tránh lỗi Model Events
+            DB::table('volunteer_profiles')
+                ->where('profile_id', $profile->profile_id)
+                ->update($updates);
         }
     }
 }

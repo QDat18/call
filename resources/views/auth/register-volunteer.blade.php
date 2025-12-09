@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" x-data="{ darkMode: false }">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,23 +10,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
+
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    
+
     @include('components.navbar')
 
     <div class="flex-1 container mx-auto px-4 py-12">
         <div class="max-w-4xl mx-auto">
-            
+
             <!-- Header -->
             <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-4">
+                <div
+                    class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-4">
                     <i class="fas fa-user-plus text-3xl text-white"></i>
                 </div>
                 <h1 class="text-4xl font-bold text-gray-800 mb-2">Join as a Volunteer</h1>
                 <p class="text-gray-600">Start making a difference in your community today</p>
                 <div class="mt-4">
                     <span class="text-sm text-gray-500">Registering as an organization? </span>
-                    <a href="{{ route('register.organization') }}" class="text-indigo-600 hover:underline font-semibold">
+                    <a href="{{ route('register.organization') }}"
+                        class="text-indigo-600 hover:underline font-semibold">
                         Click here
                     </a>
                 </div>
@@ -33,8 +37,9 @@
 
             <!-- Registration Form -->
             <div class="bg-white rounded-2xl shadow-xl p-8">
-                
-                <form method="POST" action="{{ route('register.volunteer.submit') }}" id="volunteerForm" class="space-y-6">
+
+                <form method="POST" action="{{ route('register.volunteer.submit') }}" id="volunteerForm"
+                    class="space-y-6">
                     @csrf
                     <input type="hidden" name="user_type" value="Volunteer">
 
@@ -61,10 +66,10 @@
                                     First Name <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" name="first_name" value="{{ old('first_name') }}" required
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="John">
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="John">
                                 @error('first_name')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
 
@@ -73,10 +78,10 @@
                                     Last Name <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" name="last_name" value="{{ old('last_name') }}" required
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="Doe">
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Doe">
                                 @error('last_name')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
@@ -87,11 +92,11 @@
                                     Date of Birth <span class="text-red-500">*</span>
                                 </label>
                                 <input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}" required
-                                       max="{{ date('Y-m-d', strtotime('-16 years')) }}"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    max="{{ date('Y-m-d', strtotime('-16 years')) }}"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                 <p class="text-xs text-gray-500 mt-1">Must be at least 16 years old</p>
                                 @error('date_of_birth')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
 
@@ -100,14 +105,15 @@
                                     Gender <span class="text-red-500">*</span>
                                 </label>
                                 <select name="gender" required
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <option value="">Select gender</option>
                                     <option value="Male" {{ old('gender') == 'Male' ? 'selected' : '' }}>Male</option>
-                                    <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female</option>
+                                    <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female
+                                    </option>
                                     <option value="Other" {{ old('gender') == 'Other' ? 'selected' : '' }}>Other</option>
                                 </select>
                                 @error('gender')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
@@ -125,10 +131,10 @@
                                     Email Address <span class="text-red-500">*</span>
                                 </label>
                                 <input type="email" name="email" value="{{ old('email') }}" required
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="john@example.com">
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="john@example.com">
                                 @error('email')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
 
@@ -137,11 +143,11 @@
                                     Phone Number <span class="text-red-500">*</span>
                                 </label>
                                 <input type="tel" name="phone" value="{{ old('phone') }}" required
-                                       pattern="[0-9]{10,11}"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="0912345678">
+                                    pattern="[0-9]{10,11}"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="0912345678">
                                 @error('phone')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
@@ -158,29 +164,27 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     City <span class="text-red-500">*</span>
                                 </label>
-                                <select name="city" required
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">Select city</option>
-                                    <option value="Hanoi" {{ old('city') == 'Hanoi' ? 'selected' : '' }}>Hanoi</option>
-                                    <option value="Ho Chi Minh" {{ old('city') == 'Ho Chi Minh' ? 'selected' : '' }}>Ho Chi Minh City</option>
-                                    <option value="Da Nang" {{ old('city') == 'Da Nang' ? 'selected' : '' }}>Da Nang</option>
-                                    <option value="Hai Phong" {{ old('city') == 'Hai Phong' ? 'selected' : '' }}>Hai Phong</option>
-                                    <option value="Can Tho" {{ old('city') == 'Can Tho' ? 'selected' : '' }}>Can Tho</option>
+                                <select name="city" id="city-select" required
+                                    onchange="fetchDistricts(this.value, '{{ old('district') }}')"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Loading cities...</option>
                                 </select>
+                                <input type="hidden" name="city_name" id="city-name-input">
                                 @error('city')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    District
+                                    District <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="district" value="{{ old('district') }}"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="District name">
+                                <select name="district" id="district-select" required disabled
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                    <option value="">Select city first</option>
+                                </select>
                                 @error('district')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
@@ -190,10 +194,10 @@
                                 Full Address
                             </label>
                             <textarea name="address" rows="2"
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                      placeholder="Street address">{{ old('address') }}</textarea>
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Street address">{{ old('address') }}</textarea>
                             @error('address')
-                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
                     </div>
@@ -210,12 +214,11 @@
                                     Password <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
-                                    <input type="password" name="password" id="password" required
-                                           minlength="8"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                           placeholder="Minimum 8 characters">
-                                    <button type="button" onclick="togglePassword('password')" 
-                                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-indigo-600">
+                                    <input type="password" name="password" id="password" required minlength="8"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        placeholder="Minimum 8 characters">
+                                    <button type="button" onclick="togglePassword('password')"
+                                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-indigo-600">
                                         <i class="fas fa-eye" id="password-icon"></i>
                                     </button>
                                 </div>
@@ -224,7 +227,7 @@
                                 </div>
                                 <p id="password-text" class="text-xs mt-1"></p>
                                 @error('password')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
 
@@ -233,11 +236,12 @@
                                     Confirm Password <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
-                                    <input type="password" name="password_confirmation" id="password_confirmation" required
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                           placeholder="Re-enter password">
-                                    <button type="button" onclick="togglePassword('password_confirmation')" 
-                                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-indigo-600">
+                                    <input type="password" name="password_confirmation" id="password_confirmation"
+                                        required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        placeholder="Re-enter password">
+                                    <button type="button" onclick="togglePassword('password_confirmation')"
+                                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-indigo-600">
                                         <i class="fas fa-eye" id="password_confirmation-icon"></i>
                                     </button>
                                 </div>
@@ -250,15 +254,17 @@
                     <div class="bg-gray-50 rounded-lg p-6">
                         <div class="flex items-start space-x-3">
                             <input type="checkbox" name="terms" id="terms" required
-                                   class="mt-1 h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                class="mt-1 h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
                             <label for="terms" class="text-sm text-gray-700">
-                                I agree to the <a href="{{ route('terms') }}" target="_blank" class="text-indigo-600 hover:underline font-semibold">Terms of Service</a> 
-                                and <a href="{{ route('privacy') }}" target="_blank" class="text-indigo-600 hover:underline font-semibold">Privacy Policy</a>
+                                I agree to the <a href="{{ route('terms') }}" target="_blank"
+                                    class="text-indigo-600 hover:underline font-semibold">Terms of Service</a>
+                                and <a href="{{ route('privacy') }}" target="_blank"
+                                    class="text-indigo-600 hover:underline font-semibold">Privacy Policy</a>
                                 <span class="text-red-500">*</span>
                             </label>
                         </div>
                         @error('terms')
-                        <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+                            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -267,8 +273,8 @@
                         <a href="{{ route('login') }}" class="text-gray-600 hover:text-gray-800 transition">
                             <i class="fas fa-arrow-left mr-2"></i>Back to Login
                         </a>
-                        <button type="submit" 
-                                class="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg">
+                        <button type="submit"
+                            class="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg">
                             <i class="fas fa-user-plus mr-2"></i>Create Account
                         </button>
                     </div>
@@ -284,7 +290,7 @@
         function togglePassword(fieldId) {
             const field = document.getElementById(fieldId);
             const icon = document.getElementById(fieldId + '-icon');
-            
+
             if (field.type === 'password') {
                 field.type = 'text';
                 icon.classList.remove('fa-eye');
@@ -301,7 +307,7 @@
         const strengthBar = document.getElementById('password-strength');
         const strengthText = document.getElementById('password-text');
 
-        passwordInput.addEventListener('input', function() {
+        passwordInput.addEventListener('input', function () {
             const password = this.value;
             let strength = 0;
 
@@ -311,7 +317,7 @@
             if (password.match(/[^a-zA-Z0-9]/)) strength++;
 
             strengthBar.className = 'h-full transition-all duration-300';
-            
+
             if (strength === 0) {
                 strengthBar.style.width = '0%';
                 strengthText.textContent = '';
@@ -342,12 +348,12 @@
         const confirmPassword = document.getElementById('password_confirmation');
         const matchText = document.getElementById('password-match');
 
-        confirmPassword.addEventListener('input', function() {
+        confirmPassword.addEventListener('input', function () {
             if (this.value === '') {
                 matchText.textContent = '';
                 return;
             }
-            
+
             if (this.value === passwordInput.value) {
                 matchText.textContent = 'Passwords match ✓';
                 matchText.className = 'text-xs mt-1 text-green-500';
@@ -357,7 +363,7 @@
             }
         });
 
-        passwordInput.addEventListener('input', function() {
+        passwordInput.addEventListener('input', function () {
             if (confirmPassword.value !== '') {
                 if (confirmPassword.value === this.value) {
                     matchText.textContent = 'Passwords match ✓';
@@ -368,6 +374,59 @@
                 }
             }
         });
+
+        const API_URL_PROVINCES = 'https://esgoo.net/api-tinhthanh/1/0';
+        const API_URL_DISTRICTS = 'https://esgoo.net/api-tinhthanh/2/';
+
+        const citySelect = document.getElementById('city-select');
+        const districtSelect = document.getElementById('district-select');
+        const cityNameInput = document.getElementById('city-name-input');
+        const oldCity = citySelect?.value || '{{ old('city') }}';
+        const oldDistrict = '{{ old('district') }}';
+        async function fetchProvinces() {
+            const provinceSelect = document.getElementById("province");
+            try {
+                const res = await fetch("https://provinces.open-api.vn/api/?depth=1");
+                const data = await res.json();
+
+                provinceSelect.innerHTML = '<option value="">Chọn tỉnh/thành</option>';
+                data.forEach(p => {
+                    provinceSelect.innerHTML += `<option value="${p.code}">${p.name}</option>`;
+                });
+            } catch (err) {
+                console.error("Error fetching provinces:", err);
+                provinceSelect.innerHTML = '<option>Lỗi tải dữ liệu</option>';
+            }
+        }
+        /**
+         * Lấy danh sách Quận/Huyện dựa trên Province ID
+         * @param {string} provinceId - ID của Tỉnh/Thành phố
+         * @param {string} selectedDistrictName - Tên Quận/Huyện cũ (nếu có old input)
+         */
+        async function fetchDistricts(code) {
+            const districtSelect = document.getElementById("district");
+
+            if (!code) {
+                districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`https://provinces.open-api.vn/api/p/${code}?depth=2`);
+                const data = await res.json();
+
+                districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+                data.districts.forEach(d => {
+                    districtSelect.innerHTML += `<option value="${d.code}">${d.name}</option>`;
+                });
+            } catch (err) {
+                console.error("Error fetching districts:", err);
+                districtSelect.innerHTML = '<option>Lỗi tải dữ liệu</option>';
+            }
+        }
+        // Bắt đầu fetch tỉnh/thành phố khi trang load
+        document.addEventListener('DOMContentLoaded', fetchProvinces);
     </script>
 </body>
+
 </html>

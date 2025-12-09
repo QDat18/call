@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\CommentLike;
+
 
 class PostComment extends Model
 {
@@ -13,7 +15,8 @@ class PostComment extends Model
         'user_id',
         'content',
         'parent_id',
-        'is_approved'
+        'is_approved',
+        'likes_count'
     ];
 
     protected $casts = [
@@ -38,5 +41,16 @@ class PostComment extends Model
     public function replies()
     {
         return $this->hasMany(PostComment::class, 'parent_id');
+    }
+
+    public function likes(){
+        return $this->hasMany(CommentLike::class, 'comment_id');
+    }
+
+    public function isLikedByUser($userId){
+        if(!$userId){
+            return false;
+        }
+        return $this->likes()->where('user_id', $userId)->exists();
     }
 }

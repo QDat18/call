@@ -1,249 +1,233 @@
-{{-- resources/views/analytics/index.blade.php --}}
+{{-- resources/views/volunteer/analytics/index.blade.php --}}
 @extends('layouts.volunteer')
 
-@section('title', 'Phân Tích & Thống Kê')
-
-@push('styles')
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<style>
-    :root { --purple: #8b5cf6; --indigo: #4f46e5; }
-    .gradient-purple { background: linear-gradient(135deg, #8b5cf6, #6b46c1); }
-    .card-hover { @apply transition transform hover:-translate-y-1 hover:shadow-2xl; }
-    .chart-container { height: 380px; }
-    .btn-back { @apply bg-white border-2 border-purple-600 text-purple-600 font-bold px-6 py-3 rounded-xl hover:bg-purple-600 hover:text-white transition transform hover:scale-105 shadow-lg; }
-</style>
-@endpush
+@section('title', 'Thống kê hoạt động')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 py-12 px-4">
-    <div class="max-w-7xl mx-auto">
+    <div class="h-48 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 absolute top-0 left-0 w-full -z-10"></div>
 
-        <!-- NÚT QUAY LẠI DASHBOARD -->
-        <div class="mb-8">
-            <a href="{{ route('dashboard') }}" class="btn-back inline-flex items-center gap-3">
-                <i class="fas fa-arrow-left"></i>
-                Quay Lại Dashboard
-            </a>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+        
+        <nav class="flex mb-8" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20">
+                <li><a href="{{ route('volunteer.dashboard') }}" class="text-purple-100 hover:text-white transition"><i class="fas fa-home"></i></a></li>
+                <li><i class="fas fa-chevron-right text-purple-200 text-xs"></i></li>
+                <li class="text-white font-bold" aria-current="page">Thống kê cá nhân</li>
+            </ol>
+        </nav>
+
+        <div class="text-center mb-12 relative">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-2 drop-shadow-md">
+                Hành Trình Tình Nguyện
+            </h1>
+            <p class="text-purple-100 text-lg font-medium">Nhìn lại những dấu ấn ý nghĩa bạn đã tạo ra</p>
         </div>
 
-        <!-- ADMIN DASHBOARD -->
-        @if(auth()->user()->user_type === 'Admin')
-            <div class="text-center mb-12">
-                <h1 class="text-5xl font-bold text-purple-800 mb-4">
-                    <i class="fas fa-crown text-yellow-500"></i> Quản Trị Viên - Tổng Quan Hệ Thống
-                </h1>
-                <p class="text-xl text-gray-600">Toàn cảnh VolunteerConnect trong tầm tay bạn</p>
-            </div>
-
-            <!-- Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-                <div class="bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-2xl p-8 text-center shadow-xl card-hover">
-                    <div class="text-5xl font-bold">{{ number_format($metrics['total_users'] ?? 0) }}</div>
-                    <div class="text-lg mt-2">Tổng Người Dùng</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white rounded-2xl p-6 shadow-xl border border-purple-50 flex items-center hover:-translate-y-1 transition duration-300">
+                <div class="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 text-3xl mr-5">
+                    <i class="fas fa-clock"></i>
                 </div>
-                <div class="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl p-8 text-center shadow-xl card-hover">
-                    <div class="text-5xl font-bold">{{ number_format($metrics['total_volunteers'] ?? 0) }}</div>
-                    <div class="text-lg mt-2">Tình Nguyện Viên</div>
-                </div>
-                <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-8 text-center shadow-xl card-hover">
-                    <div class="text-5xl font-bold">{{ number_format($metrics['total_opportunities'] ?? 0) }}</div>
-                    <div class="text-lg mt-2">Cơ Hội</div>
-                </div>
-                <div class="bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-2xl p-8 text-center shadow-xl card-hover">
-                    <div class="text-5xl font-bold">{{ number_format($metrics['total_volunteer_hours'] ?? 0) }}</div>
-                    <div class="text-lg mt-2">Giờ Tình Nguyện</div>
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase tracking-wider">Tổng giờ làm</p>
+                    <h3 class="text-3xl font-extrabold text-gray-800">{{ $metrics['total_volunteer_hours'] ?? 0 }}</h3>
                 </div>
             </div>
 
-            <!-- Charts -->
-            <div class="grid lg:grid-cols-2 gap-8 mb-12">
-                <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
-                    <h3 class="text-2xl font-bold text-purple-800 mb-6 text-center">
-                        <i class="fas fa-users mr-3"></i> Xu Hướng Người Dùng (30 ngày)
+            <div class="bg-white rounded-2xl p-6 shadow-xl border border-green-50 flex items-center hover:-translate-y-1 transition duration-300">
+                <div class="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center text-green-600 text-3xl mr-5">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase tracking-wider">Hoạt động xong</p>
+                    <h3 class="text-3xl font-extrabold text-gray-800">{{ $metrics['accepted_applications'] ?? 0 }}</h3>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-xl border border-blue-50 flex items-center hover:-translate-y-1 transition duration-300">
+                <div class="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-3xl mr-5">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase tracking-wider">Đơn đã gửi</p>
+                    <h3 class="text-3xl font-extrabold text-gray-800">{{ $metrics['total_applications'] ?? 0 }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-8">
+
+            <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-chart-line text-purple-600"></i> Xu hướng tham gia
                     </h3>
-                    <div class="chart-container">
-                        <canvas id="userTrendChart"></canvas>
+                    <span class="text-xs font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">12 tháng qua</span>
+                </div>
+                <div class="p-6">
+                    <div class="relative h-80 w-full">
+                        <canvas id="hoursChart"></canvas>
                     </div>
                 </div>
+            </div>
 
-                <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
-                    <h3 class="text-2xl font-bold text-purple-800 mb-6 text-center">
-                        <i class="fas fa-chart-bar mr-3"></i> Giờ Tình Nguyện Theo Tháng
+            <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-heart text-pink-500"></i> Lĩnh vực yêu thích
                     </h3>
-                    <div class="chart-container">
-                        <canvas id="monthlyHoursChart"></canvas>
+                    <span class="text-xs font-semibold bg-pink-100 text-pink-700 px-3 py-1 rounded-full">Top quan tâm</span>
+                </div>
+                <div class="p-6 flex items-center justify-center">
+                    <div class="relative h-80 w-full flex justify-center">
+                        <canvas id="fieldChart"></canvas>
                     </div>
                 </div>
             </div>
+        </div>
 
-        <!-- ORGANIZATION DASHBOARD -->
-        @elseif(auth()->user()->user_type === 'Organization')
-            <div class="text-center mb-12">
-                <h1 class="text-5xl font-bold text-purple-800 mb-4">
-                    <i class="fas fa-building text-indigo-600"></i> {{ auth()->user()->organization->organization_name }}
-                </h1>
-                <p class="text-xl text-gray-600">Hiệu suất tổ chức của bạn</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border border-purple-100 card-hover">
-                    <div class="text-7xl font-bold text-purple-700 mb-4">{{ $metrics['total_opportunities'] ?? 0 }}</div>
-                    <div class="text-2xl text-gray-700 font-semibold">Cơ Hội Đã Đăng</div>
-                </div>
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border border-green-100 card-hover">
-                    <div class="text-7xl font-bold text-green-600 mb-4">{{ $metrics['total_applications'] ?? 0 }}</div>
-                    <div class="text-2xl text-gray-700 font-semibold">Đơn Ứng Tuyển</div>
-                </div>
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border border-blue-100 card-hover">
-                    <div class="text-7xl font-bold text-blue-600 mb-4">{{ $metrics['total_volunteer_hours'] ?? 0 }}</div>
-                    <div class="text-2xl text-gray-700 font-semibold">Giờ Tình Nguyện</div>
+        <div class="mt-12 relative rounded-3xl overflow-hidden shadow-2xl">
+            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600"></div>
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+            <div class="relative p-10 md:p-14 text-center text-white">
+                <i class="fas fa-quote-left text-4xl text-purple-300 mb-4 inline-block opacity-50"></i>
+                <p class="text-2xl md:text-3xl font-bold italic leading-relaxed mb-4">
+                    "Bạn không thay đổi thế giới trong một ngày, nhưng bạn thay đổi nó bằng mỗi giờ bạn cho đi."
+                </p>
+                <div class="flex items-center justify-center gap-2 opacity-90">
+                    <span class="h-0.5 w-8 bg-white"></span>
+                    <span class="text-sm font-semibold uppercase tracking-widest">VolunteerConnect</span>
+                    <span class="h-0.5 w-8 bg-white"></span>
                 </div>
             </div>
-
-            <!-- Organization Chart -->
-            <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
-                <h3 class="text-2xl font-bold text-purple-800 mb-6 text-center">
-                    <i class="fas fa-chart-line mr-3"></i> Giờ Tình Nguyện Của Tổ Chức (6 tháng)
-                </h3>
-                <div class="chart-container">
-                    <canvas id="orgHoursChart"></canvas>
-                </div>
-            </div>
-
-        <!-- VOLUNTEER DASHBOARD -->
-        @else
-            <div class="text-center mb-12">
-                <h1 class="text-5xl font-bold text-purple-800 mb-4">
-                    <i class="fas fa-heart text-pink-600"></i> Hành Trình Của Bạn, {{ auth()->user()->first_name }}!
-                </h1>
-                <p class="text-xl text-gray-600">Mỗi giờ bạn cống hiến đều thay đổi thế giới</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border border-purple-100 card-hover">
-                    <div class="text-7xl font-bold text-purple-700 mb-4">{{ $metrics['total_volunteer_hours'] ?? 0 }}</div>
-                    <div class="text-2xl text-gray-700 font-semibold">Giờ Tình Nguyện</div>
-                </div>
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border border-green-100 card-hover">
-                    <div class="text-7xl font-bold text-green-600 mb-4">{{ $metrics['accepted_applications'] ?? 0 }}</div>
-                    <div class="text-2xl text-gray-700 font-semibold">Đơn Thành Công</div>
-                </div>
-                <div class="bg-white rounded-3xl shadow-2xl p-10 text-center border border-blue-100 card-hover">
-                    <div class="text-7xl font-bold text-blue-600 mb-4">{{ $metrics['total_applications'] ?? 0 }}</div>
-                    <div class="text-2xl text-gray-700 font-semibold">Tổng Đơn Gửi</div>
-                </div>
-            </div>
-
-            <!-- Volunteer Chart -->
-            <div class="bg-white rounded-3xl shadow-2xl p-8 border border-purple-100 card-hover">
-                <h3 class="text-2xl font-bold text-purple-800 mb-6 text-center">
-                    <i class="fas fa-trophy mr-3"></i> Hành Trình Giờ Tình Nguyện Của Bạn
-                </h3>
-                <div class="chart-container">
-                    <canvas id="volunteerHoursChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Motivation -->
-            <div class="text-center bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-16 rounded-3xl shadow-2xl mt-12">
-                <p class="text-5xl font-bold italic">"Bạn chính là anh hùng thầm lặng của cộng đồng!"</p>
-                <p class="text-2xl mt-6 opacity-90">— VolunteerConnect Team</p>
-            </div>
-        @endif
+        </div>
 
     </div>
-</div>
+@endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Dữ liệu từ Controller
-    const userTrend = @json($userTrend ?? []);
-    const monthlyHours = @json($monthlyHours ?? []);
-    const volunteerMonthly = @json($volunteerMonthly ?? []); // Bạn cần thêm ở Controller
-    const orgMonthly = @json($orgMonthly ?? []); // Bạn cần thêm ở Controller
+    document.addEventListener('DOMContentLoaded', () => {
+        // === BIỂU ĐỒ LINE: GIỜ THEO THỜI GIAN ===
+        const ctxHours = document.getElementById('hoursChart').getContext('2d');
+        
+        // Tạo gradient cho line chart
+        const gradientHours = ctxHours.createLinearGradient(0, 0, 0, 400);
+        gradientHours.addColorStop(0, 'rgba(139, 92, 246, 0.5)'); // Purple
+        gradientHours.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
 
-    // ADMIN CHARTS
-    @if(auth()->user()->user_type === 'Admin')
-        new Chart(document.getElementById('userTrendChart'), {
+        new Chart(ctxHours, {
             type: 'line',
             data: {
-                labels: userTrend.map(d => new Date(d.date).toLocaleDateString('vi-VN')),
+                labels: @json($monthlyHours->pluck('month_year')),
                 datasets: [{
-                    label: 'Người dùng mới',
-                    data: userTrend.map(d => d.count),
+                    label: 'Giờ đóng góp',
+                    data: @json($monthlyHours->pluck('total_hours')),
                     borderColor: '#8b5cf6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    tension: 0.4,
+                    backgroundColor: gradientHours,
+                    tension: 0.4, // Đường cong mềm mại
                     fill: true,
-                    pointRadius: 6
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-
-        new Chart(document.getElementById('monthlyHoursChart'), {
-            type: 'bar',
-            data: {
-                labels: monthlyHours.map(m => `${m.month}/${m.year}`),
-                datasets: [{
-                    label: 'Tổng giờ',
-                    data: monthlyHours.map(m => m.total_hours),
-                    backgroundColor: '#8b5cf6',
-                    borderRadius: 8
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-    @endif
-
-    // ORGANIZATION CHART
-    @if(auth()->user()->user_type === 'Organization')
-        new Chart(document.getElementById('orgHoursChart'), {
-            type: 'line',
-            data: {
-                labels: orgMonthly.map(m => `${m.month}/${m.year}`),
-                datasets: [{
-                    label: 'Giờ tình nguyện',
-                    data: orgMonthly.map(m => m.total_hours),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 8
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-    @endif
-
-    // VOLUNTEER CHART
-    @if(auth()->user()->user_type === 'Volunteer')
-        new Chart(document.getElementById('volunteerHoursChart'), {
-            type: 'line',
-            data: {
-                labels: volunteerMonthly.map(m => `${m.month}/${m.year}`),
-                datasets: [{
-                    label: 'Giờ của bạn',
-                    data: volunteerMonthly.map(m => m.total_hours),
-                    borderColor: '#ec4899',
-                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 8,
-                    pointBackgroundColor: '#ec4899'
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#8b5cf6',
+                    pointBorderWidth: 3
                 }]
             },
             options: {
                 responsive: true,
-                plugins: {
+                maintainAspectRatio: false,
+                plugins: { 
                     legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => ctx.raw + ' giờ' } }
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#1f2937',
+                        bodyColor: '#8b5cf6',
+                        bodyFont: { weight: 'bold' },
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: '#f3f4f6', borderDash: [5, 5] },
+                        ticks: { font: { family: "'Inter', sans-serif" } }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { font: { family: "'Inter', sans-serif" } }
+                    }
                 }
             }
         });
-    @endif
+
+        // === BIỂU ĐỒ DONUT: LĨNH VỰC YÊU THÍCH ===
+        const fieldLabels = @json($fieldLabels);
+        const fieldValues = @json($fieldValues);
+        
+        // Kiểm tra nếu không có dữ liệu thì hiển thị dummy
+        const hasData = fieldValues.length > 0 && fieldValues.some(val => val > 0);
+        
+        const chartData = hasData ? {
+            labels: fieldLabels,
+            datasets: [{
+                data: fieldValues,
+                backgroundColor: [
+                    '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
+                    '#3b82f6', '#ef4444', '#a855f7', '#fb923c'
+                ],
+                borderColor: '#fff',
+                borderWidth: 2,
+                hoverOffset: 10
+            }]
+        } : {
+            labels: ['Chưa có dữ liệu'],
+            datasets: [{
+                data: [1],
+                backgroundColor: ['#e5e7eb'],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        };
+
+        new Chart(document.getElementById('fieldChart'), {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%', // Làm vòng tròn mỏng hơn
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { 
+                            padding: 20, 
+                            usePointStyle: true, 
+                            pointStyle: 'circle',
+                            font: { size: 12, family: "'Inter', sans-serif" } 
+                        }
+                    },
+                    tooltip: {
+                        enabled: hasData, // Tắt tooltip nếu không có data
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        bodyColor: '#1f2937',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: ctx => {
+                                const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                                const percent = Math.round((ctx.parsed / total) * 100);
+                                return ` ${ctx.label}: ${ctx.parsed} (${percent}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
 </script>
 @endpush
-@endsection

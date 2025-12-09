@@ -141,6 +141,9 @@ Route::get('/campaigns/{id}', [DonationController::class, 'show'])->name('campai
 Route::get('/map', [MapController::class, 'index'])->name('map.index');
 Route::get('/api/map/search', [MapController::class, 'search'])->name('api.map.search');
 
+
+
+
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
@@ -204,9 +207,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/public-profile/{id}', [UserController::class, 'publicProfile'])->name('public-profile');
 
     // Password Change
-    Route::get('/change-password', [UserController::class, 'showChangePasswordForm'])->name('user.change-password');
-    Route::post('/change-password', [UserController::class, 'changePassword'])->name('user.change-password.update');
-
+    // Route::get('/change-password', [UserController::class, 'showChangePasswordForm'])->name('user.change-password');
+    Route::post('/user/send-reset-link', [UserController::class, 'sendResetLinkEmail'])
+        ->name('user.send-reset-link');
+    // Route::post('/change-password', [UserController::class, 'changePassword'])->name('user.change-password.update');
+    // Route::post('/user/send-verification-code', [UserController::class, 'sendVerificationCode'])->name('user.send-verification-code');
     // User Deactivation
     Route::post('/user/deactivate', [UserController::class, 'deactivate'])->name('user.deactivate');
 
@@ -292,12 +297,22 @@ Route::middleware('auth')->group(function () {
     // Comments
     Route::post('/comments', [PostController::class, 'storeComment'])->name('comments.store');
     Route::delete('/comments/{id}', [PostController::class, 'deleteComment'])->name('comments.destroy');
-
+    Route::post('/comments/{id}/like', [PostController::class, 'toggleCommentLike'])->name('comments.like');
     // Bookmarks
     Route::get('/bookmarks', [PostController::class, 'bookmarks'])->name('bookmarks');
     Route::put('/bookmarks/{id}/notes', [PostController::class, 'updateBookmarkNotes'])->name('bookmarks.update-notes');
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| Verification Routes 
+|--------------------------------------------------------------------------
+*/
+Route::get('/email/verify/{token}', [AuthController::class, 'verifyEmail'])->name('verify-email');
+
+// Route gửi lại email xác thực (nếu cần)
+Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])->name('email.resend');
 /*
 |--------------------------------------------------------------------------
 | VOLUNTEER ROUTES
@@ -335,8 +350,8 @@ Route::middleware(['auth', 'volunteer'])->prefix('volunteer')->name('volunteer.'
     // Rút đơn
     Route::post('/applications/{application}/withdraw', [ApplicationController::class, 'withdraw'])
         ->name('applications.withdraw');
-
-    // Volunteer Activities
+    Route::post('/contact', [ApplicationController::class, 'storeContact'])
+        ->name('contact.store');
     Route::get('/activities', [VolunteerActivityController::class, 'index'])->name('activities.index');
     Route::get('/activities/create', [VolunteerActivityController::class, 'create'])->name('activities.create');
     Route::post('/activities', [VolunteerActivityController::class, 'store'])->name('activities.store');
@@ -755,7 +770,7 @@ Route::middleware('auth')->group(function () {
     // 1. Route tạo thanh toán
     // Lưu ý: Đổi tên route thành 'donation.createMomo' để khớp với View show.blade.php
     Route::post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createPayment');
-    
+
     // 2. Route Fake Gateway (Nếu dùng giả lập)
     Route::get('/payment/fake-momo', [DonationController::class, 'fakeMomoGateway'])->name('payment.fakeMomo');
 });

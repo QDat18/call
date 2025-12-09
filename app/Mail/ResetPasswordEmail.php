@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
@@ -16,17 +17,17 @@ class ResetPasswordEmail extends Mailable
     public function __construct(User $user, $token)
     {
         $this->user = $user;
-        // SỬA: Dùng route name thay vì URL trực tiếp
-        $this->resetUrl = url('/reset-password/' . $token);
+        // Thêm tham số email vào URL
+        $this->resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
     }
 
     public function build()
     {
         return $this->subject('Đặt Lại Mật Khẩu - Volunteer Connect')
-                    ->view('emails.reset-password') // Đảm bảo view này tồn tại
-                    ->with([
-                        'user' => $this->user,
-                        'resetUrl' => $this->resetUrl
-                    ]);
+            ->view('emails.reset-password') // Đảm bảo view này tồn tại
+            ->with([
+                'user' => $this->user,
+                'resetUrl' => $this->resetUrl
+            ]);
     }
 }

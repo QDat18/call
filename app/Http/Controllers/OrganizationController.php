@@ -25,26 +25,27 @@ class OrganizationController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Organization::with(['user', 'opportunities'])
+        $query = Organization::with(['user']) // Eager load user để lấy avatar
             ->withCount(['opportunities as active_opportunities_count' => function ($query) {
                 $query->where('status', 'Active');
             }])
             ->where('verification_status', 'Verified');
 
-        // Search filter
-        if ($request->has('search') && $request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('organization_name', 'like', '%' . $request->search . '%')
-                    ->orWhere('description', 'like', '%' . $request->search . '%');
+        // 1. Search Filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('organization_name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
 
-        // Type filter
-        if ($request->has('type') && $request->type) {
+        // 2. Type Filter
+        if ($request->filled('type')) {
             $query->where('organization_type', $request->type);
         }
 
-        // Sort
+        // 3. Sort
         $sort = $request->get('sort', 'rating');
         switch ($sort) {
             case 'newest':
@@ -63,6 +64,13 @@ class OrganizationController extends Controller
         $organizations = $query->paginate(12);
         $organizationTypes = ['NGO', 'NPO', 'Charity', 'School', 'Hospital', 'Community Group'];
 
+        // --- LOGIC AJAX CHUẨN SEO ---
+        // Nếu là Ajax, chỉ trả về view danh sách (Partial)
+        if ($request->ajax()) {
+            return view('organizations.partials.list', compact('organizations'))->render();
+        }
+
+        // Nếu không, trả về view đầy đủ (Layout + Header + Footer)
         return view('organizations.index', compact('organizations', 'organizationTypes'));
     }
 

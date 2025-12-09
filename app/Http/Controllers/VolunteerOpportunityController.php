@@ -22,8 +22,19 @@ class VolunteerOpportunityController extends Controller
         $query = VolunteerOpportunity::with(['organization.user', 'category'])
             ->where('status', 'Active');
 
+
+        if ($request->has('q') && $request->q != '') {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('title', 'like', '%' . $q . '%')
+                    ->orWhere('description', 'like', '%' . $q . '%')
+                    ->orWhereHas('organization', function ($org) use ($q) {
+                        $org->where('organization_name', 'like', '%' . $q . '%');
+                    });
+            });
+        }
         // Filter by category
-        if ($request->has('category') && $request->category) {
+        if ($request->has('category') && $request->category != '') {
             $query->where('category_id', $request->category);
         }
 
@@ -45,9 +56,9 @@ class VolunteerOpportunityController extends Controller
         // Search by title or description
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'LIKE', "%{$search}%")
-                  ->orWhere('description', 'LIKE', "%{$search}%");
+                    ->orWhere('description', 'LIKE', "%{$search}%");
             });
         }
 
@@ -67,11 +78,13 @@ class VolunteerOpportunityController extends Controller
                 $query->orderBy('created_at', 'desc');
         }
 
-        $opportunities = $query->paginate(12);
-        $categories = Category::where('is_active', true)
-            ->orderBy('display_order')
-            ->get();
-
+        $opportunities = $query->where('status', 'Active')
+            ->orderBy('created_at', 'desc')
+            ->paginate(9);
+        $categories = Category::all();
+        if ($request->ajax()) {
+            return view('opportunities.partials.list', compact('opportunities'))->render();
+        }
         return view('opportunities.index', compact('opportunities', 'categories'));
     }
 
@@ -109,7 +122,7 @@ class VolunteerOpportunityController extends Controller
                 ->exists();
         }
         $reviews = $opportunity->reviews()->latest()->take(10)->get();
-        return view('opportunities.show', compact('opportunity', 'similarOpportunities', 'hasApplied', 'isFavorited','reviews'));
+        return view('opportunities.show', compact('opportunity', 'similarOpportunities', 'hasApplied', 'isFavorited', 'reviews'));
     }
 
     /**
@@ -212,7 +225,7 @@ class VolunteerOpportunityController extends Controller
     public function edit($id)
     {
         $opportunity = VolunteerOpportunity::findOrFail($id);
-        
+
         $this->authorize('update', $opportunity);
 
         $categories = Category::where('is_active', true)
@@ -228,7 +241,7 @@ class VolunteerOpportunityController extends Controller
     public function update(Request $request, $id)
     {
         $opportunity = VolunteerOpportunity::findOrFail($id);
-        
+
         $this->authorize('update', $opportunity);
 
         $validator = Validator::make($request->all(), [
@@ -274,7 +287,7 @@ class VolunteerOpportunityController extends Controller
     public function destroy($id)
     {
         $opportunity = VolunteerOpportunity::findOrFail($id);
-        
+
         $this->authorize('delete', $opportunity);
 
         try {
@@ -294,7 +307,7 @@ class VolunteerOpportunityController extends Controller
     public function myOpportunities()
     {
         $user = Auth::user();
-        
+
         if (!$user->isOrganization()) {
             abort(403, 'Unauthorized action.');
         }
@@ -314,7 +327,7 @@ class VolunteerOpportunityController extends Controller
     public function changeStatus(Request $request, $id)
     {
         $opportunity = VolunteerOpportunity::findOrFail($id);
-        
+
         $this->authorize('update', $opportunity);
 
         $validator = Validator::make($request->all(), [
@@ -350,7 +363,7 @@ class VolunteerOpportunityController extends Controller
         $opportunities = VolunteerOpportunity::with(['organization.user', 'category'])
             ->where('status', 'Active')
             ->where('application_deadline', '>', now())
-            ->when($user->city, function($query) use ($user) {
+            ->when($user->city, function ($query) use ($user) {
                 $query->where('location', 'LIKE', "%{$user->city}%");
             })
             ->latest()

@@ -30,94 +30,22 @@ class DashboardController extends Controller
         $user = Auth::user();
         $profile = $user->volunteerProfile;
 
+        // 1. Thống kê
         $stats = [
             'total_hours' => $profile->total_volunteer_hours ?? 0,
             'rating' => $profile->volunteer_rating ?? 0,
             'applications' => $user->applications()->count(),
-            'accepted' => $user->applications()->where('status', 'Accepted')->count(),
-            'pending' => $user->applications()->where('status', 'Pending')->count(),
+            'accepted_applications' => $user->applications()->where('status', 'Accepted')->count(),
+            'pending_applications' => $user->applications()->whereIn('status', ['Pending', 'Under Review'])->count(),
             'completed_activities' => $user->activities()->where('status', 'Verified')->count(),
         ];
 
+        // 2. Danh sách phụ
         $recentApplications = $user->applications()
             ->with(['opportunity.organization'])
             ->latest()
             ->take(5)
             ->get();
-
-        // === GỢI Ý CƠ HỘI CÁ NHÂN HÓA - SIÊU THÔNG MINH ===
-        $recommendations = VolunteerOpportunity::with(['organization', 'category'])
-            ->where('status', 'Active')
-            ->where('application_deadline', '>', now())
-            ->whereRaw('(volunteers_needed - volunteers_registered) > 0')
-            ->where(function ($query) use ($user, $profile) {
-                $query->when($user->city, function ($q) use ($user) {
-                    $q->orWhere('location', 'LIKE', "%{$user->city}%");
-                });
-
-                // Ưu tiên kỹ năng khớp
-                if ($profile?->skills) {
-                    $skills = collect(explode(',', $profile->skills))->map('trim')->filter();
-                    foreach ($skills as $skill) {
-                        $query->orWhere('required_skills', 'LIKE', "%{$skill}%");
-                    }
-                }
-
-                // Ưu tiên danh mục yêu thích
-                if ($profile?->interests) {
-                    $interestNames = collect(explode(',', $profile->interests))->map('trim')->filter();
-                    $categoryIds = \App\Models\Category::whereIn('category_name', $interestNames)
-                        ->pluck('category_id');
-
-                    if ($categoryIds->isNotEmpty()) {
-                        $query->orWhereIn('category_id', $categoryIds);
-                    }
-                }
-            })
-            ->get()
-            ->map(function ($opp) use ($user, $profile) {
-                $score = 30; // điểm cơ bản
-
-                // Địa điểm khớp +15
-                if ($user->city && str_contains(strtolower($opp->location), strtolower($user->city))) {
-                    $score += 15;
-                }
-
-                // Kỹ năng khớp: mỗi kỹ năng +8 (tối đa +40)
-                if ($profile?->skills) {
-                    $userSkills = collect(explode(',', $profile->skills))->map('trim')->map('strtolower');
-                    $oppSkills = collect(preg_split('/[,;]/', $opp->skills_required ?? ''))
-                        ->map('trim')->map('strtolower')->filter();
-
-                    $matchedSkills = $userSkills->intersect($oppSkills)->count();
-                    $score += min($matchedSkills * 8, 40);
-                }
-
-                // Danh mục yêu thích +25
-                if ($profile?->interests && $opp->category) {
-                    $interests = collect(explode(',', $profile->interests))->map('trim');
-                    if ($interests->contains($opp->category->category_name)) {
-                        $score += 25;
-                    }
-                }
-
-                // Đã từng tương tác với tổ chức này +10
-                if ($user->applications()->whereHas('opportunity', fn($q) => $q->where('org_id', $opp->org_id))->exists()) {
-                    $score += 10;
-                }
-
-                // Ưu tiên cơ hội mới +5
-                if ($opp->created_at->gt(now()->subWeek())) {
-                    $score += 5;
-                }
-
-                $opp->match_score = min(98, $score); // không cho 100%
-                $opp->match_reason = $score >= 80 ? 'Rất phù hợp' : ($score >= 60 ? 'Khá phù hợp' : 'Có thể phù hợp');
-
-                return $opp;
-            })
-            ->sortByDesc('match_score')
-            ->take(6);
 
         $upcomingActivities = $user->applications()
             ->where('status', 'Accepted')
@@ -128,6 +56,7 @@ class DashboardController extends Controller
             ->with(['opportunity'])
             ->take(5)
             ->get();
+
         $activityHistory = $user->activities()
             ->where('status', 'Verified')
             ->with(['opportunity', 'organization'])
@@ -135,20 +64,96 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        // Chart data - Hours by month
-        $chartData = [
-            'labels' => collect(range(5, 0))->map(function ($months) {
-                return now()->subMonths($months)->format('M');
-            })->toArray(),
-            'data' => collect(range(5, 0))->map(function ($months) use ($user) {
-                return $user->activities()
-                    ->whereYear('activity_date', now()->subMonths($months)->year)
-                    ->whereMonth('activity_date', now()->subMonths($months)->month)
-                    ->where('status', 'Verified')
-                    ->sum('hours_worked');
-            })->toArray(),
-        ];
-        return view('volunteer.dashboard', compact('user', 'stats', 'recentApplications', 'recommendations', 'upcomingActivities', 'activityHistory', 'chartData'));
+        // 3. Gợi ý cơ hội (Logic thông minh giữ nguyên)
+        $recommendations = VolunteerOpportunity::with(['organization', 'category'])
+            ->where('status', 'Active')
+            ->where('application_deadline', '>', now())
+            ->whereRaw('(volunteers_needed - volunteers_registered) > 0')
+            ->where(function ($query) use ($user, $profile) {
+                $query->when($user->city, function ($q) use ($user) {
+                    $q->orWhere('location', 'LIKE', "%{$user->city}%");
+                });
+                if ($profile?->skills) {
+                    $skills = collect(explode(',', $profile->skills ?? ''))->map('trim')->filter();
+                    foreach ($skills as $skill) {
+                        $query->orWhere('required_skills', 'LIKE', "%{$skill}%");
+                    }
+                }
+                if ($profile?->interests) {
+                    $interestNames = collect(explode(',', $profile->interests ?? ''))->map('trim')->filter();
+                    $categoryIds = \App\Models\Category::whereIn('category_name', $interestNames)->pluck('category_id');
+                    if ($categoryIds->isNotEmpty()) {
+                        $query->orWhereIn('category_id', $categoryIds);
+                    }
+                }
+            })
+            ->get()
+            ->map(function ($opp) use ($user, $profile) {
+                $score = 30;
+                if ($user->city && str_contains(strtolower($opp->location), strtolower($user->city))) $score += 15;
+                $opp->match_score = min(98, $score);
+                return $opp;
+            })
+            ->sortByDesc('match_score')
+            ->take(6);
+
+        // 4. Biểu đồ Hoạt động (Line Chart)
+        $chartLabels = [];
+        $chartValues = [];
+        $activityData = $user->activities()
+            ->select(
+                DB::raw("DATE_FORMAT(activity_date, '%Y-%m') as month"),
+                DB::raw("SUM(hours_worked) as total_hours")
+            )
+            ->where('activity_date', '>=', now()->subMonths(6))
+            ->where('status', 'Verified')
+            ->groupBy('month')
+            ->orderBy('month', 'ASC')
+            ->get();
+
+        foreach ($activityData as $data) {
+            $chartLabels[] = \Carbon\Carbon::createFromFormat('Y-m', $data->month)->format('M Y');
+            $chartValues[] = (float) $data->total_hours;
+        }
+
+        // 5. Biểu đồ Lĩnh vực (Donut Chart) - SỬA LẠI LOGIC TẠI ĐÂY
+        // Thay vì lấy Favorite, ta lấy từ Applications đã được Accepted
+        $fieldData = \App\Models\Application::where('applications.volunteer_id', $user->user_id)
+            ->where('applications.status', 'Accepted') // Chỉ tính đơn đã tham gia
+            ->join('volunteer_opportunities', 'applications.opportunity_id', '=', 'volunteer_opportunities.opportunity_id')
+            ->join('categories', 'volunteer_opportunities.category_id', '=', 'categories.category_id')
+            ->select('categories.category_name', DB::raw('count(*) as total'))
+            ->groupBy('categories.category_name')
+            ->orderByDesc('total')
+            ->get();
+
+        // Nếu không có dữ liệu, trả về mảng rỗng để View hiển thị "Chưa có dữ liệu"
+        // (Bỏ đoạn code tự động lấy dữ liệu toàn hệ thống gây hiểu lầm)
+        $fieldLabels = $fieldData->pluck('category_name')->toArray();
+        $fieldValues = $fieldData->pluck('total')->toArray();
+
+        // 6. Thành tựu
+        $achievements = [];
+        if (($stats['total_hours'] ?? 0) >= 10) $achievements[] = ['icon' => '🥉', 'title' => 'Đồng (10+ giờ)'];
+        if (($stats['total_hours'] ?? 0) >= 50) $achievements[] = ['icon' => '🥈', 'title' => 'Bạc (50+ giờ)'];
+        if (($stats['accepted_applications'] ?? 0) >= 5) $achievements[] = ['icon' => '🔥', 'title' => 'Năng nổ'];
+        if (empty($achievements)) {
+            $achievements[] = ['icon' => '🌱', 'title' => 'Người mới'];
+        }
+
+        return view('volunteer.dashboard', compact(
+            'user',
+            'stats',
+            'recentApplications',
+            'upcomingActivities',
+            'activityHistory',
+            'recommendations',
+            'achievements',
+            'chartLabels',
+            'chartValues',
+            'fieldLabels',
+            'fieldValues'
+        ));
     }
     public function organizationDashboard()
     {

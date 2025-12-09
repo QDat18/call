@@ -10,19 +10,46 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
+
 class ApplicationController extends Controller
 {
     /**
      * Show the form for creating a new application
      */
 
+    // Trong App\Http\Controllers\ApplicationController.php
+
     public function myApplications(Request $request)
     {
-        $applications = Auth::user()->applications()
-            ->with('opportunity.organization')
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->latest('applied_date')
-            ->paginate(10);
+        // 1. Khởi tạo Query
+        $query = Auth::user()->applications()
+            ->with('opportunity.organization'); // Load quan hệ để hiển thị
+
+        // 2. Logic Tìm kiếm (Search)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('opportunity', function ($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%") // Tìm theo tên công việc
+                    ->orWhereHas('organization', function ($orgQ) use ($search) {
+                        $orgQ->where('organization_name', 'LIKE', "%{$search}%"); // Hoặc tìm theo tên tổ chức
+                    });
+            });
+        }
+
+        // 3. Logic Lọc Trạng thái (Filter Status)
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // 4. Logic Sắp xếp (Sort)
+        if ($request->sort == 'oldest') {
+            $query->orderBy('applied_date', 'asc'); // Cũ nhất trước
+        } else {
+            $query->orderBy('applied_date', 'desc'); // Mới nhất trước (Mặc định)
+        }
+
+        // 5. Phân trang (Paginate) + Giữ lại tham số trên URL (withQueryString)
+        $applications = $query->paginate(10)->withQueryString();
 
         return view('volunteer.applications.index', compact('applications'));
     }
@@ -116,6 +143,7 @@ class ApplicationController extends Controller
             return back()->with('error', 'Có lỗi xảy ra khi gửi đơn: ' . $e->getMessage())->withInput();
         }
     }
+
 
     // 4. Xem chi tiết đơn
     public function show(Application $application)
@@ -380,6 +408,41 @@ class ApplicationController extends Controller
                 'success' => false,
                 'message' => 'Failed to save notes'
             ], 500);
+        }
+    }
+    // Thêm vào cuối file ApplicationController.php (trước dấu } đóng class)
+
+    public function storeContact(\Illuminate\Http\Request $request)
+    {
+        // 1. Validate
+        $request->validate([
+            'message' => 'required|string|min:5',
+            'org_id'  => 'required',
+        ]);
+
+        // 2. Logic gửi thông báo (Notification)
+        try {
+            // Tìm tổ chức để lấy user_id chủ sở hữu
+            $organization = \App\Models\Organization::find($request->org_id);
+
+            if ($organization) {
+                $volunteerName = \Illuminate\Support\Facades\Auth::user()->first_name;
+
+                \App\Models\Notification::create([
+                    'user_id'           => $organization->user_id, // Gửi cho chủ tổ chức
+                    'notification_type' => 'Message',
+                    'title'             => 'Tin nhắn từ ứng viên 💬',
+                    'content'           => "$volunteerName: " . $request->message,
+                    'related_id'        => \Illuminate\Support\Facades\Auth::id(),
+                    'related_type'      => 'volunteer_contact',
+                    'is_read'           => false,
+                    'created_at'        => now(),
+                ]);
+            }
+
+            return back()->with('success', 'Đã gửi tin nhắn thành công!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Lỗi gửi tin nhắn: ' . $e->getMessage());
         }
     }
 }
