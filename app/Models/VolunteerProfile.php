@@ -32,8 +32,8 @@ class VolunteerProfile extends Model
     ];
 
     protected $casts = [
-        // 'skills' => 'array',      <-- XÓA DÒNG NÀY
-        // 'interests' => 'array',   <-- XÓA DÒNG NÀY
+        'skills' => 'array',     
+        'interests' => 'array',
         'total_volunteer_hours' => 'integer',
         'volunteer_rating' => 'decimal:2',
         'created_at' => 'datetime',

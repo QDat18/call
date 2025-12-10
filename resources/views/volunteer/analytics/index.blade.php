@@ -92,7 +92,7 @@
             <div class="relative p-10 md:p-14 text-center text-white">
                 <i class="fas fa-quote-left text-4xl text-purple-300 mb-4 inline-block opacity-50"></i>
                 <p class="text-2xl md:text-3xl font-bold italic leading-relaxed mb-4">
-                    "Bạn không thay đổi thế giới trong một ngày, nhưng bạn thay đổi nó bằng mỗi giờ bạn cho đi."
+                    "Tôi yêu Hoa Sơn Quý. Hoa Sơn Quý number 1 mãi trong lòng chúng tôi"
                 </p>
                 <div class="flex items-center justify-center gap-2 opacity-90">
                     <span class="h-0.5 w-8 bg-white"></span>

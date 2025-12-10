@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "16b6ffedb31a034dba1188e6cfc76da4",
+    "content-hash": "2633916d52d2173b28188e7a8d1bacc9",
     "packages": [
         {
             "name": "brick/math",
@@ -3193,6 +3193,53 @@
                 "source": "https://github.com/nette/utils/tree/v4.0.8"
             },
             "time": "2025-08-06T21:43:34+00:00"
+        },
+        {
+            "name": "ngankt2/vn-location",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ngankt2/vn-location",
+                "reference": "ce6b1430f3ba88f1aee2e11691128cf4de7c8127"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ngankt2/vn-location/zipball/ce6b1430f3ba88f1aee2e11691128cf4de7c8127",
+                "reference": "ce6b1430f3ba88f1aee2e11691128cf4de7c8127",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Ngankt2\\VNLocation\\VnLocationProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Ngankt2\\VNLocation\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "ngannv",
+                    "email": "ngankt2@gmail.com"
+                },
+                {
+                    "name": "CodeZiTeam",
+                    "email": "codezi.pro@gmail.com"
+                }
+            ],
+            "description": "Tỉnh thành phường xã của Việt Nam (2 cấp), cập nhật theo thông tin mới từ ngày 01/07/2025",
+            "time": "2025-07-12T07:04:20+00:00"
         },
         {
             "name": "nikic/php-parser",

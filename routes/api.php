@@ -26,6 +26,9 @@ use App\Http\Controllers\OpportunityController;
 use App\Http\Controllers\OrganizationAnalyticsController;
 use App\Http\Controllers\ConnectionController; // NEW: Connections/Friends
 
+use App\Models\Province;
+use App\Models\Ward;
+use App\Models\VnLocation;
 /*
 |--------------------------------------------------------------------------
 | Public Routes (Không cần đăng nhập)

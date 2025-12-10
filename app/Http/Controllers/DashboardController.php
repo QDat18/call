@@ -74,13 +74,16 @@ class DashboardController extends Controller
                     $q->orWhere('location', 'LIKE', "%{$user->city}%");
                 });
                 if ($profile?->skills) {
-                    $skills = collect(explode(',', $profile->skills ?? ''))->map('trim')->filter();
+                    $skills = collect($profile->skills ?? [])->map(fn($s) => trim($s))->filter();
+
                     foreach ($skills as $skill) {
                         $query->orWhere('required_skills', 'LIKE', "%{$skill}%");
                     }
                 }
                 if ($profile?->interests) {
-                    $interestNames = collect(explode(',', $profile->interests ?? ''))->map('trim')->filter();
+                    $interestNames = collect($profile->interests ?? [])
+                        ->map(fn($i) => trim($i))
+                        ->filter();
                     $categoryIds = \App\Models\Category::whereIn('category_name', $interestNames)->pluck('category_id');
                     if ($categoryIds->isNotEmpty()) {
                         $query->orWhereIn('category_id', $categoryIds);

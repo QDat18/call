@@ -53,7 +53,11 @@ class VolunteerActivity extends Model
         return $this->belongsTo(Organization::class, 'org_id', 'org_id');
     }
 
-    public function verifier(): BelongsTo
+    /**
+     * SỬA LỖI TẠI ĐÂY:
+     * Đổi tên từ 'verifier' thành 'verifiedBy' để khớp với Controller gọi ->with('verifiedBy')
+     */
+    public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by', 'user_id');
     }
@@ -104,5 +108,4 @@ class VolunteerActivity extends Model
         $daysDiff = Carbon::today()->diffInDays($this->activity_date, false);
         return $daysDiff >= -7 && $daysDiff <= 0;
     }
-        
 }

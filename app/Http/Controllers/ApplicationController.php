@@ -158,6 +158,18 @@ class ApplicationController extends Controller
 
         return view('volunteer.applications.show', compact('application'));
     }
+    public function showOrganizationApplication($id)
+    {
+        $application = Application::with(['volunteer.volunteerProfile', 'opportunity'])->findOrFail($id);
+
+        if (Auth::user()->organization->org_id !== $application->opportunity->org_id) {
+            abort(403);
+        }
+
+        return view('organization.applications.show', compact('application'));
+    }
+
+
 
     // 5. Rút đơn
     public function withdraw(Application $application)
@@ -235,6 +247,85 @@ class ApplicationController extends Controller
         ];
 
         return view('organization.applications.index', compact('applications', 'opportunities', 'stats'));
+    }
+
+    /**
+     * Mark application as Under Review
+     */
+    public function review(Request $request, $id)
+    {
+        return $this->updateApplicationStatus($id, 'Under Review');
+    }
+
+    /**
+     * Accept application
+     */
+    public function accept(Request $request, $id)
+    {
+        return $this->updateApplicationStatus($id, 'Accepted', $request->input('notes'));
+    }
+
+    /**
+     * Reject application
+     */
+    public function reject(Request $request, $id)
+    {
+        // Kiểm tra lý do nếu cần thiết
+        if (!$request->input('reason')) {
+            return response()->json(['success' => false, 'message' => 'Reason is required'], 422);
+        }
+        return $this->updateApplicationStatus($id, 'Rejected', $request->input('reason'));
+    }
+
+    /**
+     * Hàm dùng chung để xử lý cập nhật trạng thái (Private helper)
+     */
+    private function updateApplicationStatus($id, $status, $note = null)
+    {
+        $user = Auth::user();
+        if (!$user->isOrganization()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $application = Application::findOrFail($id);
+
+            // Kiểm tra quyền sở hữu
+            if ($application->opportunity->org_id !== $user->organization->org_id) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
+
+            $updateData = [
+                'status' => $status,
+                'reviewed_date' => now(),
+            ];
+
+            // Nếu có ghi chú thì cập nhật
+            if ($note) {
+                $updateData['organization_notes'] = $note;
+            }
+
+            $application->update($updateData);
+
+            // Gửi thông báo cho Tình nguyện viên
+            Notification::create([
+                'user_id' => $application->volunteer_id,
+                'notification_type' => 'Application',
+                'title' => 'Application Update 📢',
+                'content' => 'Your application for "' . $application->opportunity->title . '" has been ' . $status,
+                'related_id' => $application->application_id,
+                'related_type' => 'application',
+                'is_read' => false,
+                'created_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Application ' . strtolower($status) . ' successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

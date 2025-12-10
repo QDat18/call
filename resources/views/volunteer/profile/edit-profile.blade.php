@@ -5,6 +5,8 @@
 @push('styles')
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
     <style>
         textarea::-webkit-scrollbar {
             width: 8px;
@@ -14,10 +16,154 @@
             background: #c4b5fd;
             border-radius: 4px;
         }
+
+        .ts-control {
+            padding: 0.75rem 1rem !important;
+            border-radius: 0.5rem !important;
+            border: 1px solid #d1d5db !important;
+            background-color: white !important;
+            min-height: 48px !important;
+        }
+
+        .ts-control:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+            outline: none !important;
+        }
+
+        .ts-wrapper.multi .ts-control>div {
+            display: inline-flex !important;
+        }
+
+        /* Dropdown container */
+        .ts-dropdown {
+            position: absolute !important;
+            z-index: 9999 !important;
+            margin-top: 4px !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 0.5rem !important;
+            background: white !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+            max-height: 300px !important;
+            overflow-y: auto !important;
+        }
+
+        .ts-dropdown .option {
+            padding: 0.75rem 1rem !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+        }
+
+        .ts-dropdown .option:last-child {
+            border-bottom: none !important;
+        }
+
+        .ts-dropdown .option:hover,
+        .ts-dropdown .option.active {
+            background-color: #eef2ff !important;
+            color: #4f46e5 !important;
+        }
+
+        .ts-dropdown .option.selected {
+            background-color: #e0e7ff !important;
+            color: #4338ca !important;
+            font-weight: 500 !important;
+        }
+
+        .ts-dropdown .option .highlight {
+            background-color: #fef3c7 !important;
+            font-weight: 600 !important;
+            color: #92400e !important;
+        }
+
+        .ts-dropdown::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ts-dropdown::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+
+        .ts-dropdown::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        .ts-dropdown::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        .ts-control.disabled,
+        .ts-control[disabled] {
+            background-color: #f9fafb !important;
+            cursor: not-allowed !important;
+            opacity: 0.6 !important;
+        }
+
+        .ts-wrapper.loading .ts-control::after {
+            content: "";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: translateY(-50%) rotate(360deg);
+            }
+        }
+
+        .ts-control input::placeholder {
+            color: #9ca3af !important;
+            font-size: 0.875rem !important;
+        }
+
+        @media (max-width: 640px) {
+            .ts-dropdown {
+                max-height: 200px !important;
+            }
+
+            .ts-dropdown .option {
+                padding: 0.625rem 0.875rem !important;
+                font-size: 0.875rem !important;
+            }
+        }
     </style>
 @endpush
 
 @section('content')
+    @php
+        $currentCity = '';
+        $currentWard = '';
+
+        // Ưu tiên 1: Lấy từ bảng users (nếu bạn đã lưu lúc đăng ký)
+        if ($profile->user->city) {
+            $currentCity = $profile->user->city;
+            $currentWard = $profile->user->ward;
+        }
+        // Ưu tiên 2: Tách từ preferred_location (Ví dụ: "Xã A, Tỉnh B")
+        elseif ($profile->preferred_location) {
+            $parts = explode(',', $profile->preferred_location);
+            if (count($parts) >= 2) {
+                // Phần cuối cùng thường là Tỉnh
+                $currentCity = trim(end($parts));
+                // Phần đầu là Xã (hoặc ghép các phần trước nếu có quận)
+                array_pop($parts);
+                $currentWard = trim(implode(',', $parts));
+            } else {
+                $currentCity = $profile->preferred_location;
+            }
+        }
+    @endphp
     <div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 py-12 px-4">
         <div class="max-w-5xl mx-auto">
 
@@ -51,7 +197,22 @@
                                 </label>
                             </div>
                         </div>
-
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="group">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Họ (Last Name) <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="last_name" value="{{ $profile->user->last_name }}" required
+                                    class="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-200 focus:border-purple-500 outline-none transition"
+                                    placeholder="Nguyễn">
+                            </div>
+                            <div class="group">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Tên (First Name) <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="first_name" value="{{ $profile->user->first_name }}" required
+                                    class="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-200 focus:border-purple-500 outline-none transition"
+                                    placeholder="Văn A">
+                            </div>
+                        </div>
                         <div class="grid md:grid-cols-2 gap-6">
                             <div class="group">
                                 <label class="block text-sm font-bold text-gray-700 mb-2">Nghề nghiệp</label>
@@ -59,11 +220,34 @@
                                     class="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-200 focus:border-purple-500 outline-none transition"
                                     placeholder="VD: Sinh viên">
                             </div>
+
                             <div class="group">
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Nơi ở hiện tại</label>
-                                <input type="text" name="preferred_location" value="{{ $profile->preferred_location }}"
-                                    class="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-200 focus:border-purple-500 outline-none transition"
-                                    placeholder="VD: Hà Nội, Quận Cầu Giấy">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Nơi ở hiện tại (Tỉnh ->
+                                    Xã)</label>
+
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div>
+                                        <select id="city-select" class="tom-select" placeholder="Chọn Tỉnh/Thành phố...">
+                                            <option value="">Chọn Tỉnh/Thành phố</option>
+                                        </select>
+
+                                        <input type="hidden" name="city_name" id="city-name-input">
+                                    </div>
+
+                                    <div>
+                                        <select id="ward-select" class="tom-select" placeholder="Chọn Phường/Xã..."
+                                            disabled>
+                                            <option value="">Chọn Tỉnh trước</option>
+                                        </select>
+
+                                        <input type="hidden" name="ward_name" id="ward-name-input">
+                                    </div>
+                                </div>
+
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Địa chỉ hiện tại: <span
+                                        class="font-medium text-purple-600">{{ $profile->preferred_location ?? 'Chưa cập nhật' }}</span>
+                                </p>
                             </div>
                         </div>
 
@@ -146,11 +330,11 @@
                                 <textarea id="skillsInput" name="skills" rows="3"
                                     class="w-full px-4 py-3 bg-white border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-300 outline-none text-sm">@php
                                         // Giải mã JSON từ DB thành mảng, nếu lỗi thì trả về mảng rỗng
-                                        $skillsArr = json_decode($profile->skills, true);
+                                        $skillsArr = $profile->skills ?? [];
                                         if (!is_array($skillsArr))
                                             $skillsArr = [];
                                     @endphp
-            {{ implode(', ', $skillsArr) }}</textarea>
+                                                    {{ implode(', ', $skillsArr) }}</textarea>
 
                                 @if(isset($autoSkills) && count($autoSkills) > 0)
                                     <div class="mt-3">
@@ -173,11 +357,11 @@
 
                                 <textarea id="interestsInput" name="interests" rows="3"
                                     class="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-300 outline-none text-sm">@php
-                                        $interestsArr = json_decode($profile->interests, true);
+                                        $interestsArr = $profile->interests ?? [];
                                         if (!is_array($interestsArr))
                                             $interestsArr = [];
                                     @endphp
-        {{ implode(', ', $interestsArr) }}</textarea>
+                                                {{ implode(', ', $interestsArr) }}</textarea>
 
                                 @if(isset($autoInterests) && count($autoInterests) > 0)
                                     <div class="mt-3">
@@ -265,6 +449,141 @@
                         Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể kết nối server.' });
                     });
             });
+
+            // ==========================================
+            // CẤU HÌNH DỮ LIỆU MẶC ĐỊNH TỪ SERVER
+            // ==========================================
+            const CURRENT_CITY_NAME = "{{ $currentCity }}";
+            const CURRENT_WARD_NAME = "{{ $currentWard }}";
+
+            const API_PROVINCES = '{{ route('api.locations.provinces') }}';
+            const API_WARDS_TEMPLATE = '{{ route('api.locations.wards', ['provinceCode' => ':code']) }}';
+
+            let cityTom, wardTom;
+
+            document.addEventListener('DOMContentLoaded', function () {
+                // 1. Khởi tạo Tom Select Tỉnh
+                cityTom = new TomSelect('#city-select', {
+                    create: false,
+                    sortField: { field: 'text', direction: 'asc' },
+                    onChange: function (value) {
+                        const input = document.getElementById('city-name-input');
+                        if (value) {
+                            const option = this.options[value];
+                            if (input) input.value = option.text;
+                            loadWards(value);
+                        } else {
+                            if (input) input.value = '';
+                            resetWardSelect();
+                        }
+                    }
+                });
+
+                // 2. Khởi tạo Tom Select Xã
+                wardTom = new TomSelect('#ward-select', {
+                    create: false,
+                    sortField: { field: 'text', direction: 'asc' },
+                    onChange: function (value) {
+                        const input = document.getElementById('ward-name-input');
+                        if (value) {
+                            const option = this.options[value];
+                            if (input) input.value = option.text;
+                        } else {
+                            if (input) input.value = '';
+                        }
+                    }
+                });
+
+                // 3. Bắt đầu tải dữ liệu
+                loadProvinces();
+            });
+
+            // Hàm tải Tỉnh
+            async function loadProvinces() {
+                try {
+                    const res = await fetch(API_PROVINCES);
+                    const json = await res.json();
+
+                    if (json.data) {
+                        cityTom.clearOptions();
+                        let foundCityCode = null;
+
+                        json.data.forEach(p => {
+                            cityTom.addOption({ value: p.code, text: p.name });
+
+                            // Kiểm tra nếu tên tỉnh khớp với dữ liệu đã lưu
+                            if (CURRENT_CITY_NAME && p.name.toLowerCase() === CURRENT_CITY_NAME.toLowerCase()) {
+                                foundCityCode = p.code;
+                            }
+                        });
+
+                        // Nếu tìm thấy tỉnh đã lưu, set giá trị (Việc này sẽ trigger onChange -> loadWards)
+                        if (foundCityCode) {
+                            cityTom.setValue(foundCityCode);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Lỗi load tỉnh:', e);
+                }
+            }
+
+            // Hàm tải Xã
+            async function loadWards(provinceCode) {
+                resetWardSelect();
+                wardTom.settings.placeholder = "Đang tải...";
+                wardTom.sync();
+
+                try {
+                    const url = API_WARDS_TEMPLATE.replace(':code', provinceCode);
+                    const res = await fetch(url);
+                    const json = await res.json();
+
+                    if (json.data && json.data.length > 0) {
+                        let foundWardCode = null;
+
+                        json.data.forEach(w => {
+                            wardTom.addOption({ value: w.code, text: w.name });
+
+                            // Kiểm tra nếu tên xã khớp với dữ liệu đã lưu
+                            // (Chỉ chọn nếu tên tỉnh hiện tại cũng khớp với tên tỉnh đã lưu - tránh trùng tên xã ở tỉnh khác)
+                            const currentSelectedCityName = document.getElementById('city-name-input').value;
+
+                            if (CURRENT_WARD_NAME &&
+                                w.name.toLowerCase() === CURRENT_WARD_NAME.toLowerCase() &&
+                                currentSelectedCityName.toLowerCase() === CURRENT_CITY_NAME.toLowerCase()) {
+                                foundWardCode = w.code;
+                            }
+                        });
+
+                        wardTom.enable();
+                        wardTom.settings.placeholder = "Chọn Phường/Xã";
+                        wardTom.sync();
+
+                        // Nếu tìm thấy xã cũ, set giá trị
+                        if (foundWardCode) {
+                            wardTom.setValue(foundWardCode);
+                        }
+
+                    } else {
+                        wardTom.settings.placeholder = "Không tìm thấy xã/phường";
+                        wardTom.sync();
+                    }
+                } catch (e) {
+                    console.error('Lỗi load xã:', e);
+                    wardTom.settings.placeholder = "Lỗi tải dữ liệu";
+                    wardTom.sync();
+                }
+            }
+
+            function resetWardSelect() {
+                wardTom.clear();
+                wardTom.clearOptions();
+                wardTom.disable();
+                wardTom.settings.placeholder = "Chọn Tỉnh trước";
+                wardTom.sync();
+                const input = document.getElementById('ward-name-input');
+                if (input) input.value = '';
+            }
         </script>
     @endpush
 @endsection

@@ -19,7 +19,7 @@ class VolunteerActivityController extends Controller
     {
         $user = Auth::user();
         
-        $query = VolunteerActivity::with(['volunteer', 'opportunity', 'organization', 'verifier']);
+        $query = VolunteerActivity::with(['volunteer', 'opportunity', 'organization', 'verifiedBy']);
         
         // Filter theo user role
         if ($user->user_type === 'Volunteer') {
@@ -133,7 +133,7 @@ class VolunteerActivityController extends Controller
     // Hiển thị chi tiết activity
     public function show($id)
     {
-        $activity = VolunteerActivity::with(['volunteer', 'opportunity', 'organization', 'verifier'])
+        $activity = VolunteerActivity::with(['volunteer', 'opportunity', 'organization', 'verifiedBy'])
             ->findOrFail($id);
         
         // Kiểm tra quyền xem
@@ -145,7 +145,7 @@ class VolunteerActivityController extends Controller
             abort(403, 'Bạn không có quyền xem activity này');
         }
         
-        return view('volunteer-activities.show', compact('activity'));
+        return view('volunteer.activities.show', compact('activity'));
     }
 
     // Verify giờ tình nguyện (Organization only)

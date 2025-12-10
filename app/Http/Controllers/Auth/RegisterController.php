@@ -39,9 +39,9 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'date_of_birth' => 'nullable|date|before:today',
             'gender' => 'nullable|in:Male,Female,Other',
-            'city_name' => 'required|string|max:50',
-            'city' => 'required',
-            'district' => 'required|string|max:50',
+            'city_name' => 'required|string|max:50', // Validate Tên Tỉnh
+            'city' => 'required',                    // Validate Mã Tỉnh (quan trọng)
+            'ward_name' => 'required|string|max:50', // Validate the ward name string
             'address' => 'required|string',
             'terms' => 'required|accepted',
         ]);
@@ -62,8 +62,9 @@ class RegisterController extends Controller
             'date_of_birth' => $request->date_of_birth,
             'gender' => $request->gender,
             'country' => 'Vietnam',
+            // Store the NAME of the city and ward, not the ID
             'city' => $request->city_name,
-            'district' => $request->district,
+            'ward' => $request->ward_name,
             'address' => $request->address,
             'user_type' => $request->user_type,
             'is_active' => true,

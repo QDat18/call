@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\ReviewModerationController;
 use App\Http\Controllers\Admin\ActivityVerificationController;
 use App\Http\Controllers\Admin\ReportGenerationController;
 use App\Http\Controllers\MapController;
+use App\Models\VnLocation;
 
 /*
 |--------------------------------------------------------------------------
@@ -416,7 +417,7 @@ Route::middleware(['auth', \App\Http\Middleware\OrganizationMiddleware::class])
         Route::prefix('applications')->name('applications.')->group(function () {
             Route::get('/', [ApplicationController::class, 'organizationIndex'])->name('index');
             Route::get('/received', [ApplicationController::class, 'organizationIndex'])->name('received');
-            Route::get('/{id}', [ApplicationController::class, 'show'])->name('show');
+            Route::get('/{id}', [ApplicationController::class, 'showOrganizationApplication'])->name('show');
 
             // Xử lý đơn
             Route::put('/{id}/review', [ApplicationController::class, 'review'])->name('review');
@@ -780,6 +781,30 @@ Route::get('/donation/momo', [DonationController::class, 'momoReturn'])->name('d
 
 // 4. [QUAN TRỌNG] Route IPN - Đây là cái thiếu gây lỗi 500
 Route::get('/donation/momo-ipn', [DonationController::class, 'momoIpn'])->name('donation.momoIpn');
+
+Route::get('/api/locations/provinces', function () {
+    // Lấy những bản ghi không có cha (parent_code là NULL)
+    // Hoặc lọc theo level='tinh' hoặc 'thanh-pho' nếu data có parent_code null
+    $provinces = VnLocation::whereNull('parent_code')
+        ->select('code', 'full_name as name') // Đổi tên cột để khớp với JS cũ
+        ->orderBy('name')
+        ->get();
+
+    return response()->json(['data' => $provinces]);
+})->name('api.locations.provinces');
+
+// 2. API Lấy danh sách Phường/Xã theo Mã Tỉnh
+Route::get('/api/locations/wards/{provinceCode}', function ($provinceCode) {
+    // Lấy tất cả con của mã tỉnh truyền vào
+    $wards = VnLocation::where('parent_code', $provinceCode)
+        ->select('code', 'full_name as name')
+        ->orderBy('name')
+        ->get();
+
+    return response()->json(['data' => $wards]);
+})->name('api.locations.wards');
+
+
 /*
 |--------------------------------------------------------------------------
 | Fallback Route (404 Page)

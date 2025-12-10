@@ -118,6 +118,8 @@ class VolunteerProfileController extends Controller
         // 1. Validate
         $validator = Validator::make($request->all(), [
             'avatar' => 'nullable|image|max:2048',
+            'first_name' => 'required|string|max:50',
+            'last_name' => 'required|string|max:50',
             'occupation' => 'nullable|string|max:100',
             'education_level' => 'nullable|string',
             'university' => 'nullable|string|max:150',
@@ -144,24 +146,38 @@ class VolunteerProfileController extends Controller
                 $user->update(['avatar_url' => $path]);
             }
 
+            $userData = [
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+            ];
+
+            $user->update($userData);
             $profile = $user->volunteerProfile;
             $skillsJson = '[]'; // Mặc định là mảng rỗng JSON
             if ($request->skills) {
                 $skillsArray = array_values(array_filter(array_map('trim', explode(',', $request->skills))));
-                $skillsJson = json_encode($skillsArray, JSON_UNESCAPED_UNICODE);
+                // $skillsJson = json_encode($skillsArray, JSON_UNESCAPED_UNICODE);
+                $skillsJson = $skillsArray;
             }
 
             $interestsJson = '[]';
             if ($request->interests) {
                 $interestsArray = array_values(array_filter(array_map('trim', explode(',', $request->interests))));
-                $interestsJson = json_encode($interestsArray, JSON_UNESCAPED_UNICODE);
+                // $interestsJson = json_encode($interestsArray, JSON_UNESCAPED_UNICODE);
+                $interestsJson = $interestsArray;
+            }
+
+            if ($request->filled('city_name') && $request->filled('ward_name')) {
+                $locationData = $request->ward_name . ', ' . $request->city_name;
+            } elseif ($request->filled('city_name')) {
+                $locationData = $request->city_name;
             }
             $profile->update([
                 'occupation' => $request->occupation,
                 'education_level' => $request->education_level,
                 'university' => $request->university,
                 'bio' => $request->bio,
-                'preferred_location' => $request->preferred_location,
+                'preferred_location' => $locationData ?? $request->preferred_location,
                 'transportation' => $request->transportation,
                 'availability' => $request->availability,
                 'volunteer_experience' => $request->volunteer_experience,
@@ -459,7 +475,8 @@ class VolunteerProfileController extends Controller
     private function updateAutoSkillsAndInterests($user, $profile)
     {
         // Nếu đã có dữ liệu (và không phải mảng rỗng) thì thôi
-        if (!empty($profile->skills) && $profile->skills !== '[]') return;
+        // if (!empty($profile->skills) && $profile->skills !== '[]') return;
+        if (!empty($profile->skills)) return;
 
         $autoSkills = VolunteerOpportunity::whereHas('favorites', fn($q) => $q->where('user_id', $user->user_id))
             ->get()->pluck('skills_required')
@@ -472,7 +489,8 @@ class VolunteerProfileController extends Controller
 
         // SỬA: Dùng json_encode thay vì implode
         if (empty($profile->skills) || $profile->skills == '[]') {
-            $updates['skills'] = json_encode($autoSkills->toArray(), JSON_UNESCAPED_UNICODE);
+            // $updates['skills'] = json_encode($autoSkills->toArray(), JSON_UNESCAPED_UNICODE);
+            $updates['skills'] = $autoSkills->toArray();
         }
 
         if (empty($profile->interests) || $profile->interests == '[]') {

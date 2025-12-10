@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container mx-auto px-4 py-6">
-        <!-- Back Button -->
         <div class="mb-6">
             <a href="{{ route('organization.opportunities.index') }}"
                 class="inline-flex items-center gap-2 text-green-600 hover:text-green-700">
@@ -16,9 +15,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Main Content -->
             <div class="lg:col-span-2 space-y-6">
-                <!-- Opportunity Header -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex-1">
@@ -51,7 +48,6 @@
                         </div>
                     </div>
 
-                    <!-- Key Info -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="text-center p-3 bg-gray-50 rounded-lg">
                             <p class="text-gray-600 text-sm">Volunteers Needed</p>
@@ -71,13 +67,11 @@
                         </div>
                     </div>
 
-                    <!-- Description -->
                     <div class="mb-6">
                         <h3 class="text-lg font-semibold text-gray-800 mb-3">Description</h3>
                         <div class="text-gray-700 whitespace-pre-line">{{ $opportunity->description }}</div>
                     </div>
 
-                    <!-- Requirements -->
                     @if($opportunity->requirements)
                         <div class="mb-6">
                             <h3 class="text-lg font-semibold text-gray-800 mb-3">Requirements</h3>
@@ -85,7 +79,6 @@
                         </div>
                     @endif
 
-                    <!-- Benefits -->
                     @if($opportunity->benefits)
                         <div class="mb-6">
                             <h3 class="text-lg font-semibold text-gray-800 mb-3">Benefits</h3>
@@ -93,19 +86,15 @@
                         </div>
                     @endif
 
-                    <!-- Required Skills -->
                     @if($opportunity->required_skills)
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800 mb-3">Required Skills</h3>
                             <div class="flex flex-wrap gap-2">
                                 @php
-                                    // Kiểm tra kiểu dữ liệu để xử lý đúng
                                     $skills = $opportunity->required_skills;
                                     if (is_string($skills)) {
-                                        // Nếu là chuỗi (VD: "Skill A, Skill B") thì tách ra
                                         $skills = explode(',', $skills);
                                     } elseif (!is_array($skills)) {
-                                        // Nếu không phải mảng cũng không phải chuỗi (VD: null)
                                         $skills = [];
                                     }
                                 @endphp
@@ -120,11 +109,11 @@
                     @endif
                 </div>
 
-                <!-- Recent Applications -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-xl font-semibold text-gray-800">Recent Applications</h2>
-                        <a href="{{ route('organization.applications.index', ['opportunity' => $opportunity->opportunity_id]) }}"
+                        {{-- FIX LINK: Trỏ đúng vào danh sách ứng tuyển của cơ hội này --}}
+                        <a href="{{ route('organization.applications.index', ['opportunity_id' => $opportunity->opportunity_id]) }}"
                             class="text-green-600 hover:text-green-700 text-sm font-medium">
                             View All →
                         </a>
@@ -133,12 +122,17 @@
                     @if($recentApplications && $recentApplications->count() > 0)
                         <div class="space-y-4">
                             @foreach($recentApplications as $application)
-                                <div
-                                    class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
                                     <div class="flex items-center gap-4">
-                                        <img src="{{ $application->volunteer->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($application->volunteer->first_name . ' ' . $application->volunteer->last_name) }}"
+                                        {{-- FIX AVATAR LOGIC: Kiểm tra và thêm asset('storage/...') --}}
+                                        @php
+                                            $avatar = $application->volunteer->avatar_url 
+                                                ? asset('storage/' . $application->volunteer->avatar_url) 
+                                                : 'https://ui-avatars.com/api/?name=' . urlencode($application->volunteer->first_name . ' ' . $application->volunteer->last_name);
+                                        @endphp
+                                        <img src="{{ $avatar }}"
                                             alt="{{ $application->volunteer->first_name }}"
-                                            class="w-12 h-12 rounded-full object-cover">
+                                            class="w-12 h-12 rounded-full object-cover border border-gray-200">
                                         <div>
                                             <p class="font-semibold text-gray-800">
                                                 {{ $application->volunteer->first_name }} {{ $application->volunteer->last_name }}
@@ -157,11 +151,14 @@
                                             @endif">
                                             {{ $application->status }}
                                         </span>
+                                        {{-- Link chi tiết application --}}
                                         <a href="{{ route('organization.applications.show', $application->application_id) }}"
-                                            class="text-green-600 hover:text-green-700">
+                                            class="text-green-600 hover:text-green-700" title="View Application">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 5l7 7-7 7" />
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
                                         </a>
                                     </div>
@@ -181,9 +178,7 @@
                 </div>
             </div>
 
-            <!-- Sidebar -->
             <div class="space-y-6">
-                <!-- Details Card -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Details</h3>
                     <div class="space-y-3">
@@ -250,11 +245,11 @@
                     </div>
                 </div>
 
-                <!-- Actions Card -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                     <div class="space-y-2">
-                        <a href="{{ route('organization.applications.index', ['opportunity' => $opportunity->opportunity_id]) }}"
+                        {{-- FIX LINK: Trỏ đúng filter opportunity --}}
+                        <a href="{{ route('organization.applications.index', ['opportunity_id' => $opportunity->opportunity_id]) }}"
                             class="block w-full px-4 py-3 text-center bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
                             View All Applications
                         </a>
@@ -276,7 +271,6 @@
                     </div>
                 </div>
 
-                <!-- Statistics Card -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Statistics</h3>
                     <div class="space-y-3">
@@ -317,7 +311,6 @@
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 class="text-xl font-semibold text-gray-800 mb-4">Delete Opportunity</h3>
