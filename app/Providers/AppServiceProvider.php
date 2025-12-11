@@ -6,6 +6,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Models\Organization;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Schema;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,5 +33,24 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('pendingVerifications', $pendingVerifications);
             }
         });
+        Relation::morphMap([
+            'post' => \App\Models\Post::class,
+            // 'user' => \App\Models\User::class, // Thêm dòng này nếu sau này có report User
+            // 'comment' => \App\Models\Comment::class, // Thêm dòng này nếu sau này có report Comment
+        ]);
+
+        if (Schema::hasTable('settings')) {
+
+            // 1. Chia sẻ biến 'site_name' cho TẤT CẢ các View
+            // Lúc này trong file blade chỉ cần gọi {{ $site_name }} thay vì get_setting('site_name')
+            View::share('site_name', get_setting('site_name', 'VolunteerConnect'));
+            View::share('site_description', get_setting('site_description'));
+            View::share('contact_email', get_setting('contact_email'));
+
+            // 2. Cấu hình Mail động theo Database
+            // Ghi đè file config/mail.php bằng dữ liệu từ DB
+            Config::set('mail.from.address', get_setting('mail_from_address', env('MAIL_FROM_ADDRESS')));
+            Config::set('mail.from.name', get_setting('mail_from_name', env('MAIL_FROM_NAME')));
+        }
     }
 }

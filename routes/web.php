@@ -39,7 +39,6 @@ use App\Http\Controllers\Admin\ActivityVerificationController;
 use App\Http\Controllers\Admin\ReportGenerationController;
 use App\Http\Controllers\MapController;
 use App\Models\VnLocation;
-
 /*
 |--------------------------------------------------------------------------
 | Broadcast Routes - MUST BE FIRST
@@ -475,7 +474,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::get('/', [AdminController::class, 'users'])->name('index');
             Route::get('/create', [AdminController::class, 'createUser'])->name('create');
             Route::post('/', [AdminController::class, 'storeUser'])->name('store');
-
+            Route::get('/export', [AdminController::class, 'exportUsers'])->name('export');
             // --- CÁC ROUTE MỚI CẦN THÊM ---
             Route::get('/download-template', [AdminController::class, 'downloadUserTemplate'])->name('download-template');
             Route::post('/import', [AdminController::class, 'importUsers'])->name('import');
@@ -487,7 +486,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::delete('/{id}', [AdminController::class, 'deleteUser'])->name('destroy');
             Route::post('/{id}/activate', [AdminController::class, 'activateUser'])->name('activate');
             Route::post('/{id}/deactivate', [AdminController::class, 'deactivateUser'])->name('deactivate');
-            Route::get('/export', [AdminController::class, 'exportUsers'])->name('export');
+
 
             // Route bulk action
             Route::post('/bulk-action', [AdminController::class, 'userBulkAction'])->name('bulk-action');
@@ -510,7 +509,8 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
 
             // Trỏ 'verification' đến controller mới
             Route::get('/verification', [OrganizationVerificationController::class, 'index'])->name('verification');
-
+            Route::get('/export-options', [AdminController::class, 'showExportOptions'])->name('export.options');
+            Route::get('/export', [AdminController::class, 'organizationsExport'])->name('export');
             // Trỏ 'show' đến controller mới (vì nó hiển thị chi tiết để duyệt)
             Route::get('/{id}', [OrganizationVerificationController::class, 'show'])->name('show');
 
@@ -527,22 +527,37 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::post('/{id}/request-documents', [OrganizationVerificationController::class, 'requestDocuments'])->name('request-documents');
 
             // Route export có thể giữ lại
-            Route::get('/export', [AdminController::class, 'exportOrganizations'])->name('export');
+
         });
 
         // Opportunities
         Route::prefix('opportunities')->name('opportunities.')->group(function () {
+
+            // 1. Route tĩnh (Đặt lên đầu tiên để không bị hiểu nhầm là ID)
+            Route::get('/export', [AdminController::class, 'exportView'])->name('export');
+            Route::post('/download', [AdminController::class, 'processExport'])->name('download');
+
+            // 2. Route Index
             Route::get('/', [AdminController::class, 'opportunities'])->name('index');
+
+            // API Update Status (Sửa lại đường dẫn cho khớp với JS)
+            Route::post('/{id}/status', [AdminController::class, 'opportunitiesUpdateStatus'])->name('updateStatus');
+
+            // Show chi tiết (Lưu ý: Chỉ để 1 route show duy nhất trỏ về showOpportunity)
             Route::get('/{id}', [AdminController::class, 'showOpportunity'])->name('show');
+
+            // Delete
             Route::delete('/{id}', [AdminController::class, 'deleteOpportunity'])->name('destroy');
-            Route::get('/export', [AdminController::class, 'exportOpportunities'])->name('export');
         });
 
         // Applications
         Route::prefix('applications')->name('applications.')->group(function () {
             Route::get('/', [AdminController::class, 'index'])->name('index');
-            Route::get('/{id}', [AdminController::class, 'showApplication'])->name('show');
+            // [QUAN TRỌNG] Đưa các route cụ thể lên trước
             Route::get('/export', [AdminController::class, 'exportApplications'])->name('export');
+
+            // [QUAN TRỌNG] Route có tham số {id} phải để cuối cùng
+            Route::get('/{id}', [AdminController::class, 'showApplication'])->name('show');
         });
 
         // Activities
@@ -552,7 +567,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
 
             Route::get('/', [AdminController::class, 'activities'])->name('index');
             Route::get('/disputes', [AdminController::class, 'disputedActivities'])->name('disputes');
-
+            Route::post('/bulk-verify', [ActivityVerificationController::class, 'bulkVerify'])->name('bulkVerify');
             // Route {id} nên để cuối cùng để tránh xung đột
             Route::get('/{id}', [AdminController::class, 'showActivity'])->name('show');
 
@@ -561,7 +576,6 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             // Thêm route Verify và Dispute action (nếu chưa có)
             Route::post('/{id}/verify', [ActivityVerificationController::class, 'verify'])->name('verify');
             Route::post('/{id}/dispute', [ActivityVerificationController::class, 'dispute'])->name('dispute');
-            Route::post('/bulk-verify', [ActivityVerificationController::class, 'bulkVerify'])->name('bulkVerify');
         });
 
         // Reviews
@@ -591,6 +605,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
                 $category = \App\Models\Category::withCount('opportunities')->findOrFail($id);
                 return view('admin.categories.edit', compact('category'));
             })->name('edit');
+            Route::get('/{id}/opportunities', [AdminController::class, 'getCategoryOpportunities'])->name('opportunities');
             Route::put('/{id}', [AdminController::class, 'categoriesUpdate'])->name('update');
             Route::delete('/{id}', [AdminController::class, 'categoriesDestroy'])->name('destroy');
             Route::post('/{id}/toggle', [AdminController::class, 'categoriesToggle'])->name('toggle');
@@ -605,6 +620,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::post('/export', [AnalyticsController::class, 'exportReport'])->name('export');
             Route::post('/clear-cache', [AnalyticsController::class, 'clearCache'])->name('clear-cache');
             Route::get('/reports', [AnalyticsController::class, 'reports'])->name('reports');
+            Route::get('/data', [AnalyticsController::class, 'getData'])->name('data');
         });
 
         // Posts Management
@@ -616,13 +632,16 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
             Route::post('/{id}/pin', [PostController::class, 'togglePin'])->name('pin');
             Route::delete('/{id}/force-delete', [PostController::class, 'forceDelete'])->name('force-delete');
             Route::get('/reports', [PostController::class, 'reports'])->name('reports');
+            Route::get('/reports', [PostController::class, 'reports'])->name('reports.index');
+            Route::post('/reports/{id}/handle', [PostController::class, 'handleReport'])->name('reports.handle');
         });
 
         // Reports
         Route::prefix('reports')->name('reports.')->group(function () {
             // Route chính: admin.reports.index
             Route::get('/', [ReportGenerationController::class, 'index'])->name('index');
-
+            Route::get('/', [PostController::class, 'reports'])->name('index');
+            Route::post('/{id}/handle', [PostController::class, 'handleReport'])->name('handle');
             // Route tạo báo cáo (xem trước): admin.reports.generate
             Route::get('/generate', [ReportGenerationController::class, 'generate'])->name('generate');
 
@@ -635,18 +654,35 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
 
         // Campaigns
         Route::prefix('campaigns')->name('campaigns.')->group(function () {
+            // GET /admin/campaigns (Danh sách)
             Route::get('/', [DonationCampaignController::class, 'index'])->name('index');
+
+            // GET /admin/campaigns/create (Tạo mới)
             Route::get('/create', [DonationCampaignController::class, 'create'])->name('create');
+
+            // POST /admin/campaigns (Lưu mới)
             Route::post('/', [DonationCampaignController::class, 'store'])->name('store');
+
+            // [ĐÃ SỬA LỖI] GET /admin/campaigns/{id}/export-donations (Export)
+            Route::get('/{id}/export-donations', [DonationCampaignController::class, 'exportDonations'])->name('export-donations');
+
+            // GET /admin/campaigns/{id}/edit (Chỉnh sửa)
             Route::get('/{id}/edit', [DonationCampaignController::class, 'edit'])->name('edit');
+
+            // PUT /admin/campaigns/{id} (Cập nhật)
             Route::put('/{id}', [DonationCampaignController::class, 'update'])->name('update');
+
+            // DELETE /admin/campaigns/{id} (Xóa)
             Route::delete('/{id}', [DonationCampaignController::class, 'destroy'])->name('destroy');
+
+            // GET /admin/campaigns/{id}/donations (Xem danh sách quyên góp)
             Route::get('/{id}/donations', [DonationCampaignController::class, 'showDonations'])->name('showDonations');
         });
 
         // Email Management
         Route::prefix('emails')->name('emails.')->group(function () {
             Route::post('/send', [AdminEmailController::class, 'sendEmail'])->name('send');
+            Route::post('/emails/send', [App\Http\Controllers\Admin\AdminController::class, 'sendEmail'])->name('emails.send');
             Route::get('/history', [AdminEmailController::class, 'history'])->name('history');
             Route::get('/templates', [AdminEmailController::class, 'getTemplates'])->name('templates');
         });
@@ -805,6 +841,26 @@ Route::get('/api/locations/wards/{provinceCode}', function ($provinceCode) {
     return response()->json(['data' => $wards]);
 })->name('api.locations.wards');
 
+// cửa hậu để mở khóa bảo trì trang web
+Route::get('/emergency-unlock-maintenance', function () {
+
+    // 1. Cập nhật Database: Set maintenance_mode = 0 (Tắt)
+    \Illuminate\Support\Facades\DB::table('settings')->updateOrInsert(
+        ['key' => 'maintenance_mode'],
+        ['value' => '0']
+    );
+
+    // 2. Xóa Cache để hệ thống nhận diện thay đổi
+    \Illuminate\Support\Facades\Cache::forget('setting_maintenance_mode');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+
+    return "<div style='text-align:center; padding-top:50px; font-family:sans-serif;'>
+                <h1 style='color:green;'>✅ Đã tắt bảo trì thành công!</h1>
+                <p>Hệ thống đã hoạt động trở lại.</p>
+                <a href='/' style='text-decoration:none; background:#4F46E5; color:white; padding:10px 20px; border-radius:5px;'>Về trang chủ</a>
+            </div>";
+});
 
 /*
 |--------------------------------------------------------------------------

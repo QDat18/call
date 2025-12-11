@@ -14,14 +14,14 @@
             </div>
             <div class="flex flex-wrap gap-3">
                 <div class="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
-                    <button @click="viewMode = 'grid'" 
-                            :class="{ 'bg-white text-indigo-600 shadow-sm': viewMode === 'grid', 'text-gray-500 hover:text-gray-700': viewMode !== 'grid' }"
-                            class="px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center">
+                    <button @click="viewMode = 'grid'"
+                        :class="{ 'bg-white text-indigo-600 shadow-sm': viewMode === 'grid', 'text-gray-500 hover:text-gray-700': viewMode !== 'grid' }"
+                        class="px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center">
                         <i class="fas fa-th-large mr-2"></i> Grid
                     </button>
-                    <button @click="viewMode = 'list'" 
-                            :class="{ 'bg-white text-indigo-600 shadow-sm': viewMode === 'list', 'text-gray-500 hover:text-gray-700': viewMode !== 'list' }"
-                            class="px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center">
+                    <button @click="viewMode = 'list'"
+                        :class="{ 'bg-white text-indigo-600 shadow-sm': viewMode === 'list', 'text-gray-500 hover:text-gray-700': viewMode !== 'list' }"
+                        class="px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center">
                         <i class="fas fa-list mr-2"></i> List
                     </button>
                 </div>
@@ -30,7 +30,7 @@
                     class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition bg-white">
                     <i class="fas fa-envelope mr-2"></i>Email All
                 </button>
-                
+
                 <button @click="exportSelected()"
                     class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center">
                     <i class="fas fa-download mr-2"></i>
@@ -65,9 +65,10 @@
             </div>
 
             {{-- BOX PENDING: Thêm Link Lối Tắt --}}
-            <a href="{{ route('admin.organizations.index', ['status' => 'Pending']) }}" 
-               class="block bg-white rounded-lg shadow-sm border border-yellow-200 p-6 hover:shadow-md hover:border-yellow-400 transition group cursor-pointer relative overflow-hidden">
-                <div class="absolute top-0 right-0 bg-yellow-500 text-white text-xs px-2 py-1 rounded-bl-lg opacity-0 group-hover:opacity-100 transition">
+            <a href="{{ route('admin.organizations.index', ['status' => 'Pending']) }}"
+                class="block bg-white rounded-lg shadow-sm border border-yellow-200 p-6 hover:shadow-md hover:border-yellow-400 transition group cursor-pointer relative overflow-hidden">
+                <div
+                    class="absolute top-0 right-0 bg-yellow-500 text-white text-xs px-2 py-1 rounded-bl-lg opacity-0 group-hover:opacity-100 transition">
                     Filter
                 </div>
                 <div class="flex items-center justify-between">
@@ -75,7 +76,8 @@
                         <p class="text-sm text-gray-600 group-hover:text-yellow-700">Pending</p>
                         <p class="text-2xl font-bold text-yellow-600">{{ $stats['pending'] ?? 0 }}</p>
                     </div>
-                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition">
+                    <div
+                        class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-200 transition">
                         <i class="fas fa-clock text-yellow-600"></i>
                     </div>
                 </div>
@@ -124,10 +126,12 @@
                     </select>
                 </div>
                 <div class="md:col-span-4 flex justify-end space-x-2">
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                    <button type="submit"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
                         <i class="fas fa-filter mr-2"></i>Apply
                     </button>
-                    <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Reset</a>
+                    <a href="{{ route('admin.organizations.index') }}"
+                        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Reset</a>
                 </div>
             </form>
         </div>
@@ -136,7 +140,8 @@
             @forelse($organizations as $org)
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition relative group">
                     <div class="absolute top-3 right-3 z-10">
-                        <input type="checkbox" value="{{ $org->org_id }}" x-model="selected" class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <input type="checkbox" value="{{ $org->org_id }}" x-model="selected"
+                            class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                     </div>
 
                     <div class="p-6">
@@ -150,9 +155,9 @@
                                 </div>
                             </div>
                             <span class="px-2 py-1 text-xs font-medium rounded-full mr-6
-                                {{ $org->verification_status == 'Verified' ? 'bg-green-100 text-green-800' : '' }}
-                                {{ $org->verification_status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                {{ $org->verification_status == 'Rejected' ? 'bg-red-100 text-red-800' : '' }}">
+                                        {{ $org->verification_status == 'Verified' ? 'bg-green-100 text-green-800' : '' }}
+                                        {{ $org->verification_status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                        {{ $org->verification_status == 'Rejected' ? 'bg-red-100 text-red-800' : '' }}">
                                 {{ $org->verification_status }}
                             </span>
                         </div>
@@ -173,8 +178,9 @@
                                 class="flex-1 px-3 py-2 text-center text-sm bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100">
                                 <i class="fas fa-eye mr-1"></i>View
                             </a>
-                            <button onclick="openEmailModal('single', '{{ $org->user_id }}')" 
-                                    class="px-3 py-2 text-gray-500 hover:text-indigo-600 border border-gray-200 rounded-lg hover:bg-gray-50" title="Send Email">
+                            <button onclick="openEmailModal('single', '{{ $org->user_id }}')"
+                                class="px-3 py-2 text-gray-500 hover:text-indigo-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                title="Send Email">
                                 <i class="fas fa-envelope"></i>
                             </button>
                         </div>
@@ -187,58 +193,70 @@
             @endforelse
         </div>
 
-        <div x-show="viewMode === 'list'" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" x-cloak>
+        <div x-show="viewMode === 'list'" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+            x-cloak>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
-                                <input type="checkbox" @click="toggleAll" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <input type="checkbox" @click="toggleAll"
+                                    class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Organization</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stats
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach($organizations as $org)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <input type="checkbox" value="{{ $org->org_id }}" x-model="selected" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <img class="h-10 w-10 rounded-full object-cover" src="{{ $org->logo_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($org->organization_name) }}">
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ Str::limit($org->organization_name, 30) }}</div>
-                                        <div class="text-sm text-gray-500">{{ $org->user->email }}</div>
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" value="{{ $org->org_id }}" x-model="selected"
+                                        class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <img class="h-10 w-10 rounded-full object-cover"
+                                            src="{{ $org->logo_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($org->organization_name) }}">
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ Str::limit($org->organization_name, 30) }}</div>
+                                            <div class="text-sm text-gray-500">{{ $org->user->email }}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $org->organization_type }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                    {{ $org->verification_status == 'Verified' ? 'bg-green-100 text-green-800' : '' }}
-                                    {{ $org->verification_status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                    {{ $org->verification_status == 'Rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                                    {{ $org->verification_status }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <div class="flex flex-col">
-                                    <span>{{ $org->volunteer_count }} Vols</span>
-                                    <span>{{ $org->total_opportunities }} Opps</span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                <button onclick="openEmailModal('single', '{{ $org->user_id }}')" class="text-gray-400 hover:text-indigo-600" title="Email">
-                                    <i class="fas fa-envelope"></i>
-                                </button>
-                                <a href="{{ route('admin.organizations.show', $org->org_id) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
-                            </td>
-                        </tr>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $org->organization_type }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                            {{ $org->verification_status == 'Verified' ? 'bg-green-100 text-green-800' : '' }}
+                                            {{ $org->verification_status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                            {{ $org->verification_status == 'Rejected' ? 'bg-red-100 text-red-800' : '' }}">
+                                        {{ $org->verification_status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div class="flex flex-col">
+                                        <span>{{ $org->volunteer_count }} Vols</span>
+                                        <span>{{ $org->total_opportunities }} Opps</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                    <button onclick="openEmailModal('single', '{{ $org->user_id }}')"
+                                        class="text-gray-400 hover:text-indigo-600" title="Email">
+                                        <i class="fas fa-envelope"></i>
+                                    </button>
+                                    <a href="{{ route('admin.organizations.show', $org->org_id) }}"
+                                        class="text-indigo-600 hover:text-indigo-900">View</a>
+                                </td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>
@@ -261,7 +279,7 @@
                 return {
                     viewMode: localStorage.getItem('orgViewMode') || 'grid',
                     selected: [],
-                    
+
                     init() {
                         this.$watch('viewMode', value => localStorage.setItem('orgViewMode', value));
                     },
@@ -275,14 +293,14 @@
                     },
 
                     exportSelected() {
-                        let url = '/admin/organizations/export';
-                        const params = new URLSearchParams(window.location.search);
-                        
+                    let url = '{{ route("admin.organizations.export.options") }}';               
+                    const params = new URLSearchParams(window.location.search);
+
                         if (this.selected.length > 0) {
                             // Nếu có chọn checkbox, truyền danh sách ID
                             params.set('org_ids', this.selected.join(','));
                         }
-                        
+
                         window.location.href = url + '?' + params.toString();
                     }
                 }

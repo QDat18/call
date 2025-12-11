@@ -7,6 +7,11 @@ use App\Models\DonationCampaign;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class DonationCampaignController extends Controller
 {
@@ -26,7 +31,7 @@ class DonationCampaignController extends Controller
         }
 
         $campaigns = $query->paginate(15);
-        
+
         return view('admin.campaigns.index', compact('campaigns'));
     }
 
@@ -141,7 +146,7 @@ class DonationCampaignController extends Controller
         if ($campaign->banner_image_url) {
             Storage::disk('public')->delete($campaign->banner_image_url);
         }
-        
+
         $campaign->delete();
 
         return redirect()->route('admin.campaigns.index')->with('success', 'Xóa chiến dịch thành công.');
@@ -154,11 +159,72 @@ class DonationCampaignController extends Controller
     {
         $campaign = DonationCampaign::findOrFail($id);
         $donations = $campaign->donations()
-                              ->where('status', 'Success')
-                              ->with('user') // 'user' là tên quan hệ trong model Donation
-                              ->latest()
-                              ->paginate(20);
+            ->where('status', 'Success')
+            ->with('user') // 'user' là tên quan hệ trong model Donation
+            ->latest()
+            ->paginate(20);
 
         return view('admin.campaigns.showDonations', compact('campaign', 'donations'));
+    }
+    public function exportDonations($id)
+    {
+        $campaign = DonationCampaign::findOrFail($id);
+        $donations = $campaign->donations()->with('user')->get();
+
+        // 1. Khởi tạo Spreadsheet
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Quyên góp ' . \Str::limit($campaign->title, 15));
+
+        // Tiêu đề cột
+        $headers = ['ID', 'Người quyên góp', 'Email', 'Số tiền (VNĐ)', 'Lời nhắn', 'Mã GD', 'Thời gian'];
+        $sheet->fromArray($headers, NULL, 'A1');
+
+        // 2. Style cho Header
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']], // Màu xanh lục
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
+        ];
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(25);
+
+        // 3. Đổ dữ liệu
+        $row = 2;
+        foreach ($donations as $donation) {
+            $sheet->setCellValue('A' . $row, $donation->id);
+            $sheet->setCellValue('B' . $row, $donation->user ? $donation->user->first_name . ' ' . $donation->user->last_name : 'Khách vãng lai');
+            $sheet->setCellValue('C' . $row, $donation->user ? $donation->user->email : 'N/A');
+
+            // Sử dụng setCellValueExplicit để đảm bảo định dạng số (text trước)
+            $sheet->setCellValueExplicit('D' . $row, $donation->amount, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+            $sheet->setCellValue('E' . $row, $donation->message);
+            $sheet->setCellValue('F' . $row, $donation->vnp_TransactionNo);
+            $sheet->setCellValue('G' . $row, $donation->created_at->format('Y-m-d H:i:s'));
+
+            // Định dạng cột số tiền (D) là tiền tệ
+            $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0 "đ"');
+
+            $row++;
+        }
+
+        // 4. Auto-size và Căn giữa
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->getStyle('A:G')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $sheet->getStyle('A:A')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // ID
+
+        // 5. Xuất file (.xlsx)
+        $filename = 'donations_' . \Str::slug($campaign->title) . '_' . date('Y-m-d') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        // Trả về response dạng download
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

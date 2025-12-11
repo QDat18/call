@@ -67,6 +67,127 @@ class PostController extends Controller
     }
 
     /**
+     * Display a listing of posts for Admin.
+     */
+    public function adminIndex(\Illuminate\Http\Request $request)
+    {
+        // Kiểm tra quyền Admin (thường đã được check qua Middleware, nhưng check lại cho chắc)
+        if (!\Illuminate\Support\Facades\Auth::user()->isAdmin()) {
+            abort(403);
+        }
+
+        $query = \App\Models\Post::with('user')->withCount(['comments', 'likes']);
+
+        // 1. Tìm kiếm
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($u) use ($search) {
+                        $u->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // 2. Lọc theo trạng thái (nếu bảng posts có cột status)
+        // Giả sử có các trạng thái: published, pending, hidden...
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $posts = $query->latest()->paginate(10)->withQueryString();
+
+        return view('admin.posts.index', compact('posts'));
+    }
+
+    public function pending(Request $request)
+    {
+        // Tái sử dụng logic, chỉ force status = Pending
+        $request->merge(['status' => 'Pending']);
+        return $this->adminIndex($request);
+    }
+
+    /**
+     * Duyệt bài đăng
+     */
+    public function approve($id)
+    {
+        $post = \App\Models\Post::findOrFail($id);
+        $post->update([
+            'status' => 'Published',
+            'published_at' => now()
+        ]);
+
+        // Gửi thông báo cho tác giả (Tùy chọn)
+        \App\Models\Notification::create([
+            'user_id' => $post->user_id,
+            'notification_type' => 'System',
+            'title' => 'Bài viết đã được duyệt ✅',
+            'content' => 'Bài viết của bạn đã được quản trị viên phê duyệt và công khai.',
+            'related_id' => $post->post_id,
+            'related_type' => 'post',
+            'action_url' => route('posts.show', $post->post_id)
+        ]);
+
+        return back()->with('success', 'Đã duyệt bài đăng thành công.');
+    }
+
+    /**
+     * Từ chối bài đăng
+     */
+    public function reject(Request $request, $id)
+    {
+        $post = \App\Models\Post::findOrFail($id);
+        $post->update(['status' => 'Rejected']);
+
+        // Gửi thông báo lý do (nếu có)
+        // Bạn có thể mở rộng để nhận lý do từ request
+        \App\Models\Notification::create([
+            'user_id' => $post->user_id,
+            'notification_type' => 'System',
+            'title' => 'Bài viết bị từ chối ❌',
+            'content' => 'Bài viết của bạn vi phạm quy tắc cộng đồng.',
+            'related_id' => $post->post_id,
+            'related_type' => 'post',
+        ]);
+
+        return back()->with('success', 'Đã từ chối bài đăng.');
+    }
+
+    /**
+     * Ghim/Bỏ ghim bài đăng
+     */
+    public function togglePin($id)
+    {
+        $post = \App\Models\Post::findOrFail($id);
+
+        // Đảo ngược trạng thái hiện tại
+        $post->update(['is_pinned' => !$post->is_pinned]);
+
+        $msg = $post->is_pinned ? 'Đã ghim bài viết.' : 'Đã bỏ ghim bài viết.';
+        return back()->with('success', $msg);
+    }
+
+    /**
+     * Xóa vĩnh viễn bài đăng
+     */
+    public function forceDelete($id)
+    {
+        $post = \App\Models\Post::findOrFail($id);
+
+        // Xóa các quan hệ liên quan nếu chưa cài cascade trong database
+        $post->comments()->delete();
+        $post->likes()->delete();
+        $post->media()->delete(); // Xóa ảnh
+
+        $post->delete();
+
+        return back()->with('success', 'Đã xóa vĩnh viễn bài đăng.');
+    }
+
+    /**
      * Show single post
      */
     public function show($id)
@@ -518,59 +639,67 @@ class PostController extends Controller
      */
     public function report(Request $request, $id)
     {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please login to report content'
-            ], 401);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'reason' => 'required|in:spam,inappropriate,harassment,false_information,hate_speech,violence,other',
-            'description' => 'nullable|string|max:500'
+        // Validate lý do
+        $request->validate([
+            'reason' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000'
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first()
-            ], 422);
-        }
+        $post = \App\Models\Post::findOrFail($id);
 
-        $post = Post::findOrFail($id);
-
-        // Cannot report own post
-        if ($post->user_id === Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You cannot report your own post'
-            ], 400);
-        }
-
-        // Check if already reported
-        $existingReport = PostReport::where('post_id', $id)
-            ->where('reporter_id', Auth::id())
-            ->where('status', 'pending')
-            ->first();
-
-        if ($existingReport) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You have already reported this post'
-            ], 400);
-        }
-
-        PostReport::create([
-            'post_id' => $id,
-            'reporter_id' => Auth::id(),
+        // Lưu báo cáo vào bảng `reports` (giả sử bạn đã có bảng này, nếu chưa xem bước 2)
+        \App\Models\Report::create([
+            'user_id' => Auth::id(), // Người báo cáo
+            'target_id' => $post->post_id,
+            'target_type' => 'post', // Loại đối tượng bị báo cáo
             'reason' => $request->reason,
-            'description' => $request->description
+            'description' => $request->description,
+            'status' => 'Pending'
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Post reported successfully. We will review it soon.'
-        ]);
+        // Gửi thông báo cho Admin (Tùy chọn)
+        // ... code gửi thông báo ...
+
+        return response()->json(['success' => true, 'message' => 'Đã gửi báo cáo thành công.']);
+    }
+
+    public function reports(Request $request)
+    {
+        if (!Auth::user()->isAdmin()) abort(403);
+
+        // Lấy danh sách báo cáo liên quan đến bài viết
+        $reports = \App\Models\Report::with(['user', 'target']) // Eager load người báo cáo và bài viết
+            ->where('target_type', 'post')
+            ->where('status', 'Pending') // Chỉ hiện báo cáo chưa xử lý
+            ->latest()
+            ->paginate(15);
+
+        return view('admin.posts.reports', compact('reports'));
+    }
+
+    /**
+     * Admin xử lý báo cáo (Bỏ qua hoặc Xóa bài)
+     */
+    public function handleReport(Request $request, $id)
+    {
+        if (!Auth::user()->isAdmin()) abort(403);
+
+        $report = \App\Models\Report::findOrFail($id);
+        $action = $request->input('action'); // 'dismiss' hoặc 'delete_post'
+
+        if ($action === 'delete_post') {
+            // Xóa bài viết bị báo cáo
+            $post = \App\Models\Post::find($report->target_id);
+            if ($post) {
+                $post->delete(); // Hoặc forceDelete
+                $report->update(['status' => 'Resolved', 'resolution' => 'Post Deleted']);
+            }
+        } elseif ($action === 'dismiss') {
+            // Bỏ qua báo cáo
+            $report->update(['status' => 'Dismissed', 'resolution' => 'No Violation Found']);
+        }
+
+        return back()->with('success', 'Đã xử lý báo cáo.');
     }
 
     /**

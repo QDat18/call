@@ -84,9 +84,12 @@
 
 @push('scripts')
 <script>
-let currentReportPostId = null;
-let currentReportCommentId = null;
-
+if (typeof currentReportPostId === 'undefined') {
+    var currentReportPostId = null;
+}
+if (typeof currentReportCommentId === 'undefined') {
+    var currentReportCommentId = null;
+}
 function openReportModal(postId = null, commentId = null) {
     currentReportPostId = postId;
     currentReportCommentId = commentId;

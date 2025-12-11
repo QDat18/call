@@ -51,7 +51,8 @@
                                     <i class="fas fa-bookmark w-5"></i>
                                     <div class="text-left">
                                         <div class="font-semibold">
-                                            {{ $post->isBookmarkedByUser(Auth::id()) ? 'Bỏ lưu' : 'Lưu bài viết' }}</div>
+                                            {{ $post->isBookmarkedByUser(Auth::id()) ? 'Bỏ lưu' : 'Lưu bài viết' }}
+                                        </div>
                                         <div class="text-xs text-gray-500">Thêm vào danh sách đã lưu</div>
                                     </div>
                                 </button>
@@ -74,7 +75,7 @@
                                     </button>
                                 @else
                                     <hr class="my-2 border-gray-200 dark:border-gray-600">
-                                    <button
+                                    <button onclick="openReportModal({{ $post->post_id }})"
                                         class="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
                                         <i class="fas fa-flag w-5"></i>
                                         <div class="text-left">
@@ -158,7 +159,7 @@
                     <div class="grid grid-cols-3 gap-1">
                         <button onclick="toggleLike({{ $post->post_id }})" id="like-btn-{{ $post->post_id }}"
                             class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition
-                                {{ $post->isLikedByUser(Auth::id()) ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400' }}">
+                                            {{ $post->isLikedByUser(Auth::id()) ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400' }}">
                             <i class="fas fa-thumbs-up text-lg"></i>
                             <span class="font-semibold text-[15px]">Thích</span>
                         </button>
@@ -411,17 +412,17 @@
 
                     if (data.likes && data.likes.length > 0) {
                         list.innerHTML = data.likes.map(user => `
-                            <a href="/user/${user.user_id}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                                <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name)}" 
-                                     class="w-10 h-10 rounded-full object-cover">
-                                <div class="flex-1">
-                                    <div class="font-semibold text-gray-900 dark:text-white">${user.name}</div>
-                                </div>
-                                <div class="text-blue-600 text-xl">
-                                    <i class="fas fa-thumbs-up"></i>
-                                </div>
-                            </a>
-                        `).join('');
+                                                    <a href="/user/${user.user_id}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                                        <img src="${user.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name)}" 
+                                                             class="w-10 h-10 rounded-full object-cover">
+                                                        <div class="flex-1">
+                                                            <div class="font-semibold text-gray-900 dark:text-white">${user.name}</div>
+                                                        </div>
+                                                        <div class="text-blue-600 text-xl">
+                                                            <i class="fas fa-thumbs-up"></i>
+                                                        </div>
+                                                    </a>
+                                                `).join('');
                     } else {
                         list.innerHTML = '<p class="text-center text-gray-500 py-8">Chưa có ai thích bài viết này</p>';
                     }
@@ -543,4 +544,5 @@
             }
         </style>
     @endpush
+    @include('posts.components.report-modal')
 @endsection

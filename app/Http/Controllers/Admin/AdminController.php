@@ -10,6 +10,7 @@ use App\Models\Application;
 use App\Models\Category;
 use App\Models\VolunteerActivity;
 use App\Models\Review;
+use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -19,6 +20,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Illuminate\Support\Facades\Mail; // <--- QUAN TRỌNG: Phải có dòng này
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
@@ -48,6 +51,8 @@ class AdminController extends Controller
             // Thống kê thêm cho phần Email Management
             'total_volunteers'      => User::where('user_type', 'Volunteer')->count(),
             'active_users'          => User::where('is_active', true)->count(),
+            'total_posts'          => Post::count(),
+            'pending_posts'        => Post::where('status', 'Pending')->count(),
         ];
 
         // 2. Recent Users (5 người dùng mới nhất)
@@ -140,34 +145,43 @@ class AdminController extends Controller
      */
     public function users(Request $request)
     {
-        $query = User::query();
+        // Eager loading để tối ưu query, tránh N+1 khi hiển thị list
+        $query = User::with(['volunteerProfile', 'organization']);
 
-        // Search
+        // Search nâng cao: Tìm cả trong số điện thoại và email
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'LIKE', "%{$search}%")
                     ->orWhere('last_name', 'LIKE', "%{$search}%")
                     ->orWhere('email', 'LIKE', "%{$search}%")
-                    ->orWhere('phone', 'LIKE', "%{$search}%");
+                    ->orWhere('phone', 'LIKE', "%{$search}%")
+                    // Mở rộng tìm kiếm theo tên tổ chức nếu cần
+                    ->orWhereHas('organization', function ($subQ) use ($search) {
+                        $subQ->where('organization_name', 'LIKE', "%{$search}%");
+                    });
             });
         }
 
-        // Filter by user type
+        // Filter logic giữ nguyên...
         if ($request->filled('user_type')) {
             $query->where('user_type', $request->user_type);
         }
-
-        // Filter by status
         if ($request->filled('status')) {
             $isActive = $request->status === 'active';
             $query->where('is_active', $isActive);
         }
 
-        // Sorting (Mới thêm để UX tốt hơn)
+        // Sort mặc định là mới nhất
         $sortField = $request->get('sort', 'created_at');
         $sortOrder = $request->get('order', 'desc');
-        $query->orderBy($sortField, $sortOrder);
+
+        // Bảo vệ sort field để tránh SQL Injection
+        if (in_array($sortField, ['first_name', 'email', 'created_at', 'user_type'])) {
+            $query->orderBy($sortField, $sortOrder);
+        } else {
+            $query->latest();
+        }
 
         $users = $query->paginate(15)->withQueryString();
 
@@ -261,44 +275,88 @@ class AdminController extends Controller
      */
     public function exportUsers(Request $request)
     {
+        // --- PHẦN 1: LỌC DỮ LIỆU (Giống hệt logic hiển thị danh sách) ---
         $query = User::query();
 
-        if ($request->filled('user_type')) $query->where('user_type', $request->user_type);
-        if ($request->filled('status')) $query->where('is_active', $request->status === 'active');
+        // Lọc theo ID đã chọn (nếu có)
+        if ($request->filled('user_ids')) {
+            $ids = explode(',', $request->user_ids);
+            $query->whereIn('user_id', $ids);
+        }
+        // Nếu không chọn ID, áp dụng bộ lọc tìm kiếm
+        else {
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('first_name', 'LIKE', "%{$search}%")
+                        ->orWhere('last_name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%")
+                        ->orWhere('phone', 'LIKE', "%{$search}%");
+                });
+            }
+            if ($request->filled('user_type')) {
+                $query->where('user_type', $request->user_type);
+            }
+            if ($request->filled('status')) {
+                $isActive = $request->status === 'active';
+                $query->where('is_active', $isActive);
+            }
+        }
 
-        $filename = 'users_export_' . date('Y-m-d_H-i') . '.csv';
+        $users = $query->latest()->get();
 
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"$filename\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
+        // --- PHẦN 2: TẠO FILE EXCEL ---
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Users List');
+
+        // 1. Tạo Tiêu đề Cột (Header)
+        $headers = ['ID', 'Full Name', 'Email', 'Phone', 'Role', 'Status', 'Joined Date'];
+        $sheet->fromArray($headers, NULL, 'A1');
+
+        // 2. Style cho Header (Nền xanh, chữ trắng, in đậm)
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']], // Indigo-600
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
         ];
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(25); // Chiều cao dòng header
 
-        $callback = function () use ($query) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Full Name', 'Email', 'Phone', 'Type', 'City', 'Status', 'Joined Date']);
+        // 3. Đổ dữ liệu
+        $row = 2;
+        foreach ($users as $user) {
+            $sheet->setCellValue('A' . $row, $user->user_id);
+            $sheet->setCellValue('B' . $row, $user->first_name . ' ' . $user->last_name);
+            $sheet->setCellValue('C' . $row, $user->email);
+            $sheet->setCellValue('D' . $row, $user->phone ?? 'N/A');
+            $sheet->setCellValue('E' . $row, $user->user_type);
+            $sheet->setCellValue('F' . $row, $user->is_active ? 'Active' : 'Inactive');
+            $sheet->setCellValue('G' . $row, $user->created_at->format('d/m/Y'));
 
-            // Dùng chunk để tránh memory leak khi export dữ liệu lớn
-            $query->chunk(100, function ($users) use ($file) {
-                foreach ($users as $user) {
-                    fputcsv($file, [
-                        $user->user_id,
-                        $user->first_name . ' ' . $user->last_name,
-                        $user->email,
-                        $user->phone ?? 'N/A',
-                        $user->user_type,
-                        $user->city ?? 'N/A',
-                        $user->is_active ? 'Active' : 'Inactive',
-                        $user->created_at->format('Y-m-d'),
-                    ]);
-                }
-            });
-            fclose($file);
-        };
+            // Tô màu đỏ cho user Inactive
+            if (!$user->is_active) {
+                $sheet->getStyle('F' . $row)->getFont()->getColor()->setARGB('FFFF0000');
+            }
 
-        return response()->stream($callback, 200, $headers);
+            $row++;
+        }
+
+        // 4. Auto-size các cột cho đẹp
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // 5. Xuất file
+        $fileName = 'users_export_' . date('Y-m-d_H-i') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     /**
@@ -635,12 +693,15 @@ class AdminController extends Controller
     {
         $query = Organization::with('user');
 
-        // 1. Xử lý lọc theo ID (Nếu chọn checkbox)
+        // 1. Ưu tiên export theo IDs đã chọn
         if ($request->filled('org_ids')) {
-            $ids = is_array($request->org_ids) ? $request->org_ids : explode(',', $request->org_ids);
+            $ids = is_array($request->org_ids)
+                ? $request->org_ids
+                : explode(',', $request->org_ids);
             $query->whereIn('org_id', $ids);
-        } else {
-            // 2. Nếu không chọn ID thì dùng bộ lọc tìm kiếm hiện tại
+        }
+        // 2. Nếu không có IDs, áp dụng filters từ trang index
+        else {
             if ($request->filled('search')) {
                 $query->where('organization_name', 'LIKE', "%{$request->search}%");
             }
@@ -654,25 +715,25 @@ class AdminController extends Controller
 
         $organizations = $query->get();
 
-        // === TẠO FILE EXCEL ===
+        // Tạo file Excel
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Organizations List');
 
-        // -- Header --
+        // Header
         $headers = ['ID', 'Name', 'Type', 'Status', 'Email', 'Phone', 'Founded', 'Opportunities', 'Rating', 'Created At'];
         $sheet->fromArray($headers, NULL, 'A1');
 
-        // -- Style Header (Màu xanh, chữ đậm) --
+        // Style Header
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']], // Màu Indigo
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
         ];
         $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
 
-        // -- Data --
+        // Data
         $row = 2;
         foreach ($organizations as $org) {
             $sheet->setCellValue('A' . $row, $org->org_id);
@@ -688,12 +749,12 @@ class AdminController extends Controller
             $row++;
         }
 
-        // -- Auto Size Columns --
+        // Auto Size Columns
         foreach (range('A', 'J') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // -- Xuất file --
+        // Export file
         $filename = 'organizations_export_' . date('Y-m-d_H-i') . '.xlsx';
         $writer = new Xlsx($spreadsheet);
 
@@ -703,15 +764,24 @@ class AdminController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
+    // Add to AdminController
+    // public function showExportOptions(Request $request)
+    // {
+    //     // Nhận danh sách ID đã chọn từ trang Index (nếu có) để truyền sang View
+    //     $orgIds = $request->query('org_ids');
 
+    //     return view('admin.organizations.export', compact('orgIds'));
+    // }
     /**
      * Display opportunities list
      */
+    // Trong AdminController.php
+
     public function opportunities(Request $request)
     {
         $query = VolunteerOpportunity::with(['organization.user', 'category']);
 
-        // Search
+        // --- Giữ nguyên Logic Lọc Cũ ---
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -719,27 +789,30 @@ class AdminController extends Controller
                     ->orWhere('location', 'LIKE', "%{$search}%");
             });
         }
-
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
-        // Filter by category
         if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
-
-        // Filter by organization
         if ($request->filled('organization')) {
             $query->whereHas('organization', function ($q) use ($request) {
                 $q->where('organization_name', 'LIKE', "%{$request->organization}%");
             });
         }
+        // ---------------------------------
 
         $opportunities = $query->latest()->paginate(15);
 
-        // Statistics
+        // [THÊM MỚI] Xử lý trả về AJAX JSON
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.opportunities.partials.table', compact('opportunities'))->render(),
+                'pagination' => $opportunities->links()->toHtml()
+            ]);
+        }
+
+        // Các phần thống kê giữ nguyên
         $stats = [
             'total' => VolunteerOpportunity::count(),
             'active' => VolunteerOpportunity::where('status', 'Active')->count(),
@@ -747,22 +820,40 @@ class AdminController extends Controller
             'completed' => VolunteerOpportunity::where('status', 'Completed')->count(),
             'cancelled' => VolunteerOpportunity::where('status', 'Cancelled')->count(),
         ];
-
         $categories = Category::where('is_active', true)->get();
 
         return view('admin.opportunities.index', compact('opportunities', 'stats', 'categories'));
     }
-
     /**
      * Show opportunity details
      */
-    public function showOpportunity($id)
+    public function showOpportunity(Request $request, $id)
     {
-        $opportunity = VolunteerOpportunity::with(['organization', 'category'])->findOrFail($id);
-        // return response()->json($opportunity);
+        // Eager load sâu hơn để lấy ảnh avatar của organization user nếu cần
+        $opportunity = VolunteerOpportunity::with(['organization.user', 'category'])
+            ->findOrFail($id);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            // [NÂNG CẤP] Format sẵn dữ liệu để JS không cần xử lý logic phức tạp
+            $data = $opportunity->toArray();
+            $data['formatted_start_date'] = $opportunity->start_date ? $opportunity->start_date->format('d/m/Y') : 'N/A';
+            $data['formatted_end_date'] = $opportunity->end_date ? $opportunity->end_date->format('d/m/Y') : 'Vô thời hạn';
+            $data['org_name'] = $opportunity->organization->organization_name ?? 'N/A';
+            $data['org_avatar'] = $opportunity->organization->user->avatar_url ?? null;
+            $data['category_info'] = $opportunity->category ? [
+                'name' => $opportunity->category->category_name,
+                'color' => $opportunity->category->color,
+                'icon' => $opportunity->category->icon
+            ] : null;
+
+            return response()->json([
+                'success' => true,
+                'opportunity' => $data
+            ]);
+        }
+
         return view('admin.opportunities.show', compact('opportunity'));
     }
-
     /**
      * Update opportunity status
      */
@@ -770,20 +861,24 @@ class AdminController extends Controller
     {
         $opportunity = VolunteerOpportunity::findOrFail($id);
 
-        $opportunity->update([
-            'status' => $request->status
+        // Validate dữ liệu đầu vào
+        $request->validate([
+            'status' => 'required|in:Active,Paused,Completed,Cancelled'
         ]);
+
+        $opportunity->update(['status' => $request->status]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Status updated successfully'
+            'message' => 'Trạng thái đã được cập nhật thành công.',
+            'new_status' => $request->status // Trả về status mới để JS cập nhật giao diện
         ]);
     }
 
     /**
      * Delete opportunity
      */
-    public function opportunitiesDestroy($id)
+    public function deleteOpportunity($id)
     {
         try {
             $opportunity = VolunteerOpportunity::findOrFail($id);
@@ -791,12 +886,12 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Opportunity deleted successfully'
+                'message' => 'Đã xóa cơ hội thành công.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete opportunity'
+                'message' => 'Lỗi: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -804,43 +899,99 @@ class AdminController extends Controller
     /**
      * Export opportunities
      */
-    public function opportunitiesExport()
+    public function exportView()
     {
-        $opportunities = VolunteerOpportunity::with(['organization', 'category'])->get();
-
-        $filename = 'opportunities_' . date('Y-m-d_His') . '.csv';
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function () use ($opportunities) {
-            $file = fopen('php://output', 'w');
-
-            fputcsv($file, ['ID', 'Title', 'Organization', 'Category', 'Status', 'Location', 'Start Date', 'Applications', 'Views', 'Created']);
-
-            foreach ($opportunities as $opp) {
-                fputcsv($file, [
-                    $opp->opportunity_id,
-                    $opp->title,
-                    $opp->organization->organization_name,
-                    $opp->category ? $opp->category->category_name : 'N/A',
-                    $opp->status,
-                    $opp->location,
-                    $opp->start_date->format('Y-m-d'),
-                    $opp->application_count,
-                    $opp->view_count,
-                    $opp->created_at->format('Y-m-d'),
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        $categories = Category::all(); // Lấy danh mục để fill vào select box
+        return view('admin.opportunities.export', compact('categories'));
     }
 
+    // 2. Hàm xử lý Download (Thay thế hàm opportunitiesExport cũ hoặc sửa lại)
+    public function processExport(Request $request)
+    {
+        // 1. Lọc dữ liệu (Giữ nguyên logic lọc của bạn)
+        $query = VolunteerOpportunity::with(['organization', 'category']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        // Lấy dữ liệu
+        $opportunities = $query->get();
+
+        // 2. TẠO FILE EXCEL (.xlsx)
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Opportunities List');
+
+        // -- Header Columns --
+        $headers = [
+            'ID',
+            'Title',
+            'Organization',
+            'Category',
+            'Status',
+            'Needed',
+            'Registered',
+            'Location',
+            'Created At'
+        ];
+        $sheet->fromArray($headers, NULL, 'A1');
+
+        // -- Style Header (Màu nền xanh, chữ trắng, đậm) --
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']], // Indigo-600
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
+        ];
+        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(25); // Chiều cao dòng header
+
+        // -- Fill Data --
+        $row = 2;
+        foreach ($opportunities as $opp) {
+            $sheet->setCellValue('A' . $row, $opp->opportunity_id);
+            $sheet->setCellValue('B' . $row, $opp->title);
+            $sheet->setCellValue('C' . $row, $opp->organization->organization_name ?? 'N/A');
+            $sheet->setCellValue('D' . $row, $opp->category->category_name ?? 'N/A');
+            $sheet->setCellValue('E' . $row, $opp->status);
+            $sheet->setCellValue('F' . $row, $opp->volunteers_needed);
+            $sheet->setCellValue('G' . $row, $opp->volunteers_registered);
+            $sheet->setCellValue('H' . $row, $opp->location);
+            $sheet->setCellValue('I' . $row, $opp->created_at->format('d/m/Y'));
+
+            // Tô màu trạng thái (Optional)
+            if ($opp->status == 'Cancelled') {
+                $sheet->getStyle('A' . $row . ':I' . $row)->getFont()->getColor()->setARGB('FFEF4444'); // Red text
+            }
+
+            $row++;
+        }
+
+        // -- Auto Size Columns --
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // -- Xuất file --
+        $filename = 'opportunities_export_' . date('Y-m-d_H-i') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
     /**
      * Display applications list
      */
@@ -923,11 +1074,14 @@ class AdminController extends Controller
     /**
      * Export applications to CSV with detailed information
      */
+    /**
+     * Export applications to Excel (.xlsx)
+     */
     public function exportApplications(Request $request)
     {
+        // 1. Lọc dữ liệu (Giữ nguyên logic cũ)
         $query = Application::with(['volunteer.volunteerProfile', 'opportunity.organization']);
 
-        // Apply filters from request
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -964,76 +1118,92 @@ class AdminController extends Controller
 
         $applications = $query->orderBy('applied_date', 'desc')->get();
 
-        $filename = 'applications_export_' . date('Y-m-d_His') . '.csv';
+        // 2. TẠO FILE EXCEL
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Applications List');
 
+        // -- Header Columns --
         $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Cache-Control' => 'max-age=0',
+            'ID',
+            'Volunteer Name',
+            'Email',
+            'Phone',
+            'Age',
+            'Rating',
+            'Opportunity',
+            'Organization',
+            'Status',
+            'Applied Date',
+            'Reviewed Date',
+            'Pending Days'
         ];
+        $sheet->fromArray($headers, NULL, 'A1');
 
-        $callback = function () use ($applications) {
-            $file = fopen('php://output', 'w');
+        // -- Style Header (Nền tím, chữ trắng, đậm) --
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '6D28D9']], // Purple-700
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
+        ];
+        $sheet->getStyle('A1:L1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(30);
 
-            // Add BOM for UTF-8
-            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        // -- Fill Data --
+        $row = 2;
+        foreach ($applications as $app) {
+            $volunteer = $app->volunteer;
+            $profile = $volunteer->volunteerProfile;
 
-            // CSV Headers
-            fputcsv($file, [
-                'Application ID',
-                'Volunteer Name',
-                'Email',
-                'Phone',
-                'City',
-                'Age',
-                'Total Hours',
-                'Rating',
-                'Opportunity',
-                'Organization',
-                'Category',
-                'Location',
-                'Status',
-                'Applied Date',
-                'Reviewed Date',
-                'Interview Date',
-                'Days Pending'
-            ]);
+            // Tính số ngày chờ
+            $daysPending = $app->status === 'Pending' ?
+                $app->applied_date->diffInDays(now()) : ($app->reviewed_date ? $app->applied_date->diffInDays($app->reviewed_date) : 0);
 
-            foreach ($applications as $app) {
-                $volunteer = $app->volunteer;
-                $profile = $volunteer->volunteerProfile;
-                $opportunity = $app->opportunity;
-                $organization = $opportunity->organization;
+            $sheet->setCellValue('A' . $row, $app->application_id);
+            $sheet->setCellValue('B' . $row, $volunteer->first_name . ' ' . $volunteer->last_name);
+            $sheet->setCellValue('C' . $row, $volunteer->email);
+            $sheet->setCellValue('D' . $row, $volunteer->phone ?? 'N/A');
+            $sheet->setCellValue('E' . $row, $volunteer->date_of_birth ? \Carbon\Carbon::parse($volunteer->date_of_birth)->age : 'N/A');
+            $sheet->setCellValue('F' . $row, $profile ? number_format($profile->volunteer_rating, 1) : '0.0');
+            $sheet->setCellValue('G' . $row, $app->opportunity->title);
+            $sheet->setCellValue('H' . $row, $app->opportunity->organization->organization_name);
+            $sheet->setCellValue('I' . $row, $app->status);
+            $sheet->setCellValue('J' . $row, $app->applied_date->format('d/m/Y H:i'));
+            $sheet->setCellValue('K' . $row, $app->reviewed_date ? $app->reviewed_date->format('d/m/Y') : '');
+            $sheet->setCellValue('L' . $row, $daysPending);
 
-                // Calculate days pending
-                $daysPending = $app->status === 'Pending' ?
-                    $app->applied_date->diffInDays(now()) : ($app->reviewed_date ? $app->applied_date->diffInDays($app->reviewed_date) : 0);
+            // Tô màu trạng thái
+            $statusColor = match ($app->status) {
+                'Accepted' => 'DCFCE7', // Green-100
+                'Rejected' => 'FEE2E2', // Red-100
+                'Pending' => 'FEF9C3',  // Yellow-100
+                default => 'F3F4F6'     // Gray-100
+            };
+            $sheet->getStyle('I' . $row)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($statusColor);
 
-                fputcsv($file, [
-                    $app->application_id,
-                    $volunteer->first_name . ' ' . $volunteer->last_name,
-                    $volunteer->email,
-                    $volunteer->phone ?? 'N/A',
-                    $volunteer->city ?? 'N/A',
-                    $volunteer->date_of_birth ? \Carbon\Carbon::parse($volunteer->date_of_birth)->age : 'N/A',
-                    $profile ? $profile->total_volunteer_hours : 0,
-                    $profile ? number_format($profile->volunteer_rating, 2) : '0.00',
-                    $opportunity->title,
-                    $organization->organization_name,
-                    $opportunity->category ? $opportunity->category->category_name : 'N/A',
-                    $opportunity->location,
-                    $app->status,
-                    $app->applied_date->format('Y-m-d H:i:s'),
-                    $app->reviewed_date ? $app->reviewed_date->format('Y-m-d H:i:s') : 'N/A',
-                    $app->interview_scheduled ?? 'N/A',
-                    $daysPending
-                ]);
-            }
+            // Căn giữa các cột ngắn
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('E' . $row . ':F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('I' . $row . ':L' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-            fclose($file);
-        };
+            $row++;
+        }
 
-        return response()->stream($callback, 200, $headers);
+        // -- Auto Size Columns --
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // -- Xuất file --
+        $filename = 'applications_export_' . date('Y-m-d_H-i') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
     /**
      * Display categories list
@@ -1382,6 +1552,9 @@ class AdminController extends Controller
                 ['key' => $key],
                 ['value' => $value, 'updated_at' => now()]
             );
+
+            // [QUAN TRỌNG] Xóa Cache của key này để hệ thống load lại giá trị mới
+            \Illuminate\Support\Facades\Cache::forget('setting_' . $key);
         }
 
         // Cập nhật file .env nếu cần (Nâng cao - cẩn thận quyền ghi file)
@@ -1510,6 +1683,23 @@ class AdminController extends Controller
         }
     }
 
+
+    /**
+     * API: Get opportunities by category
+     */
+    public function getCategoryOpportunities($id)
+    {
+        $opportunities = VolunteerOpportunity::where('category_id', $id)
+            ->with('organization') // Eager load để lấy tên tổ chức
+            ->select('opportunity_id', 'title', 'org_id', 'status', 'created_at')
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $opportunities
+        ]);
+    }
     public function pendingActivities(Request $request)
     {
         $query = VolunteerActivity::with(['volunteer', 'opportunity', 'organization'])

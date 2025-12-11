@@ -1,664 +1,295 @@
 @extends('layouts.admin')
 
-@section('title', 'Platform Analytics')
+@section('title', 'Thống kê & Báo cáo')
 @section('breadcrumb', 'Analytics')
 
 @section('content')
-<div class="space-y-6">
-    
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h2 class="text-3xl font-bold text-gray-900">Platform Analytics</h2>
-            <p class="text-gray-600 mt-1">Real-time insights and performance metrics</p>
-        </div>
-        <div class="flex space-x-3">
-            <select id="periodSelector" onchange="changePeriod(this.value)" 
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                <option value="7days" {{ $period == '7days' ? 'selected' : '' }}>Last 7 days</option>
-                <option value="30days" {{ $period == '30days' ? 'selected' : '' }}>Last 30 days</option>
-                <option value="90days" {{ $period == '90days' ? 'selected' : '' }}>Last 90 days</option>
-                <option value="year" {{ $period == 'year' ? 'selected' : '' }}>Last year</option>
-            </select>
-            <a href="{{ route('admin.analytics.impact') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                <i class="fas fa-chart-line mr-2"></i>Impact Report
-            </a>
-        </div>
-    </div>
-    
-    <!-- Key Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-users text-blue-600 text-xl"></i>
-                </div>
-                @if($growth['new_users'] > 0)
-                <span class="text-sm font-medium text-green-600">
-                    <i class="fas fa-arrow-up"></i> {{ $growth['new_users'] }}
-                </span>
-                @endif
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['total_users']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Total Users</p>
-        </div>
-        
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-clipboard-list text-green-600 text-xl"></i>
-                </div>
-                @if($growth['new_opportunities'] > 0)
-                <span class="text-sm font-medium text-green-600">
-                    <i class="fas fa-arrow-up"></i> {{ $growth['new_opportunities'] }}
-                </span>
-                @endif
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['active_opportunities']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Active Opportunities</p>
-        </div>
-        
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-clock text-purple-600 text-xl"></i>
-                </div>
-                @if($growth['hours_logged'] > 0)
-                <span class="text-sm font-medium text-green-600">
-                    <i class="fas fa-arrow-up"></i> {{ number_format($growth['hours_logged']) }}h
-                </span>
-                @endif
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['total_volunteer_hours']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Volunteer Hours</p>
-        </div>
-        
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-building text-orange-600 text-xl"></i>
-                </div>
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['total_organizations']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Verified Organizations</p>
-        </div>
-    </div>
-    
-    <!-- Charts Row 1 -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- User Growth Chart -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">User Registration Trend</h3>
-            <canvas id="userGrowthChart" height="250"></canvas>
-        </div>
-        
-        <!-- Application Status Chart -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Application Status</h3>
-                <span class="text-sm text-gray-500">{{ number_format($metrics['total_applications']) }} total</span>
-            </div>
-            <canvas id="applicationChart" height="250"></canvas>
-        </div>
-    </div>
-    
-    <!-- Charts Row 2 -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Top Categories -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Categories</h3>
-            <div class="space-y-3">
-                @forelse($topCategories as $category)
+    <div class="space-y-8" x-data="analyticsDashboard()">
+
+        <div
+            class="relative bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl shadow-lg p-8 text-white overflow-hidden">
+            <div class="absolute right-0 top-0 h-full w-1/2 bg-white/10 skew-x-12 transform translate-x-20"></div>
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm font-medium text-gray-700">{{ $category->category_name }}</span>
-                        <span class="text-sm text-gray-500">{{ $category->count }}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-indigo-600 h-2 rounded-full transition-all" 
-                             style="width: {{ $topCategories->first() ? ($category->count / $topCategories->first()->count) * 100 : 0 }}%"></div>
-                    </div>
+                    <h2 class="text-3xl font-bold mb-2">Thống kê hệ thống</h2>
+
+                    <p class="text-indigo-100 text-lg opacity-90">Theo dõi hiệu suất và tăng trưởng theo thời gian thực.</p>
                 </div>
-                @empty
-                <p class="text-gray-500 text-sm text-center py-4">No data available</p>
-                @endforelse
+
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ route('admin.analytics.reports') }}"
+                        class="bg-white text-indigo-600 px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-indigo-50 transition flex items-center gap-2">
+                        <i class="fas fa-file-export"></i>
+                        <span class="hidden sm:inline">Xuất Báo Cáo</span>
+                    </a>
+                    <select x-model="period" @change="fetchData()"
+                        class="bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-white/50 focus:outline-none cursor-pointer option-black font-medium">
+                        <option value="7days" class="text-gray-900">7 ngày qua</option>
+                        <option value="30days" class="text-gray-900">30 ngày qua</option>
+                        <option value="90days" class="text-gray-900">3 tháng qua</option>
+                        <option value="year" class="text-gray-900">1 năm qua</option>
+                    </select>
+
+                    <button @click="fetchData()"
+                        class="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white p-2.5 rounded-xl transition border border-white/30"
+                        title="Làm mới dữ liệu">
+                        <i class="fas fa-sync-alt" :class="loading ? 'fa-spin' : ''"></i>
+                    </button>
+                </div>
             </div>
         </div>
-        
-        <!-- Monthly Volunteer Hours -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Volunteer Hours Trend</h3>
-            <canvas id="monthlyHoursChart" height="180"></canvas>
-        </div>
-    </div>
-    
-    <!-- Top Lists -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Top Volunteers -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-900">Top Volunteers</h3>
-            </div>
-            <div class="divide-y divide-gray-200">
-                @forelse($topVolunteers as $index => $volunteer)
-                <div class="px-6 py-4 hover:bg-gray-50 transition">
-                    <div class="flex items-center space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            {{ $index + 1 }}
-                        </div>
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($volunteer->first_name . ' ' . $volunteer->last_name) }}&background=random" 
-                             class="w-12 h-12 rounded-full border-2 border-gray-200" alt="">
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900">{{ $volunteer->first_name }} {{ $volunteer->last_name }}</p>
-                            <p class="text-sm text-gray-500">
-                                <i class="fas fa-clock mr-1"></i>{{ number_format($volunteer->total_hours) }} hours
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                @empty
-                <div class="px-6 py-12 text-center">
-                    <p class="text-gray-500">No volunteers yet</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-        
-        <!-- Top Organizations -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-900">Top Organizations</h3>
-            </div>
-            <div class="divide-y divide-gray-200">
-                @forelse($topOrganizations as $index => $org)
-                <div class="px-6 py-4 hover:bg-gray-50 transition">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold">
-                                {{ $index + 1 }}
-                            </div>
-                            <div>
-                                <p class="font-medium text-gray-900">{{ Str::limit($org->organization_name, 30) }}</p>
-                                <p class="text-sm text-gray-500">
-                                    <i class="fas fa-users mr-1"></i>{{ $org->volunteer_count }} volunteers
-                                </p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-yellow-500">
-                                <i class="fas fa-star"></i> {{ number_format($org->rating, 1) }}
-                            </span>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                <div class="flex justify-between items-start">
+                    <div class="z-10">
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tổng thành viên</p>
+                        <template x-if="loading">
+                            <div class="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2"></div>
+                        </template>
+                        <template x-if="!loading">
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-1"
+                                x-text="formatNumber(data.metrics.total_users)"></h3>
+                        </template>
+
+                        <div
+                            class="mt-2 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg w-fit flex items-center gap-1">
+                            <i class="fas fa-arrow-up"></i>
+                            <span x-text="data.metrics.new_users"></span> mới
                         </div>
                     </div>
-                </div>
-                @empty
-                <div class="px-6 py-12 text-center">
-                    <p class="text-gray-500">No organizations yet</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-    
-</div>
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// Prepare data
-const userTrendData = @json($userTrend);
-const applicationsByStatus = @json($applicationsByStatus);
-const monthlyHoursData = @json($monthlyHours);
-
-// User Growth Chart
-new Chart(document.getElementById('userGrowthChart'), {
-    type: 'line',
-    data: {
-        labels: userTrendData.map(d => new Date(d.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
-        datasets: [{
-            label: 'New Users',
-            data: userTrendData.map(d => d.count),
-            borderColor: 'rgb(99, 102, 241)',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            tension: 0.4,
-            fill: true
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { 
-            y: { beginAtZero: true, ticks: { precision: 0 } }
-        }
-    }
-});
-
-// Application Chart
-new Chart(document.getElementById('applicationChart'), {
-    type: 'doughnut',
-    data: {
-        labels: Object.keys(applicationsByStatus),
-        datasets: [{
-            data: Object.values(applicationsByStatus),
-            backgroundColor: ['#F59E0B', '#10B981', '#EF4444', '#3B82F6']
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-    }
-});
-
-// Monthly Hours Chart
-new Chart(document.getElementById('monthlyHoursChart'), {
-    type: 'bar',
-    data: {
-        labels: monthlyHoursData.map(d => `${d.year}-${String(d.month).padStart(2, '0')}`),
-        datasets: [{
-            label: 'Hours',
-            data: monthlyHoursData.map(d => d.total_hours),
-            backgroundColor: 'rgba(99, 102, 241, 0.8)',
-            borderRadius: 6
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
-    }
-});
-
-function changePeriod(period) {
-    window.location.href = `?period=${period}`;
-}
-</script>
-@endpush
-@endsection@extends('layouts.admin')
-
-@section('title', 'Platform Analytics')
-@section('breadcrumb', 'Analytics')
-
-@section('content')
-<div class="space-y-6">
-
-    <div class="flex items-center justify-between">
-        <div>
-            <h2 class="text-3xl font-bold text-gray-900">Platform Analytics</h2>
-            <p class="text-gray-600 mt-1">Real-time insights and performance metrics</p>
-        </div>
-        <div class="flex space-x-3">
-            <select id="periodSelector" onchange="changePeriod(this.value)" 
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                <option value="7days" {{ $period == '7days' ? 'selected' : '' }}>Last 7 days</option>
-                <option value="30days" {{ $period == '30days' ? 'selected' : '' }}>Last 30 days</option>
-                <option value="90days" {{ $period == '90days' ? 'selected' : '' }}>Last 90 days</option>
-                <option value="year" {{ $period == 'year' ? 'selected' : '' }}>Last year</option>
-            </select>
-            <a href="{{ route('admin.analytics.impact') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                <i class="fas fa-chart-line mr-2"></i>Impact Report
-            </a>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {{-- Card 1: Total Users --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-users text-blue-600 text-xl"></i>
-                </div>
-                @if($growth['new_users'] > 0)
-                <span class="text-sm font-medium text-green-600">
-                    <i class="fas fa-arrow-up"></i> {{ $growth['new_users'] }}
-                </span>
-                @endif
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['total_users']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Total Users</p>
-        </div>
-
-        {{-- Card 2: Active Opportunities --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-clipboard-list text-green-600 text-xl"></i>
-                </div>
-                @if($growth['new_opportunities'] > 0)
-                <span class="text-sm font-medium text-green-600">
-                    <i class="fas fa-arrow-up"></i> {{ $growth['new_opportunities'] }}
-                </span>
-                @endif
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['active_opportunities']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Active Opportunities</p>
-        </div>
-
-        {{-- Card 3: Volunteer Hours --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-clock text-purple-600 text-xl"></i>
-                </div>
-                @if($growth['hours_logged'] > 0)
-                <span class="text-sm font-medium text-green-600">
-                    <i class="fas fa-arrow-up"></i> {{ number_format($growth['hours_logged']) }}h
-                </span>
-                @endif
-            </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['total_volunteer_hours']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Total Volunteer Hours</p>
-        </div>
-
-        {{-- Card 4: Verified Organizations --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-building text-orange-600 text-xl"></i>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
                 </div>
             </div>
-            <p class="text-3xl font-bold text-gray-900">{{ number_format($metrics['total_organizations']) }}</p>
-            <p class="text-gray-600 text-sm mt-1">Verified Organizations</p>
+
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                <div class="flex justify-between items-start">
+                    <div class="z-10">
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Giờ tình nguyện</p>
+                        <template x-if="loading">
+                            <div class="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2"></div>
+                        </template>
+                        <template x-if="!loading">
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-1"
+                                x-text="formatNumber(data.metrics.total_hours)"></h3>
+                        </template>
+
+                        <div
+                            class="mt-2 text-xs font-medium text-purple-600 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-lg w-fit flex items-center gap-1">
+                            <i class="fas fa-clock mr-1"></i> Đã xác thực
+                        </div>
+                    </div>
+                    <div class="p-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-xl">
+                        <i class="fas fa-heart text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                <div class="flex justify-between items-start">
+                    <div class="z-10">
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tổ chức đối tác</p>
+                        <template x-if="loading">
+                            <div class="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2"></div>
+                        </template>
+                        <template x-if="!loading">
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-1"
+                                x-text="formatNumber(data.metrics.total_orgs)"></h3>
+                        </template>
+
+                        <div
+                            class="mt-2 text-xs font-medium text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg w-fit">
+                            Đã xác minh
+                        </div>
+                    </div>
+                    <div class="p-3 bg-orange-50 dark:bg-orange-900/20 text-orange-600 rounded-xl">
+                        <i class="fas fa-building text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                <div class="flex justify-between items-start">
+                    <div class="z-10">
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Đơn đăng ký</p>
+                        <template x-if="loading">
+                            <div class="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2"></div>
+                        </template>
+                        <template x-if="!loading">
+                            <h3 class="text-3xl font-bold text-gray-900 dark:text-white mt-1"
+                                x-text="formatNumber(data.metrics.total_apps)"></h3>
+                        </template>
+
+                        <div
+                            class="mt-2 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg w-fit">
+                            <span x-text="data.metrics.pending_apps"></span> chờ xử lý
+                        </div>
+                    </div>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl">
+                        <i class="fas fa-file-contract text-xl"></i>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <div
+                class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6">Tăng trưởng người dùng</h3>
+
+                <div class="relative w-full h-80">
+                    <div x-show="loading"
+                        class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 z-10">
+                        <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin">
+                        </div>
+                    </div>
+                    <canvas id="userGrowthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6">Trạng thái đơn</h3>
+
+                <div class="relative w-full h-64 flex justify-center">
+                    <div x-show="loading"
+                        class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 z-10">
+                        <div class="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    </div>
+                    <canvas id="appStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6">Lĩnh vực hoạt động sôi nổi nhất</h3>
+
+            <div class="relative w-full h-72">
+                <div x-show="loading"
+                    class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 z-10">
+                    <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                </div>
+                <canvas id="categoriesChart"></canvas>
+            </div>
+        </div>
+
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="charts-row-1">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">User Registration Trend</h3>
-            <div id="userGrowthLoader" class="text-center py-12 text-gray-500">
-                <i class="fas fa-spinner fa-spin mr-2"></i>Loading Chart...
-            </div>
-            <canvas id="userGrowthChart" height="250" class="hidden"></canvas>
-        </div>
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            function analyticsDashboard() {
+                return {
+                    period: '30days',
+                    loading: true,
+                    data: {
+                        metrics: { total_users: 0, new_users: 0, total_hours: 0, total_orgs: 0, total_apps: 0, pending_apps: 0 },
+                        charts: { user_growth: {}, app_status: {}, top_categories: {} }
+                    },
+                    charts: {}, // Store chart instances
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Application Status</h3>
-                <span class="text-sm text-gray-500">{{ number_format($metrics['total_applications']) }} total</span>
-            </div>
-             <div id="applicationChartLoader" class="text-center py-12 text-gray-500">
-                <i class="fas fa-spinner fa-spin mr-2"></i>Loading Chart...
-            </div>
-            <canvas id="applicationChart" height="250" class="hidden"></canvas>
-        </div>
-    </div>
+                    init() {
+                        this.fetchData();
+                    },
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="charts-row-2">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Categories</h3>
-            <div id="topCategoriesContainer">
-                <div class="text-center py-4 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading List...</div>
-            </div>
-        </div>
+                    formatNumber(num) {
+                        return new Intl.NumberFormat('vi-VN').format(num);
+                    },
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Volunteer Hours Trend</h3>
-            <div id="monthlyHoursLoader" class="text-center py-12 text-gray-500">
-                <i class="fas fa-spinner fa-spin mr-2"></i>Loading Chart...
-            </div>
-            <canvas id="monthlyHoursChart" height="180" class="hidden"></canvas>
-        </div>
-    </div>
+                    async fetchData() {
+                        this.loading = true;
+                        try {
+                            const response = await fetch(`{{ route('admin.analytics.data') }}?period=${this.period}`);
+                            const result = await response.json();
+                            this.data = result;
+                            this.renderCharts(result.charts);
+                        } catch (error) {
+                            console.error("Error fetching analytics:", error);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="top-lists-container">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-900">Top Volunteers</h3>
-            </div>
-            <div id="topVolunteersList" class="divide-y divide-gray-200">
-                <div class="text-center py-12 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading List...</div>
-            </div>
-        </div>
+                    renderCharts(chartData) {
+                        // 1. User Growth (Line)
+                        this.createChart('userGrowthChart', 'line', {
+                            labels: chartData.user_growth.labels,
+                            datasets: [{
+                                label: 'Thành viên mới',
+                                data: chartData.user_growth.data,
+                                borderColor: '#4f46e5',
+                                backgroundColor: (ctx) => {
+                                    const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+                                    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.2)');
+                                    gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+                                    return gradient;
+                                },
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 2,
+                                pointRadius: 3
+                            }]
+                        }, {
+                            scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, x: { grid: { display: false } } },
+                            plugins: { legend: { display: false } }
+                        });
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-900">Top Organizations</h3>
-            </div>
-            <div id="topOrganizationsList" class="divide-y divide-gray-200">
-                <div class="text-center py-12 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading List...</div>
-            </div>
-        </div>
-    </div>
+                        // 2. App Status (Doughnut)
+                        this.createChart('appStatusChart', 'doughnut', {
+                            labels: chartData.app_status.labels,
+                            datasets: [{
+                                data: chartData.app_status.data,
+                                backgroundColor: ['#FBBF24', '#10B981', '#EF4444', '#3B82F6'], // Amber, Emerald, Red, Blue
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        }, { cutout: '70%', plugins: { legend: { position: 'right' } } });
 
-</div>
+                        // 3. Top Categories (Bar)
+                        this.createChart('categoriesChart', 'bar', {
+                            labels: chartData.top_categories.labels,
+                            datasets: [{
+                                label: 'Số lượng cơ hội',
+                                data: chartData.top_categories.data,
+                                backgroundColor: '#8B5CF6', // Purple
+                                borderRadius: 6,
+                                barThickness: 30
+                            }]
+                        }, {
+                            indexAxis: 'y', // Horizontal Bar
+                            scales: { x: { beginAtZero: true } },
+                            plugins: { legend: { display: false } }
+                        });
+                    },
 
-@push('scripts')
-{{-- Thêm Chart.js và Axios (Nếu chưa có) --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const period = document.getElementById('periodSelector').value;
-        
-        // 1. Lazy load Charts (Thời gian)
-        fetchChartData(period);
+                    createChart(id, type, data, options = {}) {
+                        const ctx = document.getElementById(id);
+                        if (!ctx) return;
 
-        // 2. Lazy load Top Lists (Danh sách)
-        fetchTopListData();
-    });
+                        // Destroy old chart if exists
+                        if (this.charts[id]) {
+                            this.charts[id].destroy();
+                        }
 
-    function changePeriod(period) {
-        // Tải lại trang với tham số period mới để cập nhật Metrics và Charts/Lists
-        window.location.href = `?period=${period}`;
-    }
-
-    // --- CHART DATA FETCH & RENDERING ---
-    function fetchChartData(period) {
-        axios.get(`/api/analytics/charts?period=${period}`)
-            .then(response => {
-                const data = response.data;
-                
-                // User Trend Chart
-                renderUserTrendChart(data.userTrend);
-                
-                // Application Status Chart
-                renderApplicationChart(data.applicationsByStatus);
-                
-                // Monthly Hours Chart
-                renderMonthlyHoursChart(data.monthlyHours);
-            })
-            .catch(error => {
-                console.error('Error loading chart data:', error);
-                document.getElementById('userGrowthLoader').innerHTML = '<p class="text-red-500">Error loading chart data.</p>';
-                document.getElementById('applicationChartLoader').innerHTML = '<p class="text-red-500">Error loading chart data.</p>';
-                document.getElementById('monthlyHoursLoader').innerHTML = '<p class="text-red-500">Error loading chart data.</p>';
-            });
-    }
-
-    function renderUserTrendChart(userTrendData) {
-        document.getElementById('userGrowthLoader').classList.add('hidden');
-        document.getElementById('userGrowthChart').classList.remove('hidden');
-
-        new Chart(document.getElementById('userGrowthChart'), {
-            type: 'line',
-            data: {
-                labels: userTrendData.map(d => new Date(d.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
-                datasets: [{
-                    label: 'New Users',
-                    data: userTrendData.map(d => d.count),
-                    borderColor: 'rgb(99, 102, 241)',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                        this.charts[id] = new Chart(ctx, {
+                            type: type,
+                            data: data,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                ...options
+                            }
+                        });
+                    }
                 }
             }
-        });
-    }
-
-    function renderApplicationChart(applicationsByStatus) {
-        document.getElementById('applicationChartLoader').classList.add('hidden');
-        document.getElementById('applicationChart').classList.remove('hidden');
-
-        new Chart(document.getElementById('applicationChart'), {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(applicationsByStatus),
-                datasets: [{
-                    data: Object.values(applicationsByStatus),
-                    backgroundColor: ['#F59E0B', '#10B981', '#EF4444', '#3B82F6']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } }
-            }
-        });
-    }
-
-    function renderMonthlyHoursChart(monthlyHoursData) {
-        document.getElementById('monthlyHoursLoader').classList.add('hidden');
-        document.getElementById('monthlyHoursChart').classList.remove('hidden');
-
-        new Chart(document.getElementById('monthlyHoursChart'), {
-            type: 'bar',
-            data: {
-                // Tạo label tháng/năm
-                labels: monthlyHoursData.map(d => `${d.year}-${String(d.month).padStart(2, '0')}`), 
-                datasets: [{
-                    label: 'Hours',
-                    data: monthlyHoursData.map(d => d.total_hours),
-                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { beginAtZero: true } ,
-                    x: { ticks: { autoSkip: true, maxRotation: 0 } }
-                }
-            }
-        });
-    }
-
-    // --- TOP LISTS FETCH & RENDERING ---
-    function fetchTopListData() {
-        axios.get(`/api/analytics/top-lists`)
-            .then(response => {
-                const data = response.data;
-                
-                renderTopCategories(data.topCategories);
-                renderTopVolunteers(data.topVolunteers);
-                renderTopOrganizations(data.topOrganizations);
-            })
-            .catch(error => {
-                console.error('Error loading top list data:', error);
-                document.getElementById('topCategoriesContainer').innerHTML = '<p class="text-red-500 text-sm text-center py-4">Error loading data.</p>';
-                document.getElementById('topVolunteersList').innerHTML = '<div class="px-6 py-12 text-center"><p class="text-red-500">Error loading list.</p></div>';
-                document.getElementById('topOrganizationsList').innerHTML = '<div class="px-6 py-12 text-center"><p class="text-red-500">Error loading list.</p></div>';
-            });
-    }
-
-    function renderTopCategories(categories) {
-        const container = document.getElementById('topCategoriesContainer');
-        if (categories.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No data available</p>';
-            return;
-        }
-
-        const maxCount = categories.length > 0 ? categories[0].count : 1;
-        
-        let html = '<div class="space-y-3">';
-        categories.forEach(category => {
-            const widthPercentage = (category.count / maxCount) * 100;
-            html += `
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm font-medium text-gray-700">${category.category_name}</span>
-                        <span class="text-sm text-gray-500">${category.count.toLocaleString()}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-indigo-600 h-2 rounded-full transition-all" 
-                             style="width: ${widthPercentage}%"></div>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        container.innerHTML = html;
-    }
-    
-    // Sử dụng JavaScript để tạo cấu trúc danh sách cho Top Volunteers
-    function renderTopVolunteers(volunteers) {
-        const container = document.getElementById('topVolunteersList');
-        if (volunteers.length === 0) {
-            container.innerHTML = '<div class="px-6 py-12 text-center"><p class="text-gray-500">No volunteers yet</p></div>';
-            return;
-        }
-        
-        let html = '';
-        volunteers.forEach((volunteer, index) => {
-            const fullName = `${volunteer.first_name} ${volunteer.last_name}`;
-            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`;
-            html += `
-                <div class="px-6 py-4 hover:bg-gray-50 transition">
-                    <div class="flex items-center space-x-4">
-                        <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            ${index + 1}
-                        </div>
-                        <img src="${avatarUrl}" class="w-12 h-12 rounded-full border-2 border-gray-200" alt="">
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900">${fullName}</p>
-                            <p class="text-sm text-gray-500">
-                                <i class="fas fa-clock mr-1"></i>${volunteer.total_hours.toLocaleString()} hours
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    }
-
-    // Sử dụng JavaScript để tạo cấu trúc danh sách cho Top Organizations
-    function renderTopOrganizations(organizations) {
-        const container = document.getElementById('topOrganizationsList');
-        if (organizations.length === 0) {
-            container.innerHTML = '<div class="px-6 py-12 text-center"><p class="text-gray-500">No organizations yet</p></div>';
-            return;
-        }
-        
-        let html = '';
-        organizations.forEach((org, index) => {
-            const rating = org.rating ? org.rating.toFixed(1) : '0.0';
-            html += `
-                <div class="px-6 py-4 hover:bg-gray-50 transition">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold">
-                                ${index + 1}
-                            </div>
-                            <div>
-                                <p class="font-medium text-gray-900">${org.organization_name}</p>
-                                <p class="text-sm text-gray-500">
-                                    <i class="fas fa-users mr-1"></i>${org.volunteer_count.toLocaleString()} volunteers
-                                </p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-yellow-500">
-                                <i class="fas fa-star"></i> ${rating}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    }
-</script>
-@endpush
+        </script>
+    @endpush
 @endsection

@@ -1,4 +1,6 @@
 <?php
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 if (!function_exists('getStatusBadgeClass')) {
     /**
@@ -104,5 +106,20 @@ if (!function_exists('timeAgo')) {
         if (!$datetime) return 'N/A';
         
         return \Carbon\Carbon::parse($datetime)->diffForHumans();
+    }
+}
+if (!function_exists('get_setting')) {
+    function get_setting($key, $default = null)
+    {
+        // Sử dụng Cache để không phải query DB mỗi lần gọi hàm này
+        // Cache sẽ được lưu vĩnh viễn cho đến khi Admin cập nhật Setting
+        return Cache::rememberForever('setting_' . $key, function () use ($key, $default) {
+            try {
+                $setting = DB::table('settings')->where('key', $key)->first();
+                return $setting ? $setting->value : $default;
+            } catch (\Exception $e) {
+                return $default;
+            }
+        });
     }
 }

@@ -27,7 +27,8 @@ class AnalyticsController extends Controller
 
         // Route to appropriate dashboard based on user type
         if ($user->user_type === 'Admin') {
-            return $this->adminDashboard($request);
+            // return $this->adminDashboard($request);
+            return view('admin.analytics.index');
         } elseif ($user->user_type === 'Organization') {
             return $this->organizationDashboard($request);
         } else {
@@ -35,6 +36,85 @@ class AnalyticsController extends Controller
         }
     }
 
+
+    public function getData(Request $request)
+    {
+        $period = $request->get('period', '30days'); // Mặc định 30 ngày
+        $cacheKey = "admin_analytics_{$period}";
+
+        // Cache dữ liệu trong 30 phút (1800s) để giảm tải Database
+        $data = Cache::remember($cacheKey, 1800, function () use ($period) {
+            return $this->calculateMetrics($period);
+        });
+
+        return response()->json($data);
+    }
+
+
+    private function calculateMetrics($period)
+    {
+        // 1. Xác định mốc thời gian
+        $startDate = match ($period) {
+            '7days' => now()->subDays(7),
+            '90days' => now()->subDays(90),
+            'year' => now()->subYear(),
+            default => now()->subDays(30),
+        };
+
+        // 2. Các chỉ số tổng quan (Cards)
+        // Lưu ý: Đếm tổng thì không cần filter theo ngày (trừ khi muốn tính tăng trưởng)
+        $metrics = [
+            'total_users' => User::count(),
+            'new_users' => User::where('created_at', '>=', $startDate)->count(),
+
+            'total_hours' => VolunteerActivity::where('status', 'Verified')->sum('hours_worked'),
+            'new_hours' => VolunteerActivity::where('status', 'Verified')->where('activity_date', '>=', $startDate)->sum('hours_worked'),
+
+            'total_orgs' => Organization::where('verification_status', 'Verified')->count(),
+
+            'total_apps' => Application::count(),
+            'pending_apps' => Application::where('status', 'Pending')->count(),
+        ];
+
+        // 3. Biểu đồ tăng trưởng User (Line Chart)
+        $userGrowth = User::select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as count'))
+            ->where('created_at', '>=', $startDate)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        // 4. Trạng thái đơn đăng ký (Doughnut Chart)
+        $appStatus = Application::select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        // 5. Top Categories (Bar Chart)
+        $topCategories = DB::table('volunteer_opportunities')
+            ->join('categories', 'volunteer_opportunities.category_id', '=', 'categories.category_id')
+            ->select('categories.category_name', DB::raw('count(*) as count'))
+            ->groupBy('categories.category_id', 'categories.category_name')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->get();
+
+        return [
+            'metrics' => $metrics,
+            'charts' => [
+                'user_growth' => [
+                    'labels' => $userGrowth->pluck('date')->map(fn($d) => Carbon::parse($d)->format('d/m')),
+                    'data' => $userGrowth->pluck('count')
+                ],
+                'app_status' => [
+                    'labels' => $appStatus->keys(),
+                    'data' => $appStatus->values()
+                ],
+                'top_categories' => [
+                    'labels' => $topCategories->pluck('category_name'),
+                    'data' => $topCategories->pluck('count')
+                ]
+            ]
+        ];
+    }
     // Admin analytics dashboard - OPTIMIZED
     private function adminDashboard(Request $request)
     {
@@ -180,7 +260,15 @@ class AnalyticsController extends Controller
             ]);
         });
     }
+    public function clearCache()
+    {
+        Cache::forget('analytics_data_7days');
+        Cache::forget('analytics_data_30days');
+        Cache::forget('analytics_data_90days');
+        Cache::forget('analytics_data_year');
 
+        return back()->with('success', 'Dữ liệu thống kê đã được làm mới!');
+    }
     // Organization analytics dashboard - OPTIMIZED
     private function organizationDashboard(Request $request)
     {
@@ -215,75 +303,75 @@ class AnalyticsController extends Controller
     // Volunteer analytics dashboard - OPTIMIZED
     private function volunteerDashboard(Request $request)
     {
-    $user = Auth::user();
+        $user = Auth::user();
 
-    // 1. Các chỉ số chính (giữ nguyên logic bạn đang có hoặc dùng từ profile)
-    $metrics = [
-        'total_volunteer_hours'   => (int) VolunteerActivity::where('volunteer_id', $user->user_id)
-                                    ->where('status', 'Verified')
-                                    ->sum('hours_worked'),
+        // 1. Các chỉ số chính (giữ nguyên logic bạn đang có hoặc dùng từ profile)
+        $metrics = [
+            'total_volunteer_hours'   => (int) VolunteerActivity::where('volunteer_id', $user->user_id)
+                ->where('status', 'Verified')
+                ->sum('hours_worked'),
 
-        'accepted_applications'   => Application::where('volunteer_id', $user->user_id)
-                                    ->where('status', 'Accepted')
-                                    ->count(),
+            'accepted_applications'   => Application::where('volunteer_id', $user->user_id)
+                ->where('status', 'Accepted')
+                ->count(),
 
-        'total_applications'      => Application::where('volunteer_id', $user->user_id)->count(),
-    ];
+            'total_applications'      => Application::where('volunteer_id', $user->user_id)->count(),
+        ];
 
-    // 2. DỮ LIỆU BIỂU ĐỒ: Giờ tình nguyện theo từng tháng (12 tháng gần nhất)
-    $user = Auth::user();
+        // 2. DỮ LIỆU BIỂU ĐỒ: Giờ tình nguyện theo từng tháng (12 tháng gần nhất)
+        $user = Auth::user();
 
-    // 1. Các chỉ số chính (giữ nguyên logic bạn đang có hoặc dùng từ profile)
-    $metrics = [
-        'total_volunteer_hours'   => (int) VolunteerActivity::where('volunteer_id', $user->user_id)
-                                    ->where('status', 'Verified')
-                                    ->sum('hours_worked'),
+        // 1. Các chỉ số chính (giữ nguyên logic bạn đang có hoặc dùng từ profile)
+        $metrics = [
+            'total_volunteer_hours'   => (int) VolunteerActivity::where('volunteer_id', $user->user_id)
+                ->where('status', 'Verified')
+                ->sum('hours_worked'),
 
-        'accepted_applications'   => Application::where('volunteer_id', $user->user_id)
-                                    ->where('status', 'Accepted')
-                                    ->count(),
+            'accepted_applications'   => Application::where('volunteer_id', $user->user_id)
+                ->where('status', 'Accepted')
+                ->count(),
 
-        'total_applications'      => Application::where('volunteer_id', $user->user_id)->count(),
-    ];
+            'total_applications'      => Application::where('volunteer_id', $user->user_id)->count(),
+        ];
 
-    // 2. DỮ LIỆU BIỂU ĐỒ: Giờ tình nguyện theo từng tháng (12 tháng gần nhất)
-    $monthlyHours = VolunteerActivity::where('volunteer_id', $user->user_id)
-        ->where('status', 'Verified')
-        ->where('activity_date', '>=', now()->subYear())
-        ->selectRaw("DATE_FORMAT(activity_date, '%m/%Y') as month_year")
-        ->selectRaw('SUM(hours_worked) as total_hours')
-        ->groupBy('month_year')
-        ->orderByRaw("STR_TO_DATE(month_year, '%m/%Y')")
-        ->get();
+        // 2. DỮ LIỆU BIỂU ĐỒ: Giờ tình nguyện theo từng tháng (12 tháng gần nhất)
+        $monthlyHours = VolunteerActivity::where('volunteer_id', $user->user_id)
+            ->where('status', 'Verified')
+            ->where('activity_date', '>=', now()->subYear())
+            ->selectRaw("DATE_FORMAT(activity_date, '%m/%Y') as month_year")
+            ->selectRaw('SUM(hours_worked) as total_hours')
+            ->groupBy('month_year')
+            ->orderByRaw("STR_TO_DATE(month_year, '%m/%Y')")
+            ->get();
 
-    // Nếu chưa có hoạt động nào → tạo 12 tháng trống để biểu đồ vẫn đẹp
-    if ($monthlyHours->isEmpty()) {
-        $monthlyHours = collect(range(11, 0))->map(function ($i) {
-            $date = now()->subMonths($i);
-            return (object)[
-                'month_year'   => $date->format('m/Y'),
-                'total_hours'  => 0
-            ];
-        });
+        // Nếu chưa có hoạt động nào → tạo 12 tháng trống để biểu đồ vẫn đẹp
+        if ($monthlyHours->isEmpty()) {
+            $monthlyHours = collect(range(11, 0))->map(function ($i) {
+                $date = now()->subMonths($i);
+                return (object)[
+                    'month_year'   => $date->format('m/Y'),
+                    'total_hours'  => 0
+                ];
+            });
+        }
+        $favoriteFields = \App\Models\Favorite::where('favorites.user_id', $user->user_id)
+            ->join('volunteer_opportunities', 'favorites.opportunity_id', '=', 'volunteer_opportunities.opportunity_id')
+            ->join('categories', 'volunteer_opportunities.category_id', '=', 'categories.category_id')
+            ->selectRaw('categories.category_name as name')
+            ->selectRaw('COUNT(*) as count')
+            ->groupBy('categories.category_id', 'categories.category_name')
+            ->orderByDesc('count')
+            ->limit(8)
+            ->pluck('count', 'name');
+
+        if ($favoriteFields->isEmpty()) {
+            $favoriteFields = collect(['Chưa có dữ liệu' => 1]);
+        }
+
+        $fieldLabels = $favoriteFields->keys()->toArray();
+        $fieldValues = $favoriteFields->values()->toArray();
+        return view('volunteer.analytics.index', compact('metrics', 'monthlyHours', 'fieldLabels', 'fieldValues'));
     }
-    $favoriteFields = \App\Models\Favorite::where('favorites.user_id', $user->user_id)
-    ->join('volunteer_opportunities', 'favorites.opportunity_id', '=', 'volunteer_opportunities.opportunity_id')
-    ->join('categories', 'volunteer_opportunities.category_id', '=', 'categories.category_id')
-    ->selectRaw('categories.category_name as name')
-    ->selectRaw('COUNT(*) as count')
-    ->groupBy('categories.category_id', 'categories.category_name')
-    ->orderByDesc('count')
-    ->limit(8)
-    ->pluck('count', 'name');
-
-if ($favoriteFields->isEmpty()) {
-    $favoriteFields = collect(['Chưa có dữ liệu' => 1]);
-}
-
-$fieldLabels = $favoriteFields->keys()->toArray();
-$fieldValues = $favoriteFields->values()->toArray();
-return view('volunteer.analytics.index', compact('metrics', 'monthlyHours','fieldLabels', 'fieldValues'));
-}
 
 
     // Impact report - OPTIMIZED
@@ -687,5 +775,4 @@ return view('volunteer.analytics.index', compact('metrics', 'monthlyHours','fiel
                 return [];
         }
     }
-
 }

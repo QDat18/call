@@ -1,547 +1,458 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard')
+@section('title', 'Admin Dashboard')
 @section('breadcrumb', 'Dashboard')
 
 @section('content')
-    <div class="space-y-6">
+    <div class="space-y-8">
 
-        <!-- Quick Actions Bar -->
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-            <div class="flex items-center justify-between">
+        <div
+            class="relative bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl shadow-xl p-8 text-white overflow-hidden">
+            <div class="absolute right-0 top-0 h-full w-1/2 bg-white/10 skew-x-12 transform translate-x-20"></div>
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <h2 class="text-2xl font-bold mb-2">Welcome back, Admin!</h2>
-                    <p class="opacity-90">Here's what's happening with your platform today.</p>
+                    <h2 class="text-3xl font-bold mb-2">Xin chào Admin! 👋</h2>
+                    {{-- [MỚI] Hiển thị thứ, ngày tháng năm --}}
+                    <p class="text-indigo-100 text-lg opacity-90 flex items-center gap-2">
+                        <i class="far fa-clock"></i>
+                        <span id="live-clock" class="capitalize">
+                            {{-- Fallback nếu JS chưa chạy: Hiển thị giờ server hiện tại --}}
+                            {{ \Carbon\Carbon::now()->locale('vi')->translatedFormat('l, d/m/Y - H:i:s') }}
+                        </span>
+                    </p>
                 </div>
-                <div class="flex space-x-3">
+                <div class="flex gap-3">
                     <button onclick="openEmailModal('all')"
-                        class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-                        <i class="fas fa-envelope mr-2"></i>Send Email
+                        class="bg-white text-indigo-700 px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:bg-indigo-50 transition flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i> Gửi Thông Báo
                     </button>
                     <a href="{{ route('admin.analytics.index') }}"
-                        class="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition">
-                        <i class="fas fa-chart-line mr-2"></i>Analytics
+                        class="bg-indigo-800/50 backdrop-blur-md text-white px-5 py-2.5 rounded-xl font-semibold border border-indigo-400/30 hover:bg-indigo-800/70 transition flex items-center gap-2">
+                        <i class="fas fa-chart-pie"></i> Xem Báo Cáo
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
 
-            <!-- Total Users -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-600">Total Users</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($stats['total_users'] ?? 0) }}</p>
-                        <p class="text-sm text-green-600 mt-2">
-                            <i class="fas fa-arrow-up"></i> +{{ $stats['new_users_this_month'] ?? 0 }} this month
-                        </p>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Thành viên</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($stats['total_users'] ?? 0) }}
+                        </h3>
+                        <div class="mt-2 text-sm text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit">
+                            <i class="fas fa-arrow-up mr-1"></i> +{{ $stats['new_users_this_month'] ?? 0 }} tháng này
+                        </div>
                     </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-users text-blue-600 text-2xl"></i>
-                    </div>
-                </div>
-                <button onclick="openEmailModal('volunteers')"
-                    class="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
-                    <i class="fas fa-envelope mr-1"></i>Email Volunteers
-                </button>
-            </div>
-
-            <!-- Total Organizations -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-600">Organizations</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($stats['total_orgs'] ?? 0) }}</p>
-                        <p class="text-sm text-yellow-600 mt-2">
-                            <i class="fas fa-clock"></i> {{ $stats['pending_verifications'] ?? 0 }} pending
-                        </p>
-                    </div>
-                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-building text-purple-600 text-2xl"></i>
-                    </div>
-                </div>
-                <button onclick="openEmailModal('organizations')"
-                    class="mt-4 text-sm text-purple-600 hover:text-purple-700 font-medium">
-                    <i class="fas fa-envelope mr-1"></i>Email Organizations
-                </button>
-            </div>
-
-            <!-- Active Opportunities -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-600">Active Opportunities</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-2">
-                            {{ number_format($stats['active_opportunities'] ?? 0) }}</p>
-                        <p class="text-sm text-indigo-600 mt-2">
-                            <i class="fas fa-calendar"></i> {{ $stats['upcoming'] ?? 0 }} upcoming
-                        </p>
-                    </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-clipboard-list text-green-600 text-2xl"></i>
+                    <div
+                        class="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition">
+                        <i class="fas fa-users text-xl"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Total Applications -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-600">Applications</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-2">
-                            {{ number_format($stats['total_applications'] ?? 0) }}</p>
-                        <p class="text-sm text-orange-600 mt-2">
-                            <i class="fas fa-hourglass-half"></i> {{ $stats['pending_applications'] ?? 0 }} pending
-                        </p>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Tổ chức</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($stats['total_orgs'] ?? 0) }}
+                        </h3>
+                        @if(($stats['pending_verifications'] ?? 0) > 0)
+                            <a href="{{ route('admin.organizations.index', ['status' => 'Pending']) }}"
+                                class="mt-2 flex items-center text-sm text-amber-600 bg-amber-50 px-2 py-1 rounded-lg w-fit hover:bg-amber-100 transition">
+                                <i class="fas fa-exclamation-circle mr-1"></i> {{ $stats['pending_verifications'] }} chờ duyệt
+                            </a>
+                        @else
+                            <div class="mt-2 text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded-lg w-fit">
+                                <i class="fas fa-check-circle mr-1"></i> Đã duyệt hết
+                            </div>
+                        @endif
                     </div>
-                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-file-alt text-orange-600 text-2xl"></i>
+                    <div
+                        class="p-3 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition">
+                        <i class="fas fa-building text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Cơ hội</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                            {{ number_format($stats['active_opportunities'] ?? 0) }}
+                        </h3>
+                        <div class="mt-2 text-sm text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg w-fit">
+                            {{ $stats['upcoming'] ?? 0 }} sắp diễn ra
+                        </div>
+                    </div>
+                    <div
+                        class="p-3 bg-green-50 text-green-600 rounded-xl group-hover:bg-green-600 group-hover:text-white transition">
+                        <i class="fas fa-hand-holding-heart text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Đơn đăng ký</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                            {{ number_format($stats['total_applications'] ?? 0) }}
+                        </h3>
+                        <div class="mt-2 text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded-lg w-fit">
+                            {{ $stats['pending_applications'] ?? 0 }} đang xử lý
+                        </div>
+                    </div>
+                    <div
+                        class="p-3 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition">
+                        <i class="fas fa-file-signature text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Bài đăng cộng đồng</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($stats['total_posts'] ?? 0) }}
+                        </h3>
+                        @if(($stats['pending_posts'] ?? 0) > 0)
+                            <a href="{{ route('admin.posts.index', ['status' => 'Pending']) }}"
+                                class="mt-2 flex items-center text-sm text-red-600 bg-red-50 px-2 py-1 rounded-lg w-fit hover:bg-red-100 transition">
+                                <i class="fas fa-shield-alt mr-1"></i> {{ $stats['pending_posts'] }} cần duyệt
+                            </a>
+                        @else
+                            <a href="{{ route('admin.posts.index') }}"
+                                class="mt-2 flex items-center text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded-lg w-fit hover:bg-gray-100">
+                                <i class="fas fa-list mr-1"></i> Quản lý
+                            </a>
+                        @endif
+                    </div>
+                    <div
+                        class="p-3 bg-pink-50 text-pink-600 rounded-xl group-hover:bg-pink-600 group-hover:text-white transition">
+                        <i class="fas fa-newspaper text-xl"></i>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            <!-- User Growth Chart -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-gray-800">User Growth</h3>
-                    <select class="text-sm border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
-                        <option>Last 7 days</option>
-                        <option>Last 30 days</option>
-                        <option>Last 6 months</option>
-                    </select>
+            <div class="lg:col-span-2 space-y-8">
+
+                {{-- Biểu đồ --}}
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6">Tăng trưởng thành viên (7 ngày qua)</h3>
+                    <div class="h-80"><canvas id="userGrowthChart"></canvas></div>
                 </div>
-                <canvas id="userGrowthChart" height="80"></canvas>
-            </div>
 
-            <!-- Applications Status -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-gray-800">Application Status</h3>
-                    <button class="text-sm text-indigo-600 hover:text-indigo-700">View All</button>
-                </div>
-                <canvas id="applicationStatusChart" height="80"></canvas>
-            </div>
-
-        </div>
-
-        <!-- Email Management Section -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-800">
-                        <i class="fas fa-envelope text-indigo-600 mr-2"></i>Email Management
-                    </h3>
-                    <button onclick="openEmailModal('all')"
-                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                        <i class="fas fa-paper-plane mr-2"></i>Compose Email
-                    </button>
-                </div>
-            </div>
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button onclick="openEmailModal('volunteers')"
-                        class="p-4 border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition text-left">
-                        <div class="flex items-center justify-between mb-2">
-                            <i class="fas fa-user-friends text-blue-600 text-2xl"></i>
-                            <span class="text-2xl font-bold text-blue-600">{{ $stats['total_volunteers'] ?? 0 }}</span>
-                        </div>
-                        <p class="text-sm font-medium text-gray-700">Email All Volunteers</p>
-                        <p class="text-xs text-gray-500 mt-1">Send announcements to volunteers</p>
-                    </button>
-
-                    <button onclick="openEmailModal('organizations')"
-                        class="p-4 border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition text-left">
-                        <div class="flex items-center justify-between mb-2">
-                            <i class="fas fa-building text-purple-600 text-2xl"></i>
-                            <span class="text-2xl font-bold text-purple-600">{{ $stats['total_orgs'] ?? 0 }}</span>
-                        </div>
-                        <p class="text-sm font-medium text-gray-700">Email All Organizations</p>
-                        <p class="text-xs text-gray-500 mt-1">Send updates to organizations</p>
-                    </button>
-
-                    <button onclick="openEmailModal('active')"
-                        class="p-4 border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition text-left">
-                        <div class="flex items-center justify-between mb-2">
-                            <i class="fas fa-check-circle text-green-600 text-2xl"></i>
-                            <span class="text-2xl font-bold text-green-600">{{ $stats['active_users'] ?? 0 }}</span>
-                        </div>
-                        <p class="text-sm font-medium text-gray-700">Email Active Users</p>
-                        <p class="text-xs text-gray-500 mt-1">Target engaged users</p>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tables Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <!-- Recent Users -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-800">Recent Users</h3>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">Thành viên mới tham gia</h3>
                         <a href="{{ route('admin.users.index') }}"
-                            class="text-sm text-indigo-600 hover:text-indigo-700">View All</a>
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-800">Xem tất cả</a>
                     </div>
-                </div>
-                <div class="divide-y divide-gray-200">
-                    @forelse($recentUsers ?? [] as $user)
-                        <div class="px-6 py-4 hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-3">
-                                    <img src="https://ui-avatars.com/api/?name={{ $user->first_name }}+{{ $user->last_name }}&background=random"
-                                        alt="Avatar" class="w-10 h-10 rounded-full">
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900">{{ $user->first_name }}
-                                            {{ $user->last_name }}</p>
-                                        <p class="text-xs text-gray-500">{{ $user->email }}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <span
-                                        class="px-3 py-1 text-xs font-medium rounded-full {{ $user->user_type == 'Volunteer' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800' }}">
-                                        {{ $user->user_type }}
-                                    </span>
-                                    <button onclick="openEmailModal('single', {{ $user->user_id }})"
-                                        class="text-gray-400 hover:text-indigo-600">
-                                        <i class="fas fa-envelope"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="px-6 py-8 text-center text-gray-500">
-                            <i class="fas fa-users text-4xl mb-2"></i>
-                            <p>No recent users</p>
-                        </div>
-                    @endforelse
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                                <tr>
+                                    <th class="px-6 py-3 font-semibold">Thành viên</th>
+                                    <th class="px-6 py-3 font-semibold">Vai trò</th>
+                                    <th class="px-6 py-3 font-semibold">Ngày tham gia</th>
+                                    <th class="px-6 py-3 font-semibold text-right">Tác vụ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @forelse($recentUsers ?? [] as $user)
+                                                        <tr class="hover:bg-gray-50 transition">
+                                                            <td class="px-6 py-4">
+                                                                <div class="flex items-center gap-3">
+                                                                    @php
+                                                                        $avatar = $user->avatar_url
+                                                                            ? asset('storage/' . $user->avatar_url)
+                                                                            : 'https://ui-avatars.com/api/?name=' . urlencode($user->first_name . ' ' . $user->last_name) . '&background=random';
+                                                                    @endphp
+                                                                    <img src="{{ $avatar }}"
+                                                                        class="w-10 h-10 rounded-full object-cover border border-gray-200">
+                                                                    <div>
+                                                                        <p class="font-semibold text-gray-900">{{ $user->first_name }}
+                                                                            {{ $user->last_name }}
+                                                                        </p>
+                                                                        <p class="text-xs text-gray-500">{{ $user->email }}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="px-6 py-4">
+                                                                <span
+                                                                    class="px-3 py-1 rounded-full text-xs font-semibold
+                                                                                                    {{ $user->user_type == 'Volunteer' ? 'bg-blue-100 text-blue-700' :
+                                    ($user->user_type == 'Organization' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700') }}">
+                                                                    {{ $user->user_type }}
+                                                                </span>
+                                                            </td>
+                                                            <td class="px-6 py-4 text-sm text-gray-600">
+                                                                {{-- [MỚI] Format ngày tháng đẹp --}}
+                                                                <div class="font-medium">{{ $user->created_at->format('d/m/Y') }}</div>
+                                                                <div class="text-xs text-gray-400">{{ $user->created_at->format('H:i') }}</div>
+                                                            </td>
+                                                            <td class="px-6 py-4 text-right">
+                                                                <button onclick="openEmailModal('single', {{ $user->user_id }})"
+                                                                    class="text-gray-400 hover:text-indigo-600 transition" title="Gửi Email">
+                                                                    <i class="fas fa-envelope"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">Chưa có thành viên mới.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Pending Verifications -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-800">Pending Verifications</h3>
-                        <a href="{{ route('admin.organizations.index', ['status' => 'pending']) }}"
-                            class="text-sm text-indigo-600 hover:text-indigo-700">View All</a>
+            <div class="space-y-8">
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-amber-50">
+                        <h3 class="font-bold text-amber-800 flex items-center gap-2">
+                            <i class="fas fa-clipboard-check"></i> Duyệt Tổ Chức
+                        </h3>
+                        <span class="bg-white text-amber-600 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm">
+                            {{ $pendingOrgs->count() }}
+                        </span>
                     </div>
-                </div>
-                <div class="divide-y divide-gray-200">
-                    @forelse($pendingOrgs ?? [] as $org)
-                        <div class="px-6 py-4 hover:bg-gray-50 transition">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-900">{{ $org->organization_name }}</p>
-                                    <p class="text-xs text-gray-500 mt-1">{{ $org->organization_type }} •
-                                        {{ $org->created_at->diffForHumans() }}</p>
+                    <div class="divide-y divide-gray-100">
+                        @forelse($pendingOrgs as $org)
+                            <div class="p-5 hover:bg-gray-50 transition">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-semibold text-gray-900">{{ $org->organization_name }}</h4>
+                                    {{-- [MỚI] Format ngày tháng --}}
+                                    <span class="text-xs text-gray-400">{{ $org->created_at->format('d/m/Y') }}</span>
                                 </div>
-                                <div class="flex space-x-2">
+                                <p class="text-xs text-gray-500 mb-3 line-clamp-1">{{ $org->organization_type }}</p>
+                                <div class="flex gap-2">
+                                    <a href="{{ route('admin.organizations.show', $org->org_id) }}"
+                                        class="flex-1 text-center px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
+                                        Xem
+                                    </a>
                                     <button onclick="approveOrg('{{ $org->org_id }}')"
-                                        class="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs hover:bg-green-200 transition">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button onclick="rejectOrg('{{ $org->org_id }}')"
-                                        class="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs hover:bg-red-200 transition">
-                                        <i class="fas fa-times"></i>
+                                        class="flex-1 text-center px-3 py-1.5 bg-green-100 text-green-700 text-xs font-medium rounded-lg hover:bg-green-200 transition">
+                                        Duyệt
                                     </button>
                                 </div>
                             </div>
+                        @empty
+                            <div class="p-8 text-center text-gray-500">
+                                <i class="fas fa-check-circle text-4xl text-green-200 mb-3"></i>
+                                <p class="text-sm">Không có yêu cầu nào.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                    @if($pendingOrgs->count() > 0)
+                        <div class="p-3 bg-gray-50 border-t border-gray-100 text-center">
+                            <a href="{{ route('admin.organizations.index', ['status' => 'Pending']) }}"
+                                class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                                Xem tất cả yêu cầu &rarr;
+                            </a>
                         </div>
-                    @empty
-                        <div class="px-6 py-8 text-center text-gray-500">
-                            <i class="fas fa-check-circle text-4xl mb-2"></i>
-                            <p>No pending verifications</p>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Email Modal -->
-    <div id="emailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-                <h3 class="text-lg font-semibold text-gray-800">
-                    <i class="fas fa-envelope text-indigo-600 mr-2"></i>Compose Email
-                </h3>
-                <button onclick="closeEmailModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-
-            <form id="emailForm" action="{{ route('admin.emails.send') }}" method="POST" class="p-6">
-                @csrf
-
-                <!-- Recipients -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Recipients</label>
-                    <input type="hidden" name="recipient_type" id="recipientType">
-                    <input type="hidden" name="user_id" id="userId">
-                    <div id="recipientInfo" class="p-3 bg-gray-50 rounded-lg text-sm text-gray-700"></div>
+                    @endif
                 </div>
 
-                <!-- Subject -->
-                <div class="mb-4">
-                    <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                    <input type="text" id="subject" name="subject" required
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="Enter email subject">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-gray-800 mb-6">Trạng thái Đơn ứng tuyển</h3>
+                    <div class="relative h-64">
+                        <canvas id="applicationStatusChart"></canvas>
+                    </div>
                 </div>
 
-                <!-- Message -->
-                <div class="mb-4">
-                    <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                    <textarea id="message" name="message" rows="8" required
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        placeholder="Write your message here..."></textarea>
-                </div>
-
-                <!-- Email Templates -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" onclick="loadTemplate('welcome')"
-                            class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                            Welcome Email
+                <div class="bg-indigo-900 rounded-2xl shadow-lg p-6 text-white">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-bolt text-yellow-400"></i> Tác vụ nhanh
+                    </h3>
+                    <div class="space-y-3">
+                        <button onclick="openEmailModal('volunteers')"
+                            class="w-full text-left px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition flex justify-between items-center group">
+                            <span class="text-sm font-medium">Email cho Tình nguyện viên</span>
+                            <i
+                                class="fas fa-chevron-right text-xs opacity-50 group-hover:transform group-hover:translate-x-1 transition"></i>
                         </button>
-                        <button type="button" onclick="loadTemplate('update')"
-                            class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                            Platform Update
-                        </button>
-                        <button type="button" onclick="loadTemplate('reminder')"
-                            class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                            Activity Reminder
-                        </button>
-                        <button type="button" onclick="loadTemplate('announcement')"
-                            class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                            Announcement
+                        <button onclick="openEmailModal('organizations')"
+                            class="w-full text-left px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition flex justify-between items-center group">
+                            <span class="text-sm font-medium">Email cho Tổ chức</span>
+                            <i
+                                class="fas fa-chevron-right text-xs opacity-50 group-hover:transform group-hover:translate-x-1 transition"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Actions -->
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <button type="button" onclick="closeEmailModal()"
-                        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                        <i class="fas fa-paper-plane mr-2"></i>Send Email
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
+
+    @include('admin.partials.email-modal')
 
     @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
-            // User Growth Chart
-            const userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
-            new Chart(userGrowthCtx, {
+            // --- 1. User Growth Chart ---
+            const userCtx = document.getElementById('userGrowthChart').getContext('2d');
+            let gradient = userCtx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.5)');
+            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+            new Chart(userCtx, {
                 type: 'line',
                 data: {
-                    labels: {!! json_encode($chartData['userGrowth']['labels'] ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) !!},
+                    labels: {!! json_encode($chartData['userGrowth']['labels']) !!},
                     datasets: [{
-                        label: 'New Users',
-                        data: {!! json_encode($chartData['userGrowth']['data'] ?? [12, 19, 15, 25, 22, 30, 28]) !!},
-                        borderColor: 'rgb(99, 102, 241)',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        tension: 0.4,
-                        fill: true
+                        label: 'Người dùng mới',
+                        data: {!! json_encode($chartData['userGrowth']['data']) !!},
+                        borderColor: '#4F46E5',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#4F46E5',
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
+                        y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#E5E7EB' } },
+                        x: { grid: { display: false } }
                     }
                 }
             });
 
-            // Application Status Chart
-            const applicationStatusCtx = document.getElementById('applicationStatusChart').getContext('2d');
-            new Chart(applicationStatusCtx, {
+            // --- 2. Application Status Chart ---
+            new Chart(document.getElementById('applicationStatusChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Pending', 'Accepted', 'Rejected', 'Under Review'],
+                    labels: ['Chờ duyệt', 'Đã nhận', 'Từ chối', 'Đang xem xét'],
                     datasets: [{
-                        data: {!! json_encode($chartData['applicationStatus'] ?? [45, 30, 15, 10]) !!},
-                        backgroundColor: [
-                            'rgb(251, 191, 36)',
-                            'rgb(34, 197, 94)',
-                            'rgb(239, 68, 68)',
-                            'rgb(59, 130, 246)'
-                        ]
+                        data: {!! json_encode($chartData['applicationStatus']) !!},
+                        backgroundColor: ['#FBBF24', '#10B981', '#EF4444', '#3B82F6'],
+                        borderWidth: 0,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
                     plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
                     }
                 }
             });
 
-            // Email Modal Functions
-            function openEmailModal(type, userId = null) {
-                document.getElementById('emailModal').classList.remove('hidden');
-                document.getElementById('recipientType').value = type;
-                document.getElementById('userId').value = userId || '';
-
-                let recipientText = '';
-                switch (type) {
-                    case 'all':
-                        recipientText = 'All Users (Volunteers + Organizations)';
-                        break;
-                    case 'volunteers':
-                        recipientText = 'All Volunteers';
-                        break;
-                    case 'organizations':
-                        recipientText = 'All Organizations';
-                        break;
-                    case 'active':
-                        recipientText = 'Active Users Only';
-                        break;
-                    case 'single':
-                        recipientText = 'Single User';
-                        break;
-                }
-
-                document.getElementById('recipientInfo').innerHTML = `
-                    <i class="fas fa-users mr-2"></i>Sending to: <strong>${recipientText}</strong>
-                `;
-            }
-
-            function closeEmailModal() {
-                document.getElementById('emailModal').classList.add('hidden');
-                document.getElementById('emailForm').reset();
-            }
-
-            function loadTemplate(template) {
-                const templates = {
-                    welcome: {
-                        subject: 'Welcome to VolunteerConnect!',
-                        message: 'Dear User,\n\nWelcome to VolunteerConnect! We\'re excited to have you join our community...'
-                    },
-                    update: {
-                        subject: 'Platform Update - New Features Available',
-                        message: 'Hello,\n\nWe\'re excited to announce new features on VolunteerConnect...'
-                    },
-                    reminder: {
-                        subject: 'Reminder: Upcoming Activity',
-                        message: 'Hi there,\n\nThis is a friendly reminder about your upcoming volunteering activity...'
-                    },
-                    announcement: {
-                        subject: 'Important Announcement',
-                        message: 'Dear Community,\n\nWe have an important announcement to share...'
-                    }
-                };
-
-                if (templates[template]) {
-                    document.getElementById('subject').value = templates[template].subject;
-                    document.getElementById('message').value = templates[template].message;
-                }
-            }
-
-            // Approve Organization
+            // --- 3. Approve/Reject Org Logic ---
             function approveOrg(orgId) {
-                if (confirm('Are you sure you want to approve this organization?')) {
-                    fetch(`/admin/organizations/${orgId}/approve`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                showToast('Organization approved successfully', 'success');
-                                setTimeout(() => location.reload(), 1000);
-                            }
-                        })
-                        .catch(error => {
-                            showToast('Failed to approve organization', 'error');
-                        });
-                }
-            }
+                if (!confirm('Bạn có chắc chắn muốn duyệt tổ chức này?')) return;
 
-            // Reject Organization
-            function rejectOrg(orgId) {
-                if (confirm('Are you sure you want to reject this organization?')) {
-                    fetch(`/admin/organizations/${orgId}/reject`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                showToast('Organization rejected', 'success');
-                                setTimeout(() => location.reload(), 1000);
-                            }
-                        })
-                        .catch(error => {
-                            showToast('Failed to reject organization', 'error');
-                        });
-                }
-            }
-
-            // Email Form Submission
-            document.getElementById('emailForm').addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                const formData = new FormData(this);
-
-                fetch(this.action, {
+                fetch(`/admin/organizations/${orgId}/approve`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    },
-                    body: formData
+                        'Content-Type': 'application/json'
+                    }
                 })
-                    .then(response => response.json())
+                    .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            showToast('Email sent successfully!', 'success');
-                            closeEmailModal();
+                            // 1. Hiện thông báo thành công
+                            showToast('Đã duyệt tổ chức thành công!', 'success');
+
+                            // 2. Đợi 1.5 giây để người dùng kịp nhìn thấy thông báo rồi mới reload
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
                         } else {
-                            showToast('Failed to send email', 'error');
+                            showToast(data.message || 'Có lỗi xảy ra', 'error');
                         }
                     })
                     .catch(error => {
-                        showToast('An error occurred', 'error');
+                        console.error(error);
+                        showToast('Lỗi kết nối đến máy chủ', 'error');
                     });
-            });
+            }
+
+            function rejectOrg(orgId) {
+                let reason = prompt("Vui lòng nhập lý do từ chối:");
+                if (reason === null) return; // Người dùng ấn Cancel
+                if (reason.trim() === "") {
+                    showToast('Lý do không được để trống', 'warning');
+                    return;
+                }
+
+                fetch(`/admin/organizations/${orgId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rejection_reason: reason })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Đã từ chối tổ chức!', 'success');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            showToast(data.message || 'Lỗi xử lý', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        showToast('Lỗi hệ thống', 'error');
+                    });
+            }
+
+            function updateClock() {
+                const now = new Date();
+
+                // Cấu hình định dạng tiếng Việt
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false // Dùng định dạng 24h
+                };
+
+                // Sử dụng Intl để format chuẩn tiếng Việt (ví dụ: Thứ Năm, 11/12/2025 13:25:00)
+                let timeString = new Intl.DateTimeFormat('vi-VN', options).format(now);
+
+                // Tùy chỉnh lại chuỗi nếu muốn thêm dấu gạch ngang (-) giữa ngày và giờ cho đẹp
+                // Mặc định Intl trả về: "Thứ Năm, 11/12/2025 13:25:00"
+                // Ta có thể thay thế khoảng trắng trước giờ bằng dấu " - "
+                // timeString = timeString.replace(' ', ' - '); 
+
+                document.getElementById('live-clock').textContent = timeString;
+            }
+
+            // Chạy hàm ngay lập tức
+            updateClock();
+
+            // Cập nhật mỗi giây (1000ms)
+            setInterval(updateClock, 1000);
         </script>
     @endpush
 @endsection

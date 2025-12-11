@@ -1,189 +1,154 @@
 @extends('layouts.admin')
 
 @section('title', 'User Details')
-@section('breadcrumb', 'Users / Details')
 
 @section('content')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="space-y-6">
     
-    <!-- Back Button -->
-    <div>
-        <a href="{{ route('admin.users.index') }}" 
-           class="inline-flex items-center text-gray-600 hover:text-gray-900">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Users
-        </a>
-    </div>
-    
-    <!-- User Header -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <!-- Cover -->
-        <div class="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+    <nav class="flex text-sm font-medium text-gray-500">
+        <a href="{{ route('admin.dashboard') }}" class="hover:text-indigo-600">Dashboard</a>
+        <span class="mx-2">/</span>
+        <a href="{{ route('admin.users.index') }}" class="hover:text-indigo-600">Users</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900">{{ $user->first_name }} {{ $user->last_name }}</span>
+    </nav>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative">
+        <div class="h-44 bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600"></div>
         
-        <!-- Profile Info -->
-        <div class="px-8 pb-8">
-            <div class="flex items-end justify-between -mt-16 mb-6">
-                <div class="flex items-end space-x-4">
-                    <img src="{{ $user->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($user->first_name . ' ' . $user->last_name) }}" 
-                         class="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-white" alt="Avatar">
-                    <div class="pb-2">
-                        <h1 class="text-3xl font-bold text-gray-900">{{ $user->first_name }} {{ $user->last_name }}</h1>
-                        <div class="flex items-center space-x-4 mt-2">
-                            <span class="px-3 py-1 text-sm font-medium rounded-full
-                                {{ $user->user_type == 'Volunteer' ? 'bg-blue-100 text-blue-800' : '' }}
-                                {{ $user->user_type == 'Organization' ? 'bg-green-100 text-green-800' : '' }}
-                                {{ $user->user_type == 'Admin' ? 'bg-purple-100 text-purple-800' : '' }}">
-                                <i class="fas fa-{{ $user->user_type == 'Volunteer' ? 'user' : ($user->user_type == 'Organization' ? 'building' : 'crown') }} mr-1"></i>
-                                {{ $user->user_type }}
-                            </span>
-                            <span class="px-3 py-1 text-sm font-medium rounded-full
-                                {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ $user->is_active ? 'Active' : 'Inactive' }}
-                            </span>
-                            @if($user->is_verified)
-                            <span class="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full">
-                                <i class="fas fa-check-circle mr-1"></i>Verified
-                            </span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="flex space-x-2">
-                    <a href="{{ route('admin.users.edit', $user->user_id) }}" 
-                       class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-                        <i class="fas fa-edit mr-2"></i>Edit
-                    </a>
-                    @if($user->is_active)
-                    <button onclick="suspendUser({{ $user->user_id }})" 
-                            class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition">
-                        <i class="fas fa-pause mr-2"></i>Suspend
-                    </button>
-                    @else
-                    <button onclick="activateUser({{ $user->user_id }})" 
-                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                        <i class="fas fa-play mr-2"></i>Activate
-                    </button>
-                    @endif
-                    <button onclick="deleteUser({{ $user->user_id }})" 
-                            class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition">
-                        <i class="fas fa-trash mr-2"></i>Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Details Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Left Column - Main Info -->
-        <div class="lg:col-span-2 space-y-6">
-            
-            <!-- Personal Information -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-xs text-gray-500">Full Name</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $user->first_name }} {{ $user->last_name }}</p>
-                    </div>
-                    
-                    <div>
-                        <p class="text-xs text-gray-500">Email</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $user->email }}</p>
-                    </div>
-                    
-                    @if($user->phone)
-                    <div>
-                        <p class="text-xs text-gray-500">Phone</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $user->phone }}</p>
-                    </div>
-                    @endif
-                    
-                    @if($user->date_of_birth)
-                    <div>
-                        <p class="text-xs text-gray-500">Date of Birth</p>
-                        <p class="text-sm font-medium text-gray-900">{{ \Carbon\Carbon::parse($user->date_of_birth)->format('M d, Y') }}</p>
-                    </div>
-                    @endif
-                    
-                    @if($user->gender)
-                    <div>
-                        <p class="text-xs text-gray-500">Gender</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $user->gender }}</p>
-                    </div>
-                    @endif
-                    
-                    @if($user->city)
-                    <div>
-                        <p class="text-xs text-gray-500">Location</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $user->city }}{{ $user->district ? ', ' . $user->district : '' }}</p>
-                    </div>
-                    @endif
-                </div>
-                
-                @if($user->address)
-                <div class="mt-4 pt-4 border-t border-gray-200">
-                    <p class="text-xs text-gray-500">Full Address</p>
-                    <p class="text-sm font-medium text-gray-900">{{ $user->address }}</p>
-                </div>
+        <div class="px-8 pb-8 flex flex-col md:flex-row items-end md:items-center gap-6 -mt-16 relative z-10">
+            <div class="relative group">
+                <img src="{{ $user->avatar_url ? asset('storage/' . $user->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($user->first_name . ' ' . $user->last_name) . '&background=fff&color=4f46e5' }}" 
+                     class="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover bg-white">
+                @if($user->is_active)
+                    <span class="absolute bottom-2 right-2 w-5 h-5 bg-green-500 border-2 border-white rounded-full" title="Active"></span>
+                @else
+                    <span class="absolute bottom-2 right-2 w-5 h-5 bg-red-500 border-2 border-white rounded-full" title="Inactive"></span>
                 @endif
             </div>
             
-            <!-- Volunteer Profile (if user is volunteer) -->
-            @if($user->user_type == 'Volunteer' && $user->volunteerProfile)
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Volunteer Profile</h3>
+            <div class="flex-1 pb-1 text-center md:text-left">
+                <h1 class="text-3xl font-bold text-gray-900">{{ $user->first_name }} {{ $user->last_name }}</h1>
+                <div class="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                        <i class="fas fa-envelope mr-1"></i> {{ $user->email }}
+                    </span>
+                    
+                    @php
+                        $roleColors = [
+                            'Volunteer' => 'bg-blue-100 text-blue-700 border-blue-200',
+                            'Organization' => 'bg-purple-100 text-purple-700 border-purple-200',
+                            'Admin' => 'bg-red-100 text-red-700 border-red-200'
+                        ];
+                        $roleClass = $roleColors[$user->user_type] ?? 'bg-gray-100 text-gray-700';
+                    @endphp
+                    <span class="px-3 py-1 text-xs font-bold rounded-full border {{ $roleClass }}">
+                        {{ $user->user_type }}
+                    </span>
+
+                    @if($user->is_verified)
+                        <span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700 border border-green-200">
+                            <i class="fas fa-check-circle mr-1"></i> Verified
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-4 md:mt-0">
+                <a href="{{ route('admin.users.edit', $user->user_id) }}" 
+                   class="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 shadow-sm transition">
+                    <i class="fas fa-edit mr-2"></i> Edit
+                </a>
                 
+                @if($user->is_active)
+                <button onclick="toggleStatus({{ $user->user_id }}, 'deactivate')" 
+                        class="px-4 py-2 bg-orange-50 border border-orange-200 text-orange-700 font-bold rounded-xl hover:bg-orange-100 shadow-sm transition">
+                    <i class="fas fa-ban mr-2"></i> Suspend
+                </button>
+                @else
+                <button onclick="toggleStatus({{ $user->user_id }}, 'activate')" 
+                        class="px-4 py-2 bg-green-50 border border-green-200 text-green-700 font-bold rounded-xl hover:bg-green-100 shadow-sm transition">
+                    <i class="fas fa-check mr-2"></i> Activate
+                </button>
+                @endif
+
+                <button onclick="deleteUser({{ $user->user_id }})" 
+                        class="px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-200 transition">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 space-y-6">
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-indigo-500 rounded-full"></span>
+                    Personal Information
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">Phone</label>
+                        <p class="font-medium text-gray-900 mt-1">{{ $user->phone ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">Date of Birth</label>
+                        <p class="font-medium text-gray-900 mt-1">{{ $user->date_of_birth ? \Carbon\Carbon::parse($user->date_of_birth)->format('d/m/Y') : 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">City</label>
+                        <p class="font-medium text-gray-900 mt-1">{{ $user->city ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase">District</label>
+                        <p class="font-medium text-gray-900 mt-1">{{ $user->district ?? 'N/A' }}</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-bold text-gray-400 uppercase">Address</label>
+                        <p class="font-medium text-gray-900 mt-1">{{ $user->address ?? 'No address provided.' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            @if($user->user_type == 'Volunteer' && $user->volunteerProfile)
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-blue-500 rounded-full"></span>
+                    Volunteer Profile
+                </h3>
                 <div class="space-y-4">
                     @if($user->volunteerProfile->bio)
-                    <div>
-                        <p class="text-xs text-gray-500">Bio</p>
-                        <p class="text-sm text-gray-700">{{ $user->volunteerProfile->bio }}</p>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <label class="text-xs font-bold text-gray-400 uppercase block mb-1">Bio</label>
+                        <p class="text-gray-700 italic">"{{ $user->volunteerProfile->bio }}"</p>
                     </div>
                     @endif
-                    
+
                     <div class="grid grid-cols-2 gap-4">
-                        @if($user->volunteerProfile->occupation)
                         <div>
-                            <p class="text-xs text-gray-500">Occupation</p>
-                            <p class="text-sm font-medium text-gray-900">{{ $user->volunteerProfile->occupation }}</p>
+                            <label class="text-xs font-bold text-gray-400 uppercase">Occupation</label>
+                            <p class="font-medium text-gray-900">{{ $user->volunteerProfile->occupation ?? 'N/A' }}</p>
                         </div>
-                        @endif
-                        
-                        @if($user->volunteerProfile->education_level)
                         <div>
-                            <p class="text-xs text-gray-500">Education</p>
-                            <p class="text-sm font-medium text-gray-900">{{ $user->volunteerProfile->education_level }}</p>
-                        </div>
-                        @endif
-                        
-                        <div>
-                            <p class="text-xs text-gray-500">Total Hours</p>
-                            <p class="text-sm font-medium text-gray-900">{{ number_format($user->volunteerProfile->total_volunteer_hours) }} hours</p>
-                        </div>
-                        
-                        <div>
-                            <p class="text-xs text-gray-500">Rating</p>
-                            <p class="text-sm font-medium text-gray-900">
-                                <i class="fas fa-star text-yellow-500"></i> {{ number_format($user->volunteerProfile->volunteer_rating, 1) }}
-                            </p>
+                            <label class="text-xs font-bold text-gray-400 uppercase">Education</label>
+                            <p class="font-medium text-gray-900">{{ $user->volunteerProfile->education_level ?? 'N/A' }}</p>
                         </div>
                     </div>
-                    
+
                     @if($user->volunteerProfile->skills)
                     <div>
-                        <p class="text-xs text-gray-500 mb-2">Skills</p>
+                        <label class="text-xs font-bold text-gray-400 uppercase block mb-2">Skills</label>
                         <div class="flex flex-wrap gap-2">
-                            @php
-                                $skills = is_string($user->volunteerProfile->skills) ? explode(',', $user->volunteerProfile->skills) : [];
-                            @endphp
-                            @foreach($skills as $skill)
-                            <span class="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                                {{ trim($skill) }}
-                            </span>
+                            @foreach(explode(',', $user->volunteerProfile->skills) as $skill)
+                                <span class="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg border border-blue-100">
+                                    {{ trim($skill) }}
+                                </span>
                             @endforeach
                         </div>
                     </div>
@@ -191,270 +156,186 @@
                 </div>
             </div>
             @endif
-            
-            <!-- Organization Profile (if user is organization) -->
+
             @if($user->user_type == 'Organization' && $user->organization)
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Organization Profile</h3>
-                
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-purple-500 rounded-full"></span>
+                    Organization Details
+                </h3>
                 <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-xs text-gray-500">Organization Name</p>
-                            <p class="text-sm font-medium text-gray-900">{{ $user->organization->organization_name }}</p>
-                        </div>
-                        
-                        <div>
-                            <p class="text-xs text-gray-500">Type</p>
-                            <p class="text-sm font-medium text-gray-900">{{ $user->organization->organization_type }}</p>
-                        </div>
-                        
-                        <div>
-                            <p class="text-xs text-gray-500">Verification Status</p>
-                            <span class="px-2 py-1 text-xs font-medium rounded-full
-                                {{ $user->organization->verification_status == 'Verified' ? 'bg-green-100 text-green-800' : '' }}
-                                {{ $user->organization->verification_status == 'Pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                {{ $user->organization->verification_status == 'Rejected' ? 'bg-red-100 text-red-800' : '' }}">
-                                {{ $user->organization->verification_status }}
-                            </span>
-                        </div>
-                        
-                        <div>
-                            <p class="text-xs text-gray-500">Total Opportunities</p>
-                            <p class="text-sm font-medium text-gray-900">{{ $user->organization->total_opportunities }}</p>
-                        </div>
+                    <div class="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-100">
+                         <div>
+                            <p class="text-sm font-bold text-purple-900">{{ $user->organization->organization_name }}</p>
+                            <p class="text-xs text-purple-600">{{ $user->organization->organization_type }}</p>
+                         </div>
+                         <span class="px-3 py-1 bg-white text-purple-700 text-xs font-bold rounded-full border border-purple-200 shadow-sm">
+                            {{ $user->organization->verification_status }}
+                         </span>
                     </div>
                     
-                    @if($user->organization->description)
                     <div>
-                        <p class="text-xs text-gray-500">Description</p>
-                        <p class="text-sm text-gray-700">{{ $user->organization->description }}</p>
+                        <label class="text-xs font-bold text-gray-400 uppercase block mb-1">Description</label>
+                        <p class="text-gray-700">{{ $user->organization->description ?? 'No description.' }}</p>
                     </div>
-                    @endif
+                    
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <div class="text-center p-3 border border-gray-100 rounded-xl">
+                            <div class="text-2xl font-bold text-gray-900">{{ $user->organization->total_opportunities }}</div>
+                            <div class="text-xs text-gray-500 font-bold uppercase">Opportunities</div>
+                        </div>
+                        <div class="text-center p-3 border border-gray-100 rounded-xl">
+                            <div class="text-2xl font-bold text-gray-900">{{ $user->organization->rating ?? '0.0' }}</div>
+                            <div class="text-xs text-gray-500 font-bold uppercase">Rating</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             @endif
-            
-            <!-- Activity Log -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Activity Log</h3>
-                
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <div class="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3"></div>
-                        <div class="flex-1">
-                            <p class="text-sm text-gray-900">Account created</p>
-                            <p class="text-xs text-gray-500">{{ $user->created_at->format('M d, Y H:i') }}</p>
-                        </div>
-                    </div>
-                    
-                    @if($user->last_login_at)
-                    <div class="flex items-start">
-                        <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3"></div>
-                        <div class="flex-1">
-                            <p class="text-sm text-gray-900">Last login</p>
-                            <p class="text-xs text-gray-500">{{ $user->last_login_at->format('M d, Y H:i') }}</p>
-                        </div>
-                    </div>
-                    @endif
-                    
-                    <div class="flex items-start">
-                        <div class="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3"></div>
-                        <div class="flex-1">
-                            <p class="text-sm text-gray-900">Last updated</p>
-                            <p class="text-xs text-gray-500">{{ $user->updated_at->format('M d, Y H:i') }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
+
         </div>
-        
-        <!-- Right Column - Additional Info -->
+
         <div class="space-y-6">
             
-            <!-- Account Status -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Status</h3>
-                
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-700">Status</span>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                            {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ $user->is_active ? 'Active' : 'Inactive' }}
-                        </span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-700">Email Verified</span>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                            {{ $user->is_verified ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                            {{ $user->is_verified ? 'Verified' : 'Not Verified' }}
-                        </span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-gray-700">User Type</span>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                            {{ $user->user_type == 'Volunteer' ? 'bg-blue-100 text-blue-800' : '' }}
-                            {{ $user->user_type == 'Organization' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $user->user_type == 'Admin' ? 'bg-purple-100 text-purple-800' : '' }}">
-                            {{ $user->user_type }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Statistics (for volunteers) -->
-            @if($user->user_type == 'Volunteer' && $user->volunteerProfile)
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistics</h3>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-6">Activity Overview</h3>
                 
                 <div class="space-y-4">
-                    <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-sm text-gray-700">Volunteer Hours</span>
-                            <span class="text-sm font-semibold text-gray-900">{{ number_format($user->volunteerProfile->total_volunteer_hours) }}</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ min(100, ($user->volunteerProfile->total_volunteer_hours / 100) * 100) }}%"></div>
-                        </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Member Since</span>
+                        <span class="text-sm font-bold text-gray-900">{{ $user->created_at->format('M d, Y') }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Last Login</span>
+                        <span class="text-sm font-bold text-gray-900">
+                            {{ $user->last_login_at ? $user->last_login_at->diffForHumans() : 'Never' }}
+                        </span>
                     </div>
                     
-                    <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-sm text-gray-700">Rating</span>
-                            <span class="text-sm font-semibold text-gray-900">{{ number_format($user->volunteerProfile->volunteer_rating, 1) }}/5.0</span>
+                    <hr class="border-gray-100">
+
+                    @if($user->user_type == 'Volunteer' && $user->volunteerProfile)
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hours Volunteered</span>
+                                <span class="text-xs font-bold text-indigo-600">{{ $user->volunteerProfile->total_volunteer_hours }}h</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-2">
+                                <div class="bg-indigo-500 h-2 rounded-full" style="width: {{ min(($user->volunteerProfile->total_volunteer_hours / 100) * 100, 100) }}%"></div>
+                            </div>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-yellow-500 h-2 rounded-full" style="width: {{ ($user->volunteerProfile->volunteer_rating / 5) * 100 }}%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endif
-            
-            <!-- Quick Actions -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                
-                <div class="space-y-2">
-                    <a href="{{ route('admin.users.edit', $user->user_id) }}" 
-                       class="block w-full px-4 py-2 text-center bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition">
-                        <i class="fas fa-edit mr-2"></i>Edit Profile
-                    </a>
-                    
-                    @if($user->is_active)
-                    <button onclick="suspendUser({{ $user->user_id }})" 
-                            class="block w-full px-4 py-2 text-center bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100 transition">
-                        <i class="fas fa-pause mr-2"></i>Suspend Account
-                    </button>
-                    @else
-                    <button onclick="activateUser({{ $user->user_id }})" 
-                            class="block w-full px-4 py-2 text-center bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition">
-                        <i class="fas fa-play mr-2"></i>Activate Account
-                    </button>
                     @endif
-                    
-                    <button onclick="resetPassword()" 
-                            class="block w-full px-4 py-2 text-center bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition">
-                        <i class="fas fa-key mr-2"></i>Reset Password
-                    </button>
-                    
-                    <button onclick="deleteUser({{ $user->user_id }})" 
-                            class="block w-full px-4 py-2 text-center bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
-                        <i class="fas fa-trash mr-2"></i>Delete Account
-                    </button>
                 </div>
             </div>
-            
+
+            <div class="bg-red-50 rounded-2xl shadow-sm border border-red-100 p-6">
+                <h3 class="text-lg font-bold text-red-800 mb-4">Danger Zone</h3>
+                <p class="text-xs text-red-600 mb-4">Irreversible actions for this account.</p>
+                
+                <button onclick="resetPassword({{ $user->user_id }})" 
+                        class="w-full mb-3 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition text-sm">
+                    <i class="fas fa-key mr-2"></i> Reset Password
+                </button>
+                
+                <button onclick="deleteUser({{ $user->user_id }})" 
+                        class="w-full py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-md transition text-sm">
+                    <i class="fas fa-trash-alt mr-2"></i> Delete Account
+                </button>
+            </div>
+
         </div>
-        
     </div>
-    
 </div>
 
 @push('scripts')
 <script>
-function suspendUser(userId) {
-    if (confirm('Are you sure you want to suspend this user?')) {
-        fetch(`/admin/users/${userId}/suspend`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    function toggleStatus(userId, action) {
+        const actionText = action === 'activate' ? 'activate' : 'suspend';
+        const color = action === 'activate' ? '#10b981' : '#f59e0b';
+        
+        Swal.fire({
+            title: `Are you sure?`,
+            text: `Do you want to ${actionText} this user?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: color,
+            confirmButtonText: `Yes, ${actionText}!`
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Endpoint mapping: activate -> activateUser, deactivate -> deactivateUser/suspendUser
+                // Dựa trên Controller bạn cung cấp: có activateUser và suspendUser
+                const endpoint = action === 'activate' ? 'activate' : 'deactivate'; // Hoặc 'suspend' tùy route
+
+                fetch(`/admin/users/${userId}/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        Swal.fire('Success', data.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                })
+                .catch(err => Swal.fire('Error', 'Something went wrong', 'error'));
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('User suspended successfully!');
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to suspend user');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
         });
     }
-}
 
-function activateUser(userId) {
-    if (confirm('Are you sure you want to activate this user?')) {
-        fetch(`/admin/users/${userId}/activate`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
+    function deleteUser(userId) {
+        Swal.fire({
+            title: 'Delete User?',
+            text: "This action cannot be undone!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        Swal.fire('Deleted!', 'User has been deleted.', 'success')
+                        .then(() => window.location.href = "{{ route('admin.users.index') }}");
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                })
+                .catch(err => Swal.fire('Error', 'Connection failed', 'error'));
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('User activated successfully!');
-                location.reload();
-            } else {
-                alert(data.message || 'Failed to activate user');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
         });
     }
-}
 
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        fetch(`/admin/users/${userId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json',
+    function resetPassword(userId) {
+        Swal.fire({
+            title: 'Reset Password',
+            text: 'Send a password reset email to this user?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, send email'
+        }).then((result) => {
+            if(result.isConfirmed) {
+                // Giả định bạn có route gửi mail reset password
+                // Nếu chưa có, alert thông báo tính năng đang phát triển
+                Swal.fire('Info', 'Password reset email feature is coming soon.', 'info');
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('User deleted successfully!');
-                window.location.href = '{{ route("admin.users.index") }}';
-            } else {
-                alert(data.message || 'Failed to delete user');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
         });
     }
-}
-
-function resetPassword() {
-    alert('Reset password functionality will send an email to the user with a password reset link.');
-}
 </script>
 @endpush
+
 @endsection

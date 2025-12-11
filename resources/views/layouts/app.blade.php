@@ -268,85 +268,150 @@
                                 <i class="fas fa-comments text-lg"></i>
                             </a>
 
-                            <div class="relative" x-data="{ open: false }">
-                                <button @click="open = !open" type="button"
-                                    class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
-                                    <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name . ' ' . Auth::user()->last_name) . '&background=6366f1&color=fff' }}"
-                                        class="w-10 h-10 rounded-full avatar-border object-cover" alt="Avatar">
-                                    <span
-                                        class="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">{{ Auth::user()->first_name }}</span>
-                                    <i class="fas fa-chevron-down text-xs text-gray-500 transform transition-transform"
-                                        :class="{ 'rotate-180': open }"></i>
-                                </button>
+<div class="relative" x-data="{ open: false }">
+    <button @click="open = !open" type="button"
+        class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
+        <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name . ' ' . Auth::user()->last_name) . '&background=6366f1&color=fff' }}"
+            class="w-10 h-10 rounded-full avatar-border object-cover" alt="Avatar">
+        <span class="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {{ Auth::user()->first_name }}
+        </span>
+        <i class="fas fa-chevron-down text-xs text-gray-500 transform transition-transform"
+            :class="{ 'rotate-180': open }"></i>
+    </button>
 
-                                <div x-show="open" @click.away="open = false" x-transition
-                                    class="absolute right-0 mt-2 w-64 glass dark:glass-dark rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50"
-                                    style="display: none;">
-                                    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                            {{ Auth::user()->first_name }} {{ Auth::user()->last_name }}
-                                        </p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ Auth::user()->email }}</p>
-                                    </div>
+    <div x-show="open" @click.away="open = false" x-transition
+        class="absolute right-0 mt-2 w-64 glass dark:glass-dark rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50"
+        style="display: none;">
+        
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                {{ Auth::user()->first_name }} {{ Auth::user()->last_name }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ Auth::user()->email }}</p>
+            <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                {{ Auth::user()->user_type }}
+            </span>
+        </div>
 
-                                    <div class="py-1">
-                                        <a href="{{ route('dashboard') }}"
-                                            class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                            <i
-                                                class="fas fa-tachometer-alt w-5 text-indigo-600 dark:text-indigo-400"></i><span>Dashboard</span>
-                                        </a>
+        <div class="py-1">
+            <a href="{{ route('dashboard') }}"
+                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                <i class="fas fa-tachometer-alt w-5 text-indigo-600 dark:text-indigo-400"></i>
+                <span>Dashboard</span>
+            </a>
 
-                                        @if(Auth::user()->user_type === 'Volunteer')
-                                            <a href="{{ route('volunteer.profile.profile') }}"
-                                                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                <i class="fas fa-user-tie w-5 text-blue-600 dark:text-blue-400"></i><span>Hồ Sơ
-                                                    Của Tôi</span>
-                                            </a>
-                                            <a href="{{ route('volunteer.profile.edit') }}"
-                                                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                <i class="fas fa-edit w-5 text-purple-600 dark:text-purple-400"></i><span>Chỉnh
-                                                    Sửa & Xác Thực</span>
-                                            </a>
+            @if(Auth::user()->user_type === 'Organization')
+                {{-- ORGANIZATION LINKS --}}
+                <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                
+                <a href="{{ route('organization.profile.show') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-building w-5 text-blue-600 dark:text-blue-400"></i>
+                    <span>Hồ Sơ Tổ Chức</span>
+                </a>
+                
+                <a href="{{ route('organization.opportunities.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-briefcase w-5 text-green-600 dark:text-green-400"></i>
+                    <span>Quản Lý Cơ Hội</span>
+                </a>
 
-                                        @elseif(Auth::user()->user_type === 'Organization')
-                                            <a href="{{ route('organization.profile.show') }}"
-                                                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                <i class="fas fa-building w-5 text-blue-600 dark:text-blue-400"></i><span>Hồ Sơ
-                                                    Tổ Chức</span>
-                                            </a>
-                                            <a href="{{ route('organization.opportunities.index') }}"
-                                                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                <i class="fas fa-briefcase w-5 text-green-600 dark:text-green-400"></i><span>Cơ
-                                                    Hội Của Tôi</span>
-                                            </a>
+                <a href="{{ route('organization.applications.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-file-alt w-5 text-yellow-600 dark:text-yellow-400"></i>
+                    <span>Duyệt Đơn Đăng Ký</span>
+                </a>
 
-                                        @elseif(Auth::user()->user_type === 'Admin')
-                                            <a href="{{ route('admin.dashboard') }}"
-                                                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                <i class="fas fa-cog w-5 text-red-600 dark:text-red-400"></i><span>Admin
-                                                    Panel</span>
-                                            </a>
+                <a href="{{ route('organization.activities.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-clock w-5 text-purple-600 dark:text-purple-400"></i>
+                    <span>Xác Nhận Giờ Làm</span>
+                </a>
 
-                                        @else
-                                            <a href="{{ route('profile') }}"
-                                                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                <i class="fas fa-user w-5 text-blue-600 dark:text-blue-400"></i><span>Cài Đặt Hồ
-                                                    Sơ</span>
-                                            </a>
-                                        @endif
-                                    </div>
+            @elseif(Auth::user()->user_type === 'Volunteer')
+                {{-- VOLUNTEER LINKS --}}
+                <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
 
-                                    <div class="border-t border-gray-200 dark:border-gray-700 py-1">
-                                        <form method="POST" action="{{ route('logout') }}">
-                                            @csrf
-                                            <button type="submit"
-                                                class="flex items-center space-x-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                                                <i class="fas fa-sign-out-alt w-5"></i><span>Đăng Xuất</span>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
+                <a href="{{ route('volunteer.profile.profile') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-user w-5 text-blue-600 dark:text-blue-400"></i>
+                    <span>Hồ Sơ Cá Nhân</span>
+                </a>
+                
+                <a href="{{ route('volunteer.applications.my') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-folder-open w-5 text-yellow-600 dark:text-yellow-400"></i>
+                    <span>Đơn Của Tôi</span>
+                </a>
+
+                <a href="{{ route('volunteer.activities.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-history w-5 text-green-600 dark:text-green-400"></i>
+                    <span>Lịch Sử Hoạt Động</span>
+                </a>
+
+@elseif(Auth::user()->user_type === 'Admin')
+                {{-- ADMIN LINKS --}}
+                <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+
+                <a href="{{ route('admin.dashboard') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-chart-line w-5 text-indigo-600 dark:text-indigo-400"></i>
+                    <span>Tổng Quan (Dashboard)</span>
+                </a>
+                
+                <a href="{{ route('admin.users.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-users w-5 text-blue-600 dark:text-blue-400"></i>
+                    <span>Quản Lý Người Dùng</span>
+                </a>
+
+                <a href="{{ route('admin.organizations.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-building w-5 text-orange-600 dark:text-orange-400"></i>
+                    <span>Duyệt Tổ Chức</span>
+                </a>
+
+                <a href="{{ route('admin.posts.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-shield-alt w-5 text-red-600 dark:text-red-400"></i>
+                    <span>Kiểm Duyệt Bài Đăng</span>
+                </a>
+
+                <a href="{{ route('admin.analytics.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-chart-pie w-5 text-purple-600 dark:text-purple-400"></i>
+                    <span>Báo Cáo & Thống Kê</span>
+                </a>
+
+                <a href="{{ route('admin.settings.index') }}"
+                    class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                    <i class="fas fa-cogs w-5 text-gray-500 dark:text-gray-400"></i>
+                    <span>Cài Đặt Hệ Thống</span>
+                </a>
+            @endif
+
+            <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+            <a href="{{ route('profile') }}"
+                class="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                <i class="fas fa-cog w-5 text-gray-500 dark:text-gray-400"></i>
+                <span>Cài Đặt Tài Khoản</span>
+            </a>
+        </div>
+
+        <div class="border-t border-gray-200 dark:border-gray-700 py-1">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                    class="flex items-center space-x-3 w-full px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Đăng Xuất</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
                         @endguest
 
                         <button @click="mobileMenuOpen = !mobileMenuOpen" type="button"
