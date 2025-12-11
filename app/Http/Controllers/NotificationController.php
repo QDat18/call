@@ -47,7 +47,7 @@ class NotificationController extends Controller
 
         return view('notifications.index', compact('notifications', 'stats'));
     }
-    
+
     /**
      * Get unread notifications count (for API)
      */
@@ -56,10 +56,10 @@ class NotificationController extends Controller
         $count = Auth::user()->notifications()
             ->where('is_read', false)
             ->count();
-        
+
         return response()->json(['count' => $count]);
     }
-    
+
     /**
      * Get unread count (legacy method)
      */
@@ -67,7 +67,7 @@ class NotificationController extends Controller
     {
         return $this->getUnreadCount();
     }
-    
+
     /**
      * Get recent notifications (for dropdown)
      */
@@ -77,28 +77,47 @@ class NotificationController extends Controller
             ->latest()
             ->take(10)
             ->get();
-        
+
         return response()->json([
             'success' => true,
             'notifications' => $notifications
         ]);
     }
-    
+
     /**
      * Mark notification as read
      */
+    // public function markAsRead($id)
+    // {
+    //     $notification = Auth::user()->notifications()->findOrFail($id);
+
+    //     $notification->update(['is_read' => true]);
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Notification marked as read'
+    //     ]);
+    // }
+
     public function markAsRead($id)
     {
-        $notification = Auth::user()->notifications()->findOrFail($id);
-        
-        $notification->update(['is_read' => true]);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Notification marked as read'
-        ]);
+        $notification = auth()->user()->notifications()->findOrFail($id);
+
+        // Đánh dấu đã đọc
+        $notification->markAsRead();
+
+        // Lấy đường dẫn đích từ dữ liệu thông báo
+        // (Dựa trên code ActivityController bạn gửi, key là 'action_url')
+        $targetUrl = $notification->data['action_url'] ?? null;
+
+        // Nếu có link đích thì chuyển hướng tới đó
+        if ($targetUrl) {
+            return redirect($targetUrl);
+        }
+
+        // Nếu không có link (hoặc link hỏng), quay lại trang trước đó
+        return back();
     }
-    
     /**
      * Mark all notifications as read
      */
@@ -107,29 +126,29 @@ class NotificationController extends Controller
         $count = Auth::user()->notifications()
             ->where('is_read', false)
             ->update(['is_read' => true]);
-        
+
         return response()->json([
             'success' => true,
             'count' => $count,
             'message' => 'All notifications marked as read'
         ]);
     }
-    
+
     /**
      * Delete notification
      */
     public function destroy($id)
     {
         $notification = Auth::user()->notifications()->findOrFail($id);
-        
+
         $notification->delete();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Notification deleted'
         ]);
     }
-    
+
     /**
      * Delete all read notifications
      */
@@ -138,51 +157,64 @@ class NotificationController extends Controller
         $count = Auth::user()->notifications()
             ->where('is_read', true)
             ->delete();
-        
+
         return response()->json([
             'success' => true,
             'count' => $count,
             'message' => 'All read notifications deleted'
         ]);
     }
-    
+
     /**
      * Delete all read notifications (legacy)
      */
     public function deleteAllRead()
     {
-        return $this->deleteRead();
+        try {
+            // Xóa tất cả thông báo ĐÃ ĐỌC (read_at không null) của user hiện tại
+            $deletedCount = auth()->user()->readNotifications()->delete();
+
+            return response()->json([
+                'success' => true,
+                'count' => $deletedCount,
+                'message' => 'Đã xóa các thông báo đã đọc.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xóa thông báo: ' . $e->getMessage()
+            ], 500);
+        }
     }
-    
     /**
      * Get notifications by type
      */
     public function getByType($type)
     {
         $validTypes = ['Application', 'Message', 'Video Call', 'Review', 'System', 'Opportunity'];
-        
+
         if (!in_array($type, $validTypes)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid notification type'
             ], 400);
         }
-        
+
         $notifications = Auth::user()->notifications()
             ->where('notification_type', $type)
             ->latest()
             ->paginate(20);
-        
+
         return response()->json($notifications);
     }
-    
+
     /**
      * Get notification statistics
      */
     public function statistics()
     {
         $user = Auth::user();
-        
+
         $stats = [
             'total' => $user->notifications()->count(),
             'unread' => $user->notifications()->where('is_read', false)->count(),
@@ -198,7 +230,7 @@ class NotificationController extends Controller
                 'low' => $user->notifications()->where('priority', 'low')->where('is_read', false)->count(),
             ]
         ];
-        
+
         return response()->json($stats);
     }
 }

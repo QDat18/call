@@ -219,11 +219,12 @@ Route::middleware('auth')->group(function () {
     // Notifications
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
-        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
+        Route::get('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read-all');
         Route::get('/recent', [UserController::class, 'getRecentNotifications'])->name('recent');
         Route::post('/{notification}/mark-read', [UserController::class, 'markNotificationRead'])->name('mark-read');
         Route::post('/mark-all-read', [UserController::class, 'markAllNotificationsRead'])->name('mark-all-read');
+        Route::post('/delete-read', [NotificationController::class, 'deleteAllRead'])->name('delete-read');
     });
 
     // Conversations

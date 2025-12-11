@@ -1180,7 +1180,7 @@ class AdminController extends Controller
         $activity = VolunteerActivity::with([
             'volunteer.volunteerProfile',
             'opportunity.organization',
-            'verifier'
+            'verifiedBy'
         ])->findOrFail($id);
 
         return view('admin.activities.show', compact('activity'));

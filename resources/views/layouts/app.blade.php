@@ -159,7 +159,9 @@
                                     class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition">
                                 </div>
                                 <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-lg">
-                                    <i class="fas fa-hands-helping text-white text-xl"></i>
+                                    <img src="{{ asset('local.jpg') }}" alt="Volunteer Logo"
+                                        class="h-8 w-auto object-cover">
+
                                 </div>
                             </div>
                             <span class="font-bold text-xl gradient-text hidden sm:block">VolunteerConnect</span>
@@ -218,6 +220,47 @@
                                             class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full notification-badge"></span>
                                     @endif
                                 </button>
+
+                                <div x-show="open" @click.away="open = false" x-transition
+                                    class="absolute right-0 mt-2 w-80 glass dark:glass-dark rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 overflow-hidden"
+                                    style="display: none;">
+
+                                    <div
+                                        class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                        <h6 class="text-sm font-bold text-gray-900 dark:text-white">Notifications</h6>
+                                        <a href="{{ route('notifications.index') }}"
+                                            class="text-xs text-indigo-600 hover:underline">View all</a>
+                                    </div>
+
+                                    <div class="max-h-64 overflow-y-auto">
+                                        @forelse(auth()->user()->unreadNotifications->take(5) as $notification)
+                                            <a href="{{ route('notifications.read', $notification->getKey()) }}"
+                                                class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition border-b border-gray-100 dark:border-gray-700 last:border-0">                                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                    {{ $notification->data['title'] ?? 'New Notification' }}</p>
+                                                <p class="text-xs text-gray-500 mt-1 truncate">
+                                                    {{ $notification->data['content'] ?? '' }}</p>
+                                                <p class="text-[10px] text-gray-400 mt-1">
+                                                    {{ $notification->created_at->diffForHumans() }}</p>
+                                            </a>
+                                        @empty
+                                            <div class="px-4 py-6 text-center text-gray-500 text-sm">
+                                                No new notifications
+                                            </div>
+                                        @endforelse
+                                    </div>
+
+                                    @if(auth()->user()->unreadNotifications->count() > 0)
+                                        <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-center">
+                                            <form action="{{ route('notifications.read-all') }}" method="POST">
+                                                @csrf
+                                                <button type="submit"
+                                                    class="text-xs text-gray-500 hover:text-indigo-600 font-medium">
+                                                    Mark all as read
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
 
                             <a href="{{ route('conversations.index') }}"
