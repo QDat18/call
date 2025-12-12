@@ -1,7 +1,7 @@
 # Base PHP image
 FROM php:8.2-fpm
 
-# Install system dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -18,25 +18,25 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# Working directory
 WORKDIR /var/www/html
 
-# Copy app files
+# Copy source
 COPY . .
 
-# Install PHP dependencies
+# Composer install
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-# Optimize Laravel
+# Build cache
 RUN php artisan config:clear \
     && php artisan route:clear \
     && php artisan view:clear
 
-# Expose port
+# Expose port 8080 for internal usage
 EXPOSE 8080
 
-# Start Laravel server
+# Default command (overridden by Procfile)
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
