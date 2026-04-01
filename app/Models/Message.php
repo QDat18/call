@@ -24,18 +24,20 @@ class Message extends Model
         'attachment_name',
         'is_deleted',
         'sent_at',
+        'reactions',
     ];
 
     protected $casts = [
         'is_deleted' => 'boolean',
         'sent_at' => 'datetime',
+        'reactions' => 'array',
     ];
 
     // ✅ Auto-set sent_at khi tạo
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($message) {
             if (empty($message->sent_at)) {
                 $message->sent_at = now();

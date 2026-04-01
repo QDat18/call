@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up()
     {
+        Schema::dropIfExists('settings');
         Schema::create('settings', function (Blueprint $table) {
             $table->id();
             $table->string('key')->unique(); // Tên cài đặt (ví dụ: site_name)

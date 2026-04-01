@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Models\User;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -30,8 +33,48 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $user = $request->validateCredentials();
+        // $user = $request->validateCredentials();
 
+        $email = $request->input('email');
+        $user = User::where('email', $email)->first();
+
+        // 1. KIỂM TRA: Nếu tài khoản đã bị khóa (is_active = 0) -> Chặn luôn
+        if ($user && !$user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => 'Tài khoản của bạn đã bị vô hiệu hóa do nhập sai quá nhiều lần. Vui lòng liên hệ Admin.',
+            ]);
+        }
+
+        // Key định danh để đếm lỗi (login_fail_ + UserID)
+        $limiterKey = $user ? 'login_fail_' . $user->id : null;
+
+        try {
+            // 2. THỬ ĐĂNG NHẬP (Hàm này sẽ ném lỗi nếu sai pass)
+            $user = $request->validateCredentials();
+
+            // === NẾU ĐĂNG NHẬP THÀNH CÔNG ===
+            // Xóa bộ đếm lỗi cũ nếu có
+            if ($limiterKey) {
+                RateLimiter::clear($limiterKey);
+            }
+        } catch (ValidationException $e) {
+            // === NẾU ĐĂNG NHẬP THẤT BẠI (Sai mật khẩu) ===
+            if ($user && $limiterKey) {
+                // Tăng bộ đếm lỗi
+                RateLimiter::hit($limiterKey);
+
+                // Kiểm tra nếu sai quá 7 lần -> KHÓA TÀI KHOẢN
+                if (RateLimiter::attempts($limiterKey) >= 7) {
+                    $user->update(['is_active' => false]);
+
+                    // Reset bộ đếm để lần sau vào check ngay điều kiện số 1 (is_active)
+                    RateLimiter::clear($limiterKey);
+                }
+            }
+
+            // Ném lại lỗi ra ngoài để hiển thị "Mật khẩu không đúng"
+            throw $e;
+        }
         if (Features::enabled(Features::twoFactorAuthentication()) && $user->hasEnabledTwoFactorAuthentication()) {
             $request->session()->put([
                 'login.id' => $user->getKey(),

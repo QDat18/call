@@ -114,7 +114,8 @@
                     @endif
 
                     <!-- Create Post Card -->
-                    @auth
+                    {{-- @auth
+
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                             <div class="flex gap-3 mb-3">
                                 <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name) }}"
@@ -143,10 +144,64 @@
                                 </a>
                             </div>
                         </div>
+                    @endauth --}}
+@auth
+                        {{-- KIỂM TRA XÁC THỰC: Chỉ hiện khung đăng bài nếu đã verify --}}
+                        @if(Auth::user()->is_verified)
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                                <div class="flex gap-3 mb-3">
+                                    <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name) }}"
+                                        class="w-10 h-10 rounded-full object-cover">
+                                    <a href="{{ route('posts.create') }}"
+                                        class="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full px-4 py-2.5 text-left text-gray-500 dark:text-gray-400 transition cursor-pointer">
+                                        Bạn đang nghĩ gì?
+                                    </a>
+                                </div>
+                                <hr class="border-gray-200 dark:border-gray-700 mb-3">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <a href="{{ route('posts.create') }}"
+                                        class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                        <i class="fas fa-video text-red-500 text-xl"></i>
+                                        <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">Video trực tiếp</span>
+                                    </a>
+                                    <a href="{{ route('posts.create') }}"
+                                        class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                        <i class="fas fa-image text-green-500 text-xl"></i>
+                                        <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">Ảnh/video</span>
+                                    </a>
+                                    <a href="{{ route('posts.create') }}"
+                                        class="flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                        <i class="fas fa-smile text-yellow-500 text-xl"></i>
+                                        <span class="font-semibold text-gray-700 dark:text-gray-300 text-sm">Cảm xúc</span>
+                                    </a>
+                                </div>
+                            </div>
+                        @else
+                            {{-- THÔNG BÁO NẾU CHƯA XÁC THỰC --}}
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow mb-4">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm text-yellow-700">
+                                            Tài khoản của bạn chưa được xác thực. Vui lòng 
+                                            <a href="{{ route('volunteer.profile.profile') }}" class="font-bold underline hover:text-yellow-800">xác thực email/hồ sơ</a> 
+                                            để có thể đăng bài viết và tham gia thảo luận.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     @endauth
-
                     <!-- Posts Feed -->
                     @forelse($posts as $post)
+                    @if($post->is_pinned)
+                        <div class="mb-1 ml-2 flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider">
+                            <i class="fas fa-thumbtack transform rotate-45"></i>
+                            <span>Bài viết được ghim</span>
+                        </div>
+                    @endif
                         @include('posts.components.post-card', ['post' => $post])
                     @empty
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">

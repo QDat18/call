@@ -70,6 +70,118 @@
 
             </div>
         </section>
+        {{-- === NEW SECTION: BẢNG VÀNG VINH DANH === --}}
+        <section class="max-w-7xl mx-auto px-4 py-16 relative z-10">
+            {{-- Khung nền Gradient Đen-Tím sang trọng --}}
+            <div
+                class="relative rounded-[2.5rem] overflow-hidden bg-[#0F172A] shadow-2xl shadow-indigo-500/20 border border-white/10">
+
+                {{-- Hiệu ứng nền (Blobs phát sáng) --}}
+                <div
+                    class="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-yellow-500 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-pulse">
+                </div>
+                <div
+                    class="absolute bottom-0 left-0 -mb-20 -ml-20 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20">
+                </div>
+
+                <div class="relative z-10 px-6 py-12 md:p-16 flex flex-col md:flex-row items-center justify-between gap-12">
+
+                    {{-- Cột Trái: Tiêu đề & CTA --}}
+                    <div class="md:w-1/3 text-center md:text-left space-y-6">
+                        <div
+                            class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300 font-bold text-xs uppercase tracking-widest">
+                            <i class="fas fa-crown text-sm"></i> Bảng vàng tháng 12
+                        </div>
+
+                        <h2 class="text-4xl md:text-5xl font-black text-white leading-tight">
+                            Vinh Danh <br>
+                            <span
+                                class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 drop-shadow-sm">
+                                Trái Tim Vàng
+                            </span>
+                        </h2>
+
+                        <p class="text-slate-300 text-lg leading-relaxed">
+                            Cùng chúc mừng những cá nhân xuất sắc nhất đã cống hiến không ngừng nghỉ cho cộng đồng.
+                        </p>
+
+                        <div class="pt-2">
+                            <a href="{{ route('leaderboard.index') }}"
+                                class="group inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-900 font-bold rounded-2xl transition-all duration-300 hover:bg-yellow-400 hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/50">
+                                Xem Bảng Xếp Hạng
+                                <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Cột Phải: Top 3 Cards (Thiết kế bục vinh quang) --}}
+                    <div class="md:w-2/3 w-full grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+
+                        {{-- Vị trí số 2 (Trái) --}}
+                        @if(isset($topVolunteers[1]))
+                            <div
+                                class="order-2 sm:order-1 bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-6 flex flex-col items-center text-center transform hover:-translate-y-2 transition duration-300">
+                                <div class="relative mb-4">
+                                    <img src="{{ $topVolunteers[1]->user->avatar_url ? asset('storage/' . $topVolunteers[1]->user->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($topVolunteers[1]->user->first_name) . '&background=random' }}"
+                                        class="w-16 h-16 rounded-full object-cover border-4 border-slate-300 shadow-lg">
+                                    <div
+                                        class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-slate-300 text-slate-800 text-xs font-bold px-2 py-0.5 rounded shadow-sm">
+                                        #2</div>
+                                </div>
+                                <h3 class="text-white font-bold text-lg truncate w-full">
+                                    {{ $topVolunteers[1]->user->first_name }}</h3>
+                                <p class="text-slate-400 text-sm mb-3">Bạc</p>
+                                <span
+                                    class="bg-slate-700/50 text-slate-200 px-3 py-1 rounded-lg text-sm font-mono">{{ $topVolunteers[1]->total_volunteer_hours }}h</span>
+                            </div>
+                        @endif
+
+                        {{-- Vị trí số 1 (Giữa - To nhất) --}}
+                        @if(isset($topVolunteers[0]))
+                            <div
+                                class="order-1 sm:order-2 bg-gradient-to-b from-yellow-500/20 to-amber-900/20 backdrop-blur-md border border-yellow-500/30 rounded-3xl p-8 flex flex-col items-center text-center transform scale-110 shadow-2xl shadow-yellow-900/20 relative z-10">
+                                <div class="absolute -top-6">
+                                    <i class="fas fa-crown text-4xl text-yellow-400 drop-shadow-lg animate-bounce"
+                                        style="animation-duration: 3s;"></i>
+                                </div>
+                                <div class="relative mb-4 mt-2">
+                                    <img src="{{ $topVolunteers[0]->user->avatar_url ? asset('storage/' . $topVolunteers[0]->user->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($topVolunteers[0]->user->first_name) . '&background=random' }}"
+                                        class="w-24 h-24 rounded-full object-cover border-4 border-yellow-400 shadow-xl shadow-yellow-500/20">
+                                    <div
+                                        class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 text-sm font-bold px-3 py-0.5 rounded shadow-sm">
+                                        #1</div>
+                                </div>
+                                <h3 class="text-white font-bold text-xl truncate w-full">
+                                    {{ $topVolunteers[0]->user->first_name }}</h3>
+                                <p class="text-yellow-200 text-sm mb-4 font-medium">Quán Quân</p>
+                                <span
+                                    class="bg-yellow-500 text-yellow-900 px-4 py-1.5 rounded-xl font-bold font-mono text-lg">{{ $topVolunteers[0]->total_volunteer_hours }}h</span>
+                            </div>
+                        @endif
+
+                        {{-- Vị trí số 3 (Phải) --}}
+                        @if(isset($topVolunteers[2]))
+                            <div
+                                class="order-3 sm:order-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-6 flex flex-col items-center text-center transform hover:-translate-y-2 transition duration-300">
+                                <div class="relative mb-4">
+                                    <img src="{{ $topVolunteers[2]->user->avatar_url ? asset('storage/' . $topVolunteers[2]->user->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode($topVolunteers[2]->user->first_name) . '&background=random' }}"
+                                        class="w-16 h-16 rounded-full object-cover border-4 border-orange-700 shadow-lg">
+                                    <div
+                                        class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-orange-700 text-orange-100 text-xs font-bold px-2 py-0.5 rounded shadow-sm">
+                                        #3</div>
+                                </div>
+                                <h3 class="text-white font-bold text-lg truncate w-full">
+                                    {{ $topVolunteers[2]->user->first_name }}</h3>
+                                <p class="text-slate-400 text-sm mb-3">Đồng</p>
+                                <span
+                                    class="bg-slate-700/50 text-slate-200 px-3 py-1 rounded-lg text-sm font-mono">{{ $topVolunteers[2]->total_volunteer_hours }}h</span>
+                            </div>
+                        @endif
+
+                    </div>
+                </div>
+            </div>
+        </section>
         {{-- POSTS FEED SECTION --}}
         <section class="max-w-7xl mx-auto px-4 py-16">
             <div class="flex items-center justify-between mb-8">

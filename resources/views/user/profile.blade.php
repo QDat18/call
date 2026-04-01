@@ -55,10 +55,18 @@
                                         class="px-5 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-white rounded-xl font-semibold hover:bg-gray-50 transition">
                                         <i class="fas fa-eye mr-2"></i> Xem công khai
                                     </a>
-                                    <a href="{{ route('user.edit-profile') }}"
-                                        class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 shadow-md shadow-indigo-200 dark:shadow-none transition">
-                                        <i class="fas fa-pen mr-2"></i> Chỉnh sửa
-                                    </a>
+                                    
+                            @if (Auth::user()->user_type === 'Volunteer')
+                                <a href="{{ route('volunteer.profile.edit') }}" 
+                                   class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                    <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân
+                                </a>
+                            @elseif (Auth::user()->user_type === 'Organization')
+                                <a href="{{ route('organization.profile.edit') }}" 
+                                   class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                    <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân
+                                </a>
+                            @endif
                                 </div>
                             </div>
                         </div>
@@ -156,16 +164,33 @@
                                             ];
                                         @endphp
 
-                                        @foreach(explode(',', $user->volunteerProfile->skills) as $index => $skill)
-                                            @php
-                                                $colorClass = $badgeColors[$index % count($badgeColors)];
-                                            @endphp
-                                            <span
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 {{ $colorClass }} rounded-full text-sm font-semibold shadow-sm hover:shadow-md transition-shadow">
-                                                <i class="fas fa-check-circle text-xs"></i>
-                                                <span>{{ trim($skill) }}</span>
-                                            </span>
-                                        @endforeach
+@php
+    $rawSkills = $user->volunteerProfile->skills;
+    
+    // Nếu là chuỗi (VD: "PHP, Laravel, CSS") -> Dùng explode
+    if (is_string($rawSkills)) {
+        $skillsList = explode(',', $rawSkills);
+    } 
+    // Nếu đã là mảng (do Model $casts = ['skills' => 'array']) -> Dùng luôn
+    elseif (is_array($rawSkills)) {
+        $skillsList = $rawSkills;
+    } 
+    // Trường hợp null hoặc khác -> Mảng rỗng
+    else {
+        $skillsList = [];
+    }
+@endphp
+
+@foreach($skillsList as $index => $skill)
+    @php
+        $colorClass = $badgeColors[$index % count($badgeColors)];
+    @endphp
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 {{ $colorClass }} rounded-full text-sm font-semibold shadow-sm hover:shadow-md transition-shadow">
+        <i class="fas fa-check-circle text-xs"></i>
+        {{-- Trim khoảng trắng thừa và strip_tags để an toàn --}}
+        <span>{{ trim(strip_tags($skill)) }}</span>
+    </span>
+@endforeach
                                     </div>
                                 </div>
                             @endif

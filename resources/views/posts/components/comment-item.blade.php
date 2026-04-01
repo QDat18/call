@@ -2,6 +2,9 @@
 @php
     $isOwner = Auth::check() && Auth::id() === $comment->user_id;
     $maxLevel = 2; // Maximum nesting level
+    
+    // Kiểm tra biến post_author_id có tồn tại không (cho trường hợp include đệ quy)
+    $postAuthorId = $post_author_id ?? null;
 @endphp
 
 <div class="flex gap-2 {{ $level > 0 ? 'ml-10' : '' }}" id="comment-{{ $comment->comment_id }}">
@@ -33,11 +36,30 @@
                 </div>
                 @endif
 
-                {{-- Author Name --}}
-                <a href="{{ route('user.public-profile', $comment->user_id) }}" 
-                   class="font-semibold text-[13px] text-gray-900 dark:text-white hover:underline block mb-0.5">
-                    {{ $comment->user->first_name }} {{ $comment->user->last_name }}
-                </a>
+                {{-- [ĐÃ SỬA] Author Name & Badges --}}
+                <div class="flex items-center gap-1 mb-0.5">
+                    <a href="{{ route('user.public-profile', $comment->user_id) }}" 
+                       class="font-semibold text-[13px] text-gray-900 dark:text-white hover:underline">
+                        {{ $comment->user->first_name }} {{ $comment->user->last_name }}
+                    </a>
+
+                    {{-- 1. Badge Admin --}}
+                    @if($comment->user->user_type === 'Admin')
+                        <i class="fas fa-shield-alt text-blue-600 text-[11px]" title="Quản trị viên"></i>
+                    @endif
+
+                    {{-- 2. Badge Organization (Tích xanh lá) --}}
+                    @if($comment->user->user_type === 'Organization')
+                        <i class="fas fa-check-circle text-green-500 text-[11px]" title="Tổ chức đã xác minh"></i>
+                    @endif
+
+                    {{-- 3. Badge Tác giả (Chủ bài viết) --}}
+                    @if($postAuthorId && $comment->user_id === $postAuthorId)
+                        <span class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 text-[10px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
+                            <i class="fas fa-pen-nib text-[9px]"></i> Tác giả
+                        </span>
+                    @endif
+                </div>
 
                 {{-- Comment Content --}}
                 <div class="text-[15px] text-gray-800 dark:text-gray-200 whitespace-pre-line break-words {{ $isOwner ? 'pr-8' : '' }}">
@@ -87,7 +109,12 @@
         @if($comment->replies && $comment->replies->count() > 0)
             <div class="mt-3 space-y-3">
                 @foreach($comment->replies as $reply)
-                    @include('posts.components.comment-item', ['comment' => $reply, 'level' => $level + 1])
+                    {{-- [ĐÃ SỬA] Truyền tiếp post_author_id xuống các comment con --}}
+                    @include('posts.components.comment-item', [
+                        'comment' => $reply, 
+                        'level' => $level + 1,
+                        'post_author_id' => $postAuthorId
+                    ])
                 @endforeach
             </div>
         @endif

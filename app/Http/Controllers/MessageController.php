@@ -26,35 +26,34 @@ class MessageController extends Controller
     public function index(Request $request, $conversationId)
     {
         $user = Auth::user();
-        
+
         $participant = ConversationParticipant::where('conversation_id', $conversationId)
             ->where('user_id', $user->user_id)
             ->where('is_active', true)
             ->first();
-            
-        if (!$participant) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-        
-        $page = $request->get('page', 1);
-        $perPage = 50;
-        
-        $messages = Message::where('conversation_id', $conversationId)
+
+        if(!$participant) abort(403);
+
+        $limit = $request->get('limit', 20);
+        $beforeId = $request->get('before_id'); // Để load more khi scroll lên
+
+        $query = Message::where('conversation_id', $conversationId)
             ->where('is_deleted', false)
-            ->with(['sender'])
-            ->orderBy('sent_at', 'desc')
-            ->paginate($perPage);
-        
-        return response()->json([
-            'success' => true,
-            'messages' => $messages->items(),
-            'pagination' => [
-                'current_page' => $messages->currentPage(),
-                'last_page' => $messages->lastPage(),
-                'per_page' => $messages->perPage(),
-                'total' => $messages->total()
-            ]
-        ]);
+            ->with('sender')
+            ->orderBy('sent_at', 'desc'); // Lấy mới nhất trước
+
+        if ($beforeId) {
+            $query->where('message_id', '<', $beforeId);
+        }
+
+        $messages = $query->take($limit)->get()->reverse()->values(); // Đảo ngược lại để hiển thị tăng dần thời gian
+
+        // Format dữ liệu giống MessageSent
+        $formatted = $messages->map(function($msg) {
+            return (new MessageSent($msg))->broadcastWith();
+        });
+
+        return response()->json(['success' => true, 'data' => $formatted]);
     }
 
     /**
@@ -63,75 +62,60 @@ class MessageController extends Controller
     public function send(Request $request, $conversationId)
     {
         $request->validate([
-            'content' => 'required|string|max:5000',
-            'message_type' => 'nullable|in:text,image,file,video',
+            'content' => 'nullable|string|max:5000',
+            'message_type' => 'required|in:text,image,file,video',
+            'file' => 'required_if:message_type,image,file,video|file|max:10240' // 10MB
         ]);
-        
-        try {
-            $conversation = Conversation::findOrFail($conversationId);
-            
-            // Kiểm tra quyền
-            $isParticipant = $conversation->participants()
-                ->where('user_id', auth()->id())
-                ->where('is_active', true)
-                ->exists();
-            
-            if (!$isParticipant) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You are not a participant'
-                ], 403);
-            }
-            
-            // ✅ Tạo message
-            $message = Message::create([
-                'conversation_id' => $conversationId,
-                'sender_id' => auth()->id(),
-                'message_type' => $request->message_type ?? 'text',
-                'content' => $request->content,
-            ]);
-            
-            // Update conversation
-            $conversation->update(['last_message_at' => now()]);
-            
-            // Update unread count cho người khác
-            $conversation->participants()
-                ->where('user_id', '!=', auth()->id())
-                ->increment('unread_count');
-            
-            // Load sender để broadcast
-            $message->load('sender');
-            
-            // ✅ LOG
-            Log::info('💬 Message sent', [
-                'message_id' => $message->message_id,
-                'sender_id' => auth()->id(),
-                'conversation_id' => $conversationId,
-                'content' => substr($message->content, 0, 50),
-            ]);
-            
-            // ✅ BROADCAST với Pusher
-            try {
-                broadcast(new MessageSent($message))->toOthers();
-                Log::info('✅ Broadcast successful');
-            } catch (\Exception $e) {
-                Log::error('❌ Broadcast failed: ' . $e->getMessage());
-            }
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Message sent successfully',
-                'data' => $message
-            ], 200);
-            
-        } catch (\Exception $e) {
-            Log::error('❌ Send message error: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
+
+        $user = Auth::user();
+        $conversation = Conversation::findOrFail($conversationId);
+
+        // Check quyền
+        if (!$conversation->participants()->where('user_id', $user->user_id)->exists()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
+
+        $messageData = [
+            'conversation_id' => $conversationId,
+            'sender_id' => $user->user_id,
+            'message_type' => $request->message_type,
+            'content' => $request->content ?? '',
+        ];
+
+        // Xử lý file nếu có
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store('messages/' . $conversationId, 'public');
+            $messageData['attachment_url'] = $path;
+            $messageData['attachment_name'] = $file->getClientOriginalName();
+
+            // Nếu là ảnh/file thì content có thể để trống hoặc tên file
+            if (empty($messageData['content'])) {
+                $messageData['content'] = ($request->message_type === 'image') ? 'Đã gửi một ảnh' : 'Đã gửi một tệp đính kèm';
+            }
+        }
+
+        $message = Message::create($messageData);
+
+        // Cập nhật conversation
+        $conversation->update(['last_message_at' => now()]);
+
+        // Tăng unread cho người khác
+        $conversation->participants()
+            ->where('user_id', '!=', $user->user_id)
+            ->increment('unread_count');
+
+        // Broadcast sự kiện
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Exception $e) {
+            Log::error("Broadcast error: " . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => (new MessageSent($message))->broadcastWith() // Trả về format chuẩn ngay lập tức
+        ]);
     }
 
     /**
@@ -140,16 +124,16 @@ class MessageController extends Controller
     public function markRead(Request $request, $conversationId)
     {
         $user = Auth::user();
-        
+
         $participant = ConversationParticipant::where('conversation_id', $conversationId)
             ->where('user_id', $user->user_id)
             ->firstOrFail();
-        
+
         $participant->update([
             'unread_count' => 0,
             'last_read_at' => now()
         ]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Marked as read'
@@ -162,35 +146,34 @@ class MessageController extends Controller
     public function uploadAttachment(Request $request, $conversationId)
     {
         $user = Auth::user();
-        
+
         $participant = ConversationParticipant::where('conversation_id', $conversationId)
             ->where('user_id', $user->user_id)
             ->where('is_active', true)
             ->first();
-            
+
         if (!$participant) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        
+
         $validated = $request->validate([
             'file' => 'required|file|max:10240',
             'type' => 'required|in:image,file,video'
         ]);
-        
+
         try {
             $file = $request->file('file');
-            
+
             // Store file
             $path = $file->store('messages/' . $conversationId, 'public');
             $url = Storage::url($path);
-            
+
             return response()->json([
                 'success' => true,
                 'url' => $url,
                 'filename' => $file->getClientOriginalName(),
                 'size' => $file->getSize(),
             ]);
-            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -205,17 +188,17 @@ class MessageController extends Controller
     public function destroy($conversationId, $messageId)
     {
         $user = Auth::user();
-        
+
         $message = Message::where('conversation_id', $conversationId)
             ->where('message_id', $messageId)
             ->firstOrFail();
-        
+
         if ($message->sender_id != $user->user_id && $user->user_type !== 'Admin') {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        
+
         $message->update(['is_deleted' => true]);
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Message deleted'
@@ -228,25 +211,25 @@ class MessageController extends Controller
     public function getLatest(Request $request, $conversationId)
     {
         $user = Auth::user();
-        
+
         $participant = ConversationParticipant::where('conversation_id', $conversationId)
             ->where('user_id', $user->user_id)
             ->where('is_active', true)
             ->first();
-            
+
         if (!$participant) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        
+
         $afterId = $request->get('after_id', 0);
-        
+
         $messages = Message::where('conversation_id', $conversationId)
             ->where('message_id', '>', $afterId)
             ->where('is_deleted', false)
             ->with(['sender'])
             ->orderBy('sent_at', 'asc')
             ->get();
-        
+
         return response()->json([
             'success' => true,
             'messages' => $messages,
@@ -260,25 +243,25 @@ class MessageController extends Controller
     public function search(Request $request, $conversationId)
     {
         $user = Auth::user();
-        
+
         $participant = ConversationParticipant::where('conversation_id', $conversationId)
             ->where('user_id', $user->user_id)
             ->where('is_active', true)
             ->first();
-            
+
         if (!$participant) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        
+
         $query = $request->get('q', '');
-        
+
         if (strlen($query) < 2) {
             return response()->json([
                 'success' => false,
                 'error' => 'Query must be at least 2 characters'
             ], 400);
         }
-        
+
         $messages = Message::where('conversation_id', $conversationId)
             ->where('is_deleted', false)
             ->where('message_type', 'text')
@@ -287,7 +270,7 @@ class MessageController extends Controller
             ->orderBy('sent_at', 'desc')
             ->limit(50)
             ->get();
-        
+
         return response()->json([
             'success' => true,
             'messages' => $messages,
@@ -301,16 +284,16 @@ class MessageController extends Controller
     public function getUnreadCount()
     {
         $user = Auth::user();
-        
+
         $unreadCount = ConversationParticipant::where('user_id', $user->user_id)
             ->where('is_active', true)
             ->sum('unread_count');
-        
+
         $conversations = ConversationParticipant::where('user_id', $user->user_id)
             ->where('is_active', true)
             ->where('unread_count', '>', 0)
             ->pluck('unread_count', 'conversation_id');
-        
+
         return response()->json([
             'success' => true,
             'total_unread' => $unreadCount,
@@ -321,24 +304,40 @@ class MessageController extends Controller
     /**
      * Typing indicator - ✅ BROADCAST VỚI PUSHER
      */
-    public function typing(Request $request, $conversationId)
+    /**
+     * Typing indicator
+     */
+    public function typing(Request $request) // <--- XÓA $conversationId ở đây
     {
-        $user = Auth::user();
-        
-        $participant = ConversationParticipant::where('conversation_id', $conversationId)
-            ->where('user_id', $user->user_id)
-            ->where('is_active', true)
-            ->first();
-            
-        if (!$participant) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-        
+        // 1. Validate dữ liệu gửi lên
         $validated = $request->validate([
+            'conversation_id' => 'required|exists:conversations,conversation_id', // Thêm validate ID
             'is_typing' => 'required|boolean'
         ]);
-        
-        // ✅ Broadcast typing event
+
+        $conversationId = $validated['conversation_id'];
+        $user = Auth::user();
+
+        // 2. Kiểm tra quyền (Optional nhưng nên có)
+        $isParticipant = ConversationParticipant::where('conversation_id', $conversationId)
+            ->where('user_id', $user->user_id)
+            ->exists();
+
+        if (!$isParticipant) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // 3. Xử lý Cache hoặc Broadcast
+        // Cách dùng Cache (như bạn đã làm ở các bước trước)
+        $key = "typing_{$conversationId}_{$user->user_id}";
+
+        if ($validated['is_typing']) {
+            \Illuminate\Support\Facades\Cache::put($key, true, 5); // Tồn tại 5 giây
+        } else {
+            \Illuminate\Support\Facades\Cache::forget($key);
+        }
+
+        // Nếu bạn dùng Pusher/Reverb (Broadcast)
         try {
             broadcast(new UserTyping(
                 $conversationId,
@@ -349,11 +348,39 @@ class MessageController extends Controller
         } catch (\Exception $e) {
             Log::error('Typing broadcast failed: ' . $e->getMessage());
         }
-        
+
         return response()->json([
             'success' => true,
             'user_id' => $user->user_id,
             'is_typing' => $validated['is_typing']
+        ]);
+    }
+
+    public function checkUpdates(Request $request, $conversationId)
+    {
+        // Lấy mốc thời gian client gửi lên (hoặc mặc định là 10 giây trước)
+        $lastCheck = $request->get('last_check', now()->subSeconds(10));
+
+        // Tìm các tin nhắn trong cuộc hội thoại này có updated_at mới hơn mốc thời gian
+        $updatedMessages = Message::where('conversation_id', $conversationId)
+            ->where('updated_at', '>', $lastCheck)
+            ->get();
+        $otherParticipants = ConversationParticipant::where('conversation_id', $conversationId)
+            ->where('user_id', '!=', $user->user_id)
+            ->pluck('user_id');
+
+        $typingUsers = [];
+        foreach ($otherParticipants as $otherId) {
+            if (\Cache::has("typing_{$conversationId}_{$otherId}")) {
+                $u = User::find($otherId);
+                if ($u) $typingUsers[] = $u->first_name;
+            }
+        }
+        return response()->json([
+            'success' => true,
+            'updates' => $updatedMessages,
+            'typing_users' => $typingUsers,
+            'server_time' => now()->toDateTimeString() // Trả về giờ server để đồng bộ lần sau
         ]);
     }
 }

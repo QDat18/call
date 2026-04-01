@@ -282,7 +282,7 @@
                                 </div>
                             </div>
 
-                            <div class="mt-6">
+                            {{-- <div class="mt-6">
                                 @auth
                                     @if(auth()->user()->user_type === 'Volunteer')
                                         @if($hasApplied ?? false)
@@ -307,8 +307,48 @@
                                         Đăng nhập để ứng tuyển
                                     </a>
                                 @endauth
-                            </div>
+                            </div> --}}
+                            <div class="mt-6">
+                                @auth
+                                    @if(auth()->user()->user_type === 'Volunteer')
+                                        {{-- LOGIC 1: Đã ứng tuyển --}}
+                                        @if($hasApplied ?? false)
+                                            <div class="w-full py-3 bg-blue-50 text-blue-600 font-bold rounded-xl text-center border border-blue-100">
+                                                <i class="fas fa-check-circle mr-2"></i> Đã nộp đơn
+                                            </div>
+                                        
+                                        {{-- LOGIC 2: Chưa xác thực (THÊM MỚI) --}}
+                                        @elseif(!auth()->user()->is_verified)
+                                            <div class="text-center">
+                                                <div class="w-full py-3 bg-gray-100 text-gray-500 font-bold rounded-xl text-center mb-2 cursor-not-allowed">
+                                                    <i class="fas fa-lock mr-2"></i> Chưa xác thực
+                                                </div>
+                                                <p class="text-xs text-red-500 px-2">
+                                                    Bạn cần <a href="{{ route('volunteer.profile.profile') }}" class="underline font-bold">xác thực tài khoản</a> để ứng tuyển.
+                                                </p>
+                                            </div>
 
+                                        {{-- LOGIC 3: Đủ điều kiện ứng tuyển --}}
+                                        @elseif($opportunity->status === 'Active' && $opportunity->volunteers_registered < $opportunity->volunteers_needed)
+                                            <a href="{{ route('volunteer.applications.create', ['opportunity' => $opportunity->opportunity_id]) }}"
+                                                class="block w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl text-center shadow-lg hover:shadow-xl hover:-translate-y-1 transition transform duration-200">
+                                                Nộp Đơn Ngay <i class="fas fa-arrow-right ml-2"></i>
+                                            </a>
+                                        
+                                        {{-- LOGIC 4: Đã đóng --}}
+                                        @else
+                                            <div class="w-full py-3 bg-gray-100 text-gray-500 font-bold rounded-xl text-center">
+                                                Đã đóng đơn
+                                            </div>
+                                        @endif
+                                    @endif
+                                @else
+                                    <a href="{{ route('login') }}"
+                                        class="block w-full py-3 bg-indigo-50 text-indigo-600 font-bold rounded-xl text-center hover:bg-indigo-100 transition">
+                                        Đăng nhập để ứng tuyển
+                                    </a>
+                                @endauth
+                            </div>
                             {{-- Share Buttons --}}
                             <div class="mt-6 flex justify-center gap-3">
                                 <button

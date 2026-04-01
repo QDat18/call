@@ -13,13 +13,10 @@ class CheckMaintenanceMode
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // 1. Nếu chế độ bảo trì đang TẮT -> Cho qua luôn
         if (get_setting('maintenance_mode') !== '1') {
             return $next($request);
         }
 
-        // 2. Những Route ĐƯỢC PHÉP truy cập khi bảo trì (Whitelist)
-        // Bao gồm: trang login, xử lý login, logout, và các route admin
         $excludedRoutes = [
             'login',           // Route hiển thị form login
             'login/*',         // Các xử lý login

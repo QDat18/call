@@ -9,6 +9,7 @@ use App\Models\VolunteerOpportunity;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\VolunteerActivity;
+use Illuminate\Support\Facades\RateLimiter;
 use App\Models\Review;
 use App\Models\Post;
 use Illuminate\Http\Request;
@@ -507,11 +508,16 @@ class AdminController extends Controller
     {
         $user = User::findOrFail($id);
 
+        // 1. Cập nhật trạng thái trong Database
         $user->update(['is_active' => true]);
+
+        // 2. [QUAN TRỌNG] Xóa bộ đếm số lần nhập sai của User này
+        // Key này phải trùng với key bạn đã đặt bên LoginController ('login_fail_' + user_id)
+        RateLimiter::clear('login_fail_' . $user->user_id);
 
         return response()->json([
             'success' => true,
-            'message' => 'User activated successfully'
+            'message' => 'Tài khoản đã được mở khóa và reset số lần nhập sai.'
         ]);
     }
 

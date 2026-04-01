@@ -162,46 +162,49 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                         @forelse($donations as $donation)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <img class="w-8 h-8 rounded-full object-cover border border-gray-200"
-                                            src="{{ $donation->user->avatar_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($donation->user->first_name) . '&background=random' }}"
-                                            alt="">
-                                        <div>
-                                            <p class="font-semibold text-gray-900 dark:text-white">
-                                                {{ $donation->user->first_name }} {{ $donation->user->last_name }}
-                                            </p>
-                                            <p class="text-xs text-gray-500">{{ $donation->user->email }}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                        +{{ number_format($donation->amount, 0, ',', '.') }} đ
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    @if($donation->message)
-                                        <div class="max-w-xs truncate text-gray-600 dark:text-gray-300"
-                                            title="{{ $donation->message }}">
-                                            {{ $donation->message }}
-                                        </div>
-                                    @else
-                                        <span class="text-gray-400 italic">Không có lời nhắn</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
-                                    {{ $donation->created_at->format('d/m/Y H:i') }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    <code
-                                        class="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono text-gray-600 dark:text-gray-400">
-                                                                    {{ $donation->vnp_TransactionNo ?? 'N/A' }}
-                                                                </code>
-                                </td>
-                            </tr>
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <img class="w-8 h-8 rounded-full object-cover border border-gray-200" src="{{ !empty($donation->user->avatar_url)
+                            ? (\Illuminate\Support\Str::startsWith($donation->user->avatar_url, ['http'])
+                                ? $donation->user->avatar_url
+                                : asset('storage/' . $donation->user->avatar_url))
+                            : 'https://ui-avatars.com/api/?name=' . urlencode($donation->user->first_name) . '&background=random' }}"
+                                                        alt="{{ $donation->user->first_name }}">    
+                                                    <div>
+                                                        <p class="font-semibold text-gray-900 dark:text-white">
+                                                            {{ $donation->user->first_name }} {{ $donation->user->last_name }}
+                                                        </p>
+                                                        <p class="text-xs text-gray-500">{{ $donation->user->email }}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span
+                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                    +{{ number_format($donation->amount, 0, ',', '.') }} đ
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                @if($donation->message)
+                                                    <div class="max-w-xs truncate text-gray-600 dark:text-gray-300"
+                                                        title="{{ $donation->message }}">
+                                                        {{ $donation->message }}
+                                                    </div>
+                                                @else
+                                                    <span class="text-gray-400 italic">Không có lời nhắn</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+                                                {{ $donation->created_at->format('d/m/Y H:i') }}
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <code
+                                                    class="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono text-gray-600 dark:text-gray-400">
+                                                                                        {{ $donation->vnp_TransactionNo ?? 'N/A' }}
+                                                                                    </code>
+                                            </td>
+                                        </tr>
                         @empty
                             <tr>
                                 <td colspan="5" class="px-6 py-12 text-center text-gray-500">

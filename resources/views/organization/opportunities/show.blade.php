@@ -3,6 +3,11 @@
 @section('title', $opportunity->title)
 
 @section('content')
+    {{-- TÍNH TOÁN SỐ LƯỢNG ACCEPTED TRỰC TIẾP TẠI VIEW ĐỂ ĐẢM BẢO CHÍNH XÁC --}}
+    @php
+        $acceptedCount = $opportunity->applications->where('status', 'Accepted')->count();
+    @endphp
+
     <div class="container mx-auto px-4 py-6">
         <div class="mb-6">
             <a href="{{ route('organization.opportunities.index') }}"
@@ -55,7 +60,8 @@
                         </div>
                         <div class="text-center p-3 bg-gray-50 rounded-lg">
                             <p class="text-gray-600 text-sm">Registered</p>
-                            <p class="text-2xl font-bold text-green-600">{{ $opportunity->volunteers_registered }}</p>
+                            {{-- SỬA: Dùng biến $acceptedCount --}}
+                            <p class="text-2xl font-bold text-green-600">{{ $acceptedCount }}</p>
                         </div>
                         <div class="text-center p-3 bg-gray-50 rounded-lg">
                             <p class="text-gray-600 text-sm">Applications</p>
@@ -112,7 +118,6 @@
                 <div class="bg-white rounded-lg shadow p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-xl font-semibold text-gray-800">Recent Applications</h2>
-                        {{-- FIX LINK: Trỏ đúng vào danh sách ứng tuyển của cơ hội này --}}
                         <a href="{{ route('organization.applications.index', ['opportunity_id' => $opportunity->opportunity_id]) }}"
                             class="text-green-600 hover:text-green-700 text-sm font-medium">
                             View All →
@@ -124,7 +129,6 @@
                             @foreach($recentApplications as $application)
                                 <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
                                     <div class="flex items-center gap-4">
-                                        {{-- FIX AVATAR LOGIC: Kiểm tra và thêm asset('storage/...') --}}
                                         @php
                                             $avatar = $application->volunteer->avatar_url 
                                                 ? asset('storage/' . $application->volunteer->avatar_url) 
@@ -151,7 +155,6 @@
                                             @endif">
                                             {{ $application->status }}
                                         </span>
-                                        {{-- Link chi tiết application --}}
                                         <a href="{{ route('organization.applications.show', $application->application_id) }}"
                                             class="text-green-600 hover:text-green-700" title="View Application">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,7 +223,7 @@
                         <div class="flex items-start gap-3">
                             <svg class="w-5 h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
                             </svg>
                             <div class="flex-1">
                                 <p class="text-sm text-gray-600">Experience Level</p>
@@ -248,7 +251,6 @@
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                     <div class="space-y-2">
-                        {{-- FIX LINK: Trỏ đúng filter opportunity --}}
                         <a href="{{ route('organization.applications.index', ['opportunity_id' => $opportunity->opportunity_id]) }}"
                             class="block w-full px-4 py-3 text-center bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
                             View All Applications
@@ -284,24 +286,27 @@
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Volunteers Registered</span>
-                            <span class="font-semibold text-green-600">{{ $opportunity->volunteers_registered }}</span>
+                            {{-- SỬA: Dùng $acceptedCount --}}
+                            <span class="font-semibold text-green-600">{{ $acceptedCount }}</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Spots Remaining</span>
+                            {{-- SỬA: Tính toán dựa trên $acceptedCount --}}
                             <span class="font-semibold text-blue-600">
-                                {{ max(0, $opportunity->volunteers_needed - $opportunity->volunteers_registered) }}
+                                {{ max(0, $opportunity->volunteers_needed - $acceptedCount) }}
                             </span>
                         </div>
                         <div class="pt-3 border-t border-gray-200">
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600">Fill Rate</span>
+                                {{-- SỬA: Tính toán dựa trên $acceptedCount --}}
                                 <span class="font-semibold text-purple-600">
-                                    {{ $opportunity->volunteers_needed > 0 ? round(($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100) : 0 }}%
+                                    {{ $opportunity->volunteers_needed > 0 ? round(($acceptedCount / $opportunity->volunteers_needed) * 100) : 0 }}%
                                 </span>
                             </div>
                             <div class="mt-2 bg-gray-200 rounded-full h-2">
                                 <div class="bg-purple-600 h-2 rounded-full"
-                                    style="width: {{ $opportunity->volunteers_needed > 0 ? min(100, ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100) : 0 }}%">
+                                    style="width: {{ $opportunity->volunteers_needed > 0 ? min(100, ($acceptedCount / $opportunity->volunteers_needed) * 100) : 0 }}%">
                                 </div>
                             </div>
                         </div>

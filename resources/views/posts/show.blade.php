@@ -87,7 +87,12 @@
                             </div>
                         </div>
                     </div>
-
+                    @if($post->is_pinned)
+                        <div class="mb-3 flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold text-sm uppercase tracking-wider bg-indigo-50 dark:bg-indigo-900/20 w-fit px-3 py-1 rounded-full">
+                            <i class="fa-solid fa-crown"></i>
+                            <span>Bài viết được ghim bởi Admin</span>
+                        </div>
+                    @endif
                     {{-- Content --}}
                     @if($post->title)
                         <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-2">{{ $post->title }}</h1>
@@ -182,45 +187,63 @@
             {{-- Comments Section --}}
             @if($post->allow_comments)
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4" id="comments-section">
+@auth
+                        @if(Auth::user()->is_verified)
+                            {{-- FORM BÌNH LUẬN CHO USER ĐÃ XÁC THỰC --}}
+                            <div class="flex gap-2 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                                <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name) }}"
+                                    class="w-8 h-8 rounded-full object-cover">
 
-                    @auth
-                        {{-- Write Comment --}}
-                        <div class="flex gap-2 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-                            <img src="{{ Auth::user()->avatar_url ? asset('storage/' . Auth::user()->avatar_url) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->first_name) }}"
-                                class="w-8 h-8 rounded-full object-cover">
+                                <div class="flex-1">
+                                    <form action="{{ route('posts.comment', $post->post_id) }}" method="POST" id="comment-form">
+                                        @csrf
+                                        <input type="hidden" name="parent_id" id="parent_id_input">
 
-                            <div class="flex-1">
-                                <form action="{{ route('posts.comment', $post->post_id) }}" method="POST" id="comment-form">
-                                    @csrf
-                                    <input type="hidden" name="parent_id" id="parent_id_input">
-
-                                    <div class="relative">
-                                        <div id="reply-indicator"
-                                            class="hidden mb-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-blue-600 dark:text-blue-400 flex items-center justify-between">
-                                            <span>Đang trả lời <b id="reply-to-username"></b></span>
-                                            <button type="button" onclick="cancelReply()"
-                                                class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-
-                                        <div class="flex items-start gap-2">
-                                            <div class="flex-1 relative">
-                                                <textarea name="content" id="comment-content" rows="1"
-                                                    class="w-full bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm pr-10"
-                                                    placeholder="Viết bình luận..."
-                                                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
-                                                <button type="submit"
-                                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700 p-1">
-                                                    <i class="fas fa-paper-plane"></i>
+                                        <div class="relative">
+                                            <div id="reply-indicator"
+                                                class="hidden mb-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-blue-600 dark:text-blue-400 flex items-center justify-between">
+                                                <span>Đang trả lời <b id="reply-to-username"></b></span>
+                                                <button type="button" onclick="cancelReply()"
+                                                    class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                                    <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
+
+                                            <div class="flex items-start gap-2">
+                                                <div class="flex-1 relative">
+                                                    <textarea name="content" id="comment-content" rows="1"
+                                                        class="w-full bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm pr-10"
+                                                        placeholder="Viết bình luận..."
+                                                        onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
+                                                    <button type="submit"
+                                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700 p-1">
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        @else
+                            {{-- THÔNG BÁO YÊU CẦU XÁC THỰC --}}
+                            <div class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700" id="verification-warning">
+                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-lock text-yellow-400"></i>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm text-yellow-700">
+                                                Tài khoản chưa xác thực. Vui lòng <a href="{{ route('profile') }}" class="font-bold underline">xác thực email</a> để tham gia bình luận.
+                                            </p>
                                         </div>
                                     </div>
-                                </form>
+                                </div>
                             </div>
-                        </div>
+                        @endif
                     @else
+                        {{-- GIỮ NGUYÊN PHẦN CHƯA ĐĂNG NHẬP --}}
                         <div class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700 text-center">
                             <p class="text-gray-600 dark:text-gray-400">
                                 <a href="{{ route('login') }}" class="text-blue-600 font-semibold hover:underline">Đăng nhập</a> để
@@ -230,17 +253,18 @@
                     @endauth
 
                     {{-- Comments List --}}
-                    <div class="space-y-3" id="comments-list">
-                        @forelse($post->comments as $comment)
-                            @include('posts.components.comment-item', ['comment' => $comment, 'level' => 0])
-                        @empty
-                            <div class="text-center py-8">
-                                <i class="far fa-comments text-4xl text-gray-300 dark:text-gray-600 mb-2"></i>
-                                <p class="text-gray-500 dark:text-gray-400 text-sm">Chưa có bình luận nào. Hãy là người đầu tiên
-                                    bình luận!</p>
-                            </div>
-                        @endforelse
-                    </div>
+<div class="space-y-3" id="comments-list">
+    @forelse($post->comments as $comment)
+        {{-- [ĐÃ SỬA] Thêm 'post_author_id' vào đây --}}
+        @include('posts.components.comment-item', [
+            'comment' => $comment, 
+            'level' => 0, 
+            'post_author_id' => $post->user_id 
+        ])
+    @empty
+        {{-- ... --}}
+    @endforelse
+</div>
                 </div>
             @endif
         </div>
@@ -267,8 +291,24 @@
 
     @push('scripts')
         <script>
+
+            function requireVerification() {
+                if (!isLoggedIn) {
+                    window.location.href = '{{ route("login") }}';
+                    return false;
+                }
+                if (!isUserVerified) {
+                    alert('Bạn cần xác thực tài khoản để thực hiện hành động này.');
+                    // Hoặc scroll xuống thông báo xác thực nếu có
+                    const warningBox = document.getElementById('verification-warning');
+                    if(warningBox) warningBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+                return true;
+            }
             // Toggle Like with animation
             async function toggleLike(postId) {
+                if (!requireVerification()) return;
                 const btn = document.getElementById(`like-btn-${postId}`);
                 const isLiked = btn.classList.contains('text-blue-600');
 
@@ -327,6 +367,7 @@
             }
 
             async function toggleBookmark(postId) {
+                if (!requireVerification()) return;
                 try {
                     const response = await fetch(`/posts/${postId}/bookmark`, {
                         method: 'POST',
@@ -457,6 +498,7 @@
 
             // Like comment function
             async function likeComment(commentId) {
+                if (!requireVerification()) return;
                 const btn = document.getElementById(`comment-like-${commentId}`);
                 const countSpan = document.getElementById(`comment-like-count-${commentId}`);
 

@@ -24,8 +24,12 @@ WORKDIR /var/www/html
 # Copy app files
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+# Install PHP dependencies (skip scripts to avoid DB dependency at build-time)
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+# Generate app key and discover packages after install
+RUN php artisan key:generate --force || true
+RUN php artisan package:discover --ansi
 
 # Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache

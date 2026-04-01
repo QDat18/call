@@ -96,6 +96,9 @@ class VolunteerOpportunityController extends Controller
         $opportunity = VolunteerOpportunity::with(['organization.user', 'category'])
             ->findOrFail($id);
 
+        $opportunity->volunteers_registered = $opportunity->applications()
+            ->where('status', 'Accepted')
+            ->count();
         // Increment view count
         $opportunity->increment('view_count');
 

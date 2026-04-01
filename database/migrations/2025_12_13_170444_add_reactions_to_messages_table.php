@@ -9,20 +9,20 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
-        Schema::create('settings', function (Blueprint $table) {
-            $table->string('key')->primary();
-            $table->text('value')->nullable();
-            $table->timestamps();
+        Schema::table('messages', function (Blueprint $table) {
+            // Lưu dạng JSON: {"user_id_1": "like", "user_id_2": "haha"}
+            $table->json('reactions')->nullable();
         });
     }
-
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('settings');
+        Schema::table('messages', function (Blueprint $table) {
+            //
+        });
     }
 };

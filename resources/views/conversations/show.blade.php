@@ -1,1489 +1,513 @@
 @extends('layouts.app')
 
-@section('title', 'Chat with ' . ($otherUser ? $otherUser->first_name : 'User'))
+@section('title', 'Trò chuyện với ' . ($otherUser ? $otherUser->first_name : 'Người dùng'))
+
+{{-- --- 1. PHP HELPER --- --}}
+@php
+    // Helper Avatar chuẩn
+    $getAvatar = function($user) {
+        if (!$user) return asset('images/default-avatar.png');
+        $path = $user->avatar_url;
+        if (empty($path)) {
+            $name = urlencode($user->first_name . ' ' . $user->last_name);
+            return "https://ui-avatars.com/api/?name={$name}&background=6366f1&color=ffffff&size=128";
+        }
+        if (Str::startsWith($path, ['http://', 'https://'])) return $path;
+        return Str::startsWith($path, 'storage/') ? asset($path) : asset('storage/' . $path);
+    };
+
+    // Helper Trạng thái Online
+    $getStatusText = function($user) {
+        if (!$user) return 'Không xác định';
+        if ($user->is_online) return 'Đang hoạt động';
+        return 'Hoạt động ' . ($user->last_activity_at ? \Carbon\Carbon::parse($user->last_activity_at)->diffForHumans() : 'gần đây');
+    };
+
+    $currentUserAvatar = $getAvatar(auth()->user());
+    $otherUserAvatar = $otherUser ? $getAvatar($otherUser) : asset('images/default-avatar.png');
+@endphp
 
 @push('styles')
 <style>
-:root {
-    --primary-color: #6366f1;
-    --secondary-color: #8b5cf6;
-    --success-color: #10b981;
-    --danger-color: #ef4444;
-    --dark-color: #1f2937;
-    --light-color: #f3f4f6;
-    --border-color: #e5e7eb;
-}
-
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f8fafc;
-}
-
-.chat-container {
-    height: calc(100vh - 70px);
-    display: flex;
-    flex-direction: column;
-    background: white;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-/* Chat Header */
-.chat-header {
-    padding: 15px 25px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.back-button {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--light-color);
-    color: var(--dark-color);
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-decoration: none;
-}
-
-.back-button:hover {
-    background: var(--border-color);
-    transform: scale(1.05);
-}
-
-.header-avatar {
-    position: relative;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--primary-color);
-}
-
-.online-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 14px;
-    height: 14px;
-    background: var(--success-color);
-    border: 2px solid white;
-    border-radius: 50%;
-}
-
-.offline-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 14px;
-    height: 14px;
-    background: #9ca3af;
-    border: 2px solid white;
-    border-radius: 50%;
-}
-
-.header-info {
-    flex: 1;
-}
-
-.header-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--dark-color);
-    margin: 0;
-}
-
-.header-status {
-    font-size: 13px;
-    margin: 0;
-}
-
-.header-status.online {
-    color: var(--success-color);
-    font-weight: 500;
-}
-
-.header-status.offline {
-    color: #6b7280;
-}
-
-.header-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.action-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--light-color);
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: var(--dark-color);
-}
-
-.action-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: scale(1.05);
-}
-
-.action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Video Call Button */
-#start-video-call {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-}
-
-#start-video-call:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-}
-
-/* Voice Call Button */
-#start-voice-call {
-    background: linear-gradient(135deg, var(--success-color), #059669);
-    color: white;
-}
-
-#start-voice-call:hover:not(:disabled) {
-    background: linear-gradient(135deg, #059669, var(--success-color));
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-}
-
-/* Messages Area */
-.messages-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    background: linear-gradient(to bottom, #f9fafb 0%, #ffffff 100%);
-    display: flex;
-    flex-direction: column;
-}
-
-.message-date-divider {
-    text-align: center;
-    margin: 20px 0;
-    position: relative;
-}
-
-.message-date-divider span {
-    background: white;
-    padding: 5px 15px;
-    border-radius: 15px;
-    font-size: 12px;
-    color: #6b7280;
-    border: 1px solid var(--border-color);
-}
-
-.message-wrapper {
-    display: flex;
-    margin-bottom: 15px;
-    animation: messageSlideIn 0.3s ease-out;
-}
-
-.message-wrapper.sent {
-    justify-content: flex-end;
-}
-
-.message-wrapper.received {
-    justify-content: flex-start;
-}
-
-.message-avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin: 0 10px;
-    flex-shrink: 0;
-}
-
-.message-wrapper.sent .message-avatar {
-    order: 2;
-}
-
-.message-content {
-    max-width: 60%;
-    display: flex;
-    flex-direction: column;
-}
-
-.message-bubble {
-    padding: 12px 16px;
-    border-radius: 18px;
-    word-wrap: break-word;
-    position: relative;
-}
-
-.message-wrapper.sent .message-bubble {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border-bottom-right-radius: 4px;
-}
-
-.message-wrapper.received .message-bubble {
-    background: var(--light-color);
-    color: var(--dark-color);
-    border-bottom-left-radius: 4px;
-}
-
-.message-text {
-    font-size: 15px;
-    line-height: 1.5;
-    margin: 0;
-}
-
-.message-attachment {
-    margin-top: 8px;
-}
-
-.message-attachment img {
-    max-width: 100%;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.message-attachment a {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 8px;
-    color: inherit;
-    text-decoration: none;
-    transition: all 0.3s;
-}
-
-.message-attachment a:hover {
-    background: rgba(255,255,255,0.3);
-}
-
-.message-time {
-    font-size: 11px;
-    color: #9ca3af;
-    margin-top: 4px;
-    padding: 0 5px;
-}
-
-.message-wrapper.sent .message-time {
-    text-align: right;
-    color: rgba(255,255,255,0.7);
-}
-
-.typing-indicator {
-    display: none;
-    padding: 12px 16px;
-    background: var(--light-color);
-    border-radius: 18px;
-    width: fit-content;
-    margin: 10px 0;
-}
-
-.typing-indicator.show {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.typing-dot {
-    width: 8px;
-    height: 8px;
-    background: #9ca3af;
-    border-radius: 50%;
-    animation: typingBounce 1.4s infinite;
-}
-
-.typing-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.typing-dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-@keyframes typingBounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
-}
-
-@keyframes messageSlideIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Input Area */
-.input-area {
-    padding: 15px 25px;
-    border-top: 1px solid var(--border-color);
-    background: white;
-}
-
-#message-form {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.input-wrapper {
-    display: flex;
-    align-items: center;
-    background: var(--light-color);
-    border-radius: 25px;
-    padding: 5px 10px;
-    flex: 1;
-}
-
-.input-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.input-btn {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--dark-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-}
-
-.input-btn:hover {
-    background: rgba(0,0,0,0.05);
-}
-
-.message-input-wrapper {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-
-.message-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    resize: none;
-    max-height: 150px;
-    overflow-y: auto;
-    font-size: 15px;
-    padding: 8px 15px;
-    line-height: 1.5;
-    color: var(--dark-color);
-    min-height: 40px;
-}
-
-.message-input:focus {
-    outline: none;
-}
-
-.emoji-btn {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-    color: #eab308;
-    position: relative;
-}
-
-.emoji-btn:hover {
-    background: rgba(234, 179, 8, 0.1);
-}
-
-.send-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-    flex-shrink: 0;
-}
-
-.send-btn:hover {
-    background: var(--secondary-color);
-    transform: scale(1.05);
-}
-
-.send-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Emoji Picker - Moved to right side */
-.emoji-picker {
-    position: absolute;
-    bottom: 50px;
-    right: 0;
-    width: 320px;
-    max-height: 350px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border-color);
-    z-index: 1000;
-    display: none;
-    overflow: hidden;
-}
-
-.emoji-picker.show {
-    display: block;
-    animation: emojiPickerSlide 0.3s ease-out;
-}
-
-@keyframes emojiPickerSlide {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.emoji-picker-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    gap: 10px;
-    background: var(--light-color);
-    overflow-x: auto;
-}
-
-.emoji-category-btn {
-    padding: 6px 12px;
-    border-radius: 20px;
-    border: none;
-    background: transparent;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: var(--dark-color);
-    white-space: nowrap;
-}
-
-.emoji-category-btn:hover {
-    background: rgba(0,0,0,0.05);
-}
-
-.emoji-category-btn.active {
-    background: var(--primary-color);
-    color: white;
-}
-
-.emoji-picker-body {
-    height: 250px;
-    overflow-y: auto;
-    padding: 12px;
-}
-
-.emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 8px;
-}
-
-.emoji-item {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.emoji-item:hover {
-    background: var(--light-color);
-    transform: scale(1.2);
-}
-
-.emoji-picker-footer {
-    padding: 10px 16px;
-    border-top: 1px solid var(--border-color);
-    font-size: 12px;
-    color: #6b7280;
-    background: var(--light-color);
-    text-align: center;
-}
-
-/* Incoming Call Modal */
-.incoming-call-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.incoming-call-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
-}
-
-.incoming-call-content {
-    position: relative;
-    background: white;
-    border-radius: 24px;
-    padding: 2rem;
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-50px) scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-.incoming-call-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.incoming-call-header i {
-    font-size: 48px;
-    color: var(--primary-color);
-    margin-bottom: 1rem;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.incoming-call-header h3 {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--dark-color);
-    margin: 0;
-}
-
-.incoming-call-body {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.caller-avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    font-size: 48px;
-    color: white;
-}
-
-.caller-avatar img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.caller-name {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--dark-color);
-    margin: 0 0 0.5rem 0;
-}
-
-.call-type {
-    font-size: 14px;
-    color: #6b7280;
-}
-
-.incoming-call-actions {
-    display: flex;
-    gap: 1rem;
-}
-
-.call-action-btn {
-    flex: 1;
-    padding: 1rem;
-    border-radius: 12px;
-    border: none;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.3s;
-}
-
-.btn-accept {
-    background: linear-gradient(135deg, var(--success-color), #059669);
-    color: white;
-}
-
-.btn-accept:hover {
-    background: linear-gradient(135deg, #059669, var(--success-color));
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
-}
-
-.btn-decline {
-    background: linear-gradient(135deg, var(--danger-color), #dc2626);
-    color: white;
-}
-
-.btn-decline:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
-}
-
-/* Loading Overlay */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9998;
-}
-
-.loading-overlay.show {
-    display: flex;
-}
-
-.loading-content {
-    background: white;
-    padding: 2rem 3rem;
-    border-radius: 16px;
-    text-align: center;
-}
-
-.loading-spinner {
-    width: 48px;
-    height: 48px;
-    border: 4px solid var(--light-color);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Scrollbar */
-.messages-area::-webkit-scrollbar {
-    width: 6px;
-}
-
-.messages-area::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.messages-area::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 3px;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .chat-header { padding: 12px 15px; }
-    .header-avatar { width: 40px; height: 40px; }
-    .header-name { font-size: 16px; }
-    .header-status { font-size: 12px; }
-    .action-btn { width: 35px; height: 35px; }
-    .messages-area { padding: 15px; }
-    .message-bubble { padding: 10px 14px; }
-    .message-text { font-size: 14px; }
-    .message-time { font-size: 10px; }
-    .input-area { padding: 12px 15px; }
-    #message-form { gap: 8px; }
-    .input-btn { width: 30px; height: 30px; }
-    .emoji-btn { width: 30px; height: 30px; }
-    .send-btn { width: 35px; height: 35px; }
-    .message-input { 
-        min-height: 35px;
-        padding: 6px 12px;
-    }
-    .emoji-picker { 
-        width: 280px; 
-        right: 0;
-        bottom: 45px;
-    }
-    .emoji-grid {
-        grid-template-columns: repeat(6, 1fr);
-    }
-}
+    :root { --primary-color: #6366f1; --light-color: #f3f4f6; --dark-color: #1f2937; --border-color: #e5e7eb; }
+    body { background-color: #f9fafb; overflow: hidden; }
+    
+    /* Layout */
+    .chat-layout { display: flex; height: calc(100vh - 65px); max-width: 1600px; margin: 0 auto; background: white; }
+    .chat-sidebar { width: 320px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: white; }
+    .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: white; position: relative; }
+    
+    /* Sidebar Items */
+    .conv-item { display: flex; align-items: center; padding: 12px; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; }
+    .conv-item:hover { background-color: #f9fafb; }
+    .conv-item.active { background-color: #eef2ff; border-left-color: var(--primary-color); }
+    .conv-avatar-wrap { position: relative; margin-right: 12px; }
+    .conv-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid #eee; }
+    .conv-status { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; }
+    .conv-status.online { background: #10b981; } .conv-status.offline { background: #9ca3af; }
+    
+    /* Chat Header */
+    .chat-header { height: 70px; padding: 0 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: white; z-index: 10; }
+    .header-user { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .header-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+    
+    /* Messages Area */
+    .messages-area { flex: 1; padding: 20px 24px; overflow-y: auto; background: #ffffff; display: flex; flex-direction: column; gap: 8px; }
+    .message-wrapper { display: flex; margin-bottom: 24px; max-width: 100%; position: relative; } /* Tăng margin bottom để chừa chỗ cho reaction */
+    .message-wrapper.sent { flex-direction: row-reverse; }
+    .msg-avatar { width: 32px; height: 32px; border-radius: 50%; margin: 0 8px; align-self: flex-end; object-fit: cover; }
+    .msg-content { max-width: 70%; display: flex; flex-direction: column; position: relative; }
+    .message-wrapper.sent .msg-content { align-items: flex-end; }
+    
+    /* Bubbles */
+    .msg-bubble { padding: 10px 16px; border-radius: 18px; font-size: 15px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .message-wrapper.sent .msg-bubble { background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
+    .message-wrapper.received .msg-bubble { background: #f3f4f6; color: var(--dark-color); border-bottom-left-radius: 4px; }
+    .msg-time { font-size: 11px; color: #9ca3af; margin-top: 4px; padding: 0 4px; }
+    
+    /* --- ACTION MENU (FIX GIẬT: Position Absolute) --- */
+    .message-actions-menu { position: absolute; top: 50%; transform: translateY(-50%); background: white; padding: 2px; border-radius: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border-color); display: none; gap: 2px; z-index: 100; height: 32px; align-items: center; }
+    .message-wrapper:hover .message-actions-menu { display: flex; animation: fadeIn 0.2s ease-out; }
+    .message-wrapper.sent .message-actions-menu { right: 100%; margin-right: 12px; flex-direction: row-reverse; }
+    .message-wrapper.received .message-actions-menu { left: 100%; margin-left: 12px; }
+    
+    .action-mini-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; cursor: pointer; color: #9ca3af; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
+    .action-mini-btn:hover { background: #f3f4f6; color: var(--primary-color); transform: scale(1.1); }
+    .action-mini-btn.delete:hover { color: #ef4444; background: #fee2e2; }
+
+    /* Reaction Popup (FIX GIẬT) */
+    .reaction-popup { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) scale(0.8); background: white; padding: 6px 12px; border-radius: 50px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; display: flex; gap: 8px; z-index: 200; opacity: 0; visibility: hidden; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; }
+    .reaction-popup.show { opacity: 1; visibility: visible; transform: translateX(-50%) scale(1); pointer-events: auto; bottom: 45px; }
+    .reaction-item { font-size: 22px; cursor: pointer; transition: transform 0.2s; user-select: none; line-height: 1; }
+    .reaction-item:hover { transform: scale(1.3) translateY(-2px); }
+
+    /* Reaction Display (FIX GIẬT: Absolute position) */
+    .reaction-display { position: absolute; bottom: -14px; right: 0; background: white; border: 1px solid #f3f4f6; border-radius: 12px; padding: 2px 6px; font-size: 11px; display: flex; align-items: center; gap: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 5; cursor: pointer; height: 20px; white-space: nowrap; }
+    .message-wrapper.received .reaction-display { left: 0; right: auto; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-50%) scale(0.9); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+
+    /* Input Area */
+    .input-area { padding: 16px 24px; border-top: 1px solid var(--border-color); background: white; position: relative; z-index: 20; }
+    .input-wrapper { background: #f3f4f6; border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+    .input-wrapper:focus-within { background: white; box-shadow: 0 0 0 2px var(--primary-color); }
+    .message-input { flex: 1; background: transparent; border: none; max-height: 120px; resize: none; padding: 8px 0; outline: none; }
+    
+    /* Emoji Picker */
+    .emoji-picker { position: absolute; bottom: 80px; right: 24px; width: 300px; height: 250px; background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); display: none; overflow: hidden; border: 1px solid var(--border-color); z-index: 100; flex-direction: column; }
+    .emoji-picker.show { display: flex; animation: slideUp 0.2s ease-out; }
+    .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; padding: 10px; overflow-y: auto; flex: 1; }
+    .emoji-item { font-size: 22px; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
+    .emoji-item:hover { background: #f3f4f6; transform: scale(1.2); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Loading Overlay */
+    .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(2px); display: none; justify-content: center; align-items: center; z-index: 50; flex-direction: column; }
+    .loading-overlay.show { display: flex; }
+    
+    /* Utils */
+    .date-divider { text-align: center; margin: 20px 0; font-size: 12px; color: #9ca3af; }
+    .date-divider span { background: #f3f4f6; padding: 4px 12px; border-radius: 12px; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    
+    @media (max-width: 768px) { .chat-sidebar { display: none; } .chat-header { padding: 0 16px; } }
 </style>
 @endpush
 
 @section('content')
-<div class="chat-container">
-    <!-- Header -->
-    <div class="chat-header">
-        <a href="{{ route('conversations.index') }}" class="back-button">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-
-        @if($otherUser)
+<div class="chat-layout">
+    
+    {{-- ========= 1. SIDEBAR ========= --}}
+    <div class="chat-sidebar">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-xl font-bold mb-3">Tin nhắn</h2>
             <div class="relative">
-                <img src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}"
-                     alt="{{ $otherUser->first_name }}"
-                     class="header-avatar">
-                @if($otherUser->is_online)
-                    <div class="online-indicator" title="Online"></div>
-                @else
-                    <div class="offline-indicator" title="Offline"></div>
-                @endif
+                <input type="text" id="conv-search" class="w-full pl-9 pr-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none" placeholder="Tìm kiếm...">
+                <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
             </div>
-        @endif
-
-        <div class="header-info">
-            <h4 class="header-name">
-                {{ $otherUser ? $otherUser->first_name . ' ' . $otherUser->last_name : 'User' }}
-            </h4>
-            <p class="header-status {{ $otherUser && $otherUser->is_online ? 'online' : 'offline' }}">
-                {{ $otherUser ? $otherUser->last_activity_text : 'Offline' }}
-            </p>
         </div>
-
-        <div class="header-actions">
-            @if($otherUser)
-                <button id="start-voice-call" class="action-btn" title="Voice Call">
-                    <i class="fas fa-phone"></i>
-                </button>
-                <button id="start-video-call" class="action-btn" title="Video Call">
-                    <i class="fas fa-video"></i>
-                </button>
+        
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
+            @if(isset($sidebarConversations))
+                @foreach($sidebarConversations as $sidebarConv)
+                    @php
+                        $p = $sidebarConv->participants->where('user_id', '!=', auth()->id())->first();
+                        $u = $p ? $p->user : null;
+                        $isActive = isset($conversation) && $sidebarConv->conversation_id == $conversation->conversation_id;
+                        $myPart = $sidebarConv->participants->where('user_id', auth()->id())->first();
+                        $isUnread = $myPart && $myPart->unread_count > 0;
+                        $lastMsg = $sidebarConv->lastMessage;
+                    @endphp
+                    
+                    @if($u)
+                        <a href="{{ route('conversations.show', $sidebarConv->conversation_id) }}" 
+                           class="conv-item {{ $isActive ? 'active' : '' }}">
+                            <div class="conv-avatar-wrap">
+                                <img src="{{ $getAvatar($u) }}" class="conv-avatar">
+                                <span class="conv-status {{ $u->is_online ? 'online' : 'offline' }}"></span>
+                            </div>
+                            <div class="flex-1 min-w-0 ml-3">
+                                <div class="flex justify-between mb-1">
+                                    <span class="font-semibold text-sm truncate">{{ $u->first_name }} {{ $u->last_name }}</span>
+                                    <span class="text-xs text-gray-500">{{ $lastMsg ? $lastMsg->sent_at->format('H:i') : '' }}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 truncate {{ $isUnread ? 'font-bold text-gray-800' : '' }}">
+                                    @if($lastMsg)
+                                        {{ $lastMsg->sender_id == auth()->id() ? 'Bạn: ' : '' }}
+                                        {{ $lastMsg->message_type == 'recalled' ? 'Tin nhắn đã thu hồi' : Str::limit($lastMsg->content, 25) }}
+                                    @else
+                                        Bắt đầu trò chuyện
+                                    @endif
+                                </div>
+                            </div>
+                            @if($isUnread && !$isActive)
+                                <div class="w-2.5 h-2.5 bg-indigo-600 rounded-full ml-2"></div>
+                            @endif
+                        </a>
+                    @endif
+                @endforeach
             @endif
         </div>
     </div>
 
-    <!-- Messages -->
-    <div class="messages-area" id="messages-area">
-        @if(isset($messages) && $messages->isNotEmpty())
-            @php $previousDate = null; @endphp
-            @foreach($messages as $message)
-                @php
-                    $currentDate = $message->sent_at->format('Y-m-d');
-                    $isSent = $message->sender_id === auth()->id();
-                @endphp
+    {{-- ========= 2. MAIN CHAT ========= --}}
+    <div class="chat-main">
+        {{-- Loading Overlay --}}
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-3"></div>
+            <p class="text-gray-700 font-medium">Đang kết nối...</p>
+        </div>
 
+        {{-- Header --}}
+        <div class="chat-header">
+            @if($otherUser)
+            <div class="flex items-center gap-3">
+                <a href="{{ route('conversations.index') }}" class="md:hidden text-gray-500"><i class="fas fa-arrow-left"></i></a>
+                <div class="relative">
+                    <img src="{{ $getAvatar($otherUser) }}" class="header-avatar">
+                    @if($otherUser->is_online)
+                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                    @endif
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800">{{ $otherUser->first_name }} {{ $otherUser->last_name }}</h4>
+                    <span class="text-xs {{ $otherUser->is_online ? 'text-green-500 font-medium' : 'text-gray-500' }}">
+                        {{ $getStatusText($otherUser) }}
+                    </span>
+                </div>
+            </div>
+            <div class="flex gap-2 text-indigo-600">
+                <button onclick="initiateCall('audio')" class="p-2 hover:bg-indigo-50 rounded-full transition" title="Gọi thoại"><i class="fas fa-phone"></i></button>
+                <button onclick="initiateCall('video')" class="p-2 hover:bg-indigo-50 rounded-full transition" title="Gọi video"><i class="fas fa-video"></i></button>
+                <button class="p-2 hover:bg-indigo-50 rounded-full transition" title="Thông tin"><i class="fas fa-info-circle"></i></button>
+            </div>
+            @endif
+        </div>
+
+        {{-- Messages List --}}
+        <div class="messages-area custom-scrollbar" id="messages-area">
+            @php $previousDate = null; @endphp
+            @foreach($messages as $msg)
+                @php
+                    $isMe = $msg->sender_id == auth()->id();
+                    $currentDate = $msg->sent_at->format('Y-m-d');
+                    
+                    // --- XỬ LÝ REACTION ---
+                    $rawReactions = $msg->reactions ?? [];
+                    $validReactions = array_filter($rawReactions, fn($val) => $val !== 'deleted');
+                    $reactionCounts = array_count_values($validReactions);
+                @endphp
+                
                 @if($previousDate !== $currentDate)
-                    <div class="message-date-divider">
-                        <span>{{ $message->sent_at->format('F j, Y') }}</span>
-                    </div>
+                    <div class="date-divider"><span>{{ $msg->sent_at->format('d/m/Y') }}</span></div>
                     @php $previousDate = $currentDate; @endphp
                 @endif
 
-                <div class="message-wrapper {{ $isSent ? 'sent' : 'received' }}" data-message-id="{{ $message->message_id }}">
-                    @if(!$isSent)
-                        <img src="{{ $message->sender->avatar_url ?? asset('images/default-avatar.png') }}"
-                             alt="{{ $message->sender->first_name }}"
-                             class="message-avatar">
-                    @endif
-
-                    <div class="message-content">
-                        <div class="message-bubble">
-                            @if($message->content)
-                                <p class="message-text">{!! nl2br(e($message->content)) !!}</p>
-                            @endif
-                            @if($message->attachment_url)
-                                <div class="message-attachment">
-                                    @if($message->message_type === 'image')
-                                        <img src="{{ asset($message->attachment_url) }}"
-                                             alt="Image"
-                                             class="clickable-image"
-                                             onclick="window.open(this.src)">
-                                    @else
-                                        <a href="{{ asset($message->attachment_url) }}"
-                                           target="_blank"
-                                           download="{{ $message->attachment_name }}">
-                                            <i class="fas fa-file"></i>
-                                            {{ $message->attachment_name }}
-                                        </a>
-                                    @endif
+                <div class="message-wrapper {{ $isMe ? 'sent' : 'received' }}" id="msg-{{ $msg->message_id }}">
+                    @if(!$isMe) <img src="{{ $getAvatar($msg->sender) }}" class="msg-avatar"> @endif
+                    
+                    <div class="msg-content">
+                        {{-- MENU ACTIONS (Fixed Position) --}}
+                        <div class="message-actions-menu">
+                            @if($msg->message_type !== 'recalled')
+                                <button class="action-mini-btn reaction-trigger" onclick="toggleReactionPopup({{ $msg->message_id }})"><i class="far fa-smile"></i></button>
+                                <div class="reaction-popup" id="popup-{{ $msg->message_id }}">
+                                    @foreach(['like'=>'👍','love'=>'❤️','haha'=>'😂','sad'=>'😢','angry'=>'😠'] as $type => $icon)
+                                        <span class="reaction-item" onclick="submitReaction({{ $msg->message_id }}, '{{ $type }}')">{{ $icon }}</span>
+                                    @endforeach
                                 </div>
+                                
+                                @if($isMe)
+                                    <button class="action-mini-btn" onclick="recallMessage({{ $msg->message_id }})" title="Thu hồi"><i class="fas fa-undo"></i></button>
+                                @endif
+                            @endif
+                            <button class="action-mini-btn delete" onclick="deleteMessage({{ $msg->message_id }})" title="Xóa phía tôi"><i class="far fa-trash-alt"></i></button>
+                        </div>
+
+                        {{-- BONG BÓNG CHAT --}}
+                        <div class="msg-bubble">
+                            @if($msg->message_type === 'recalled')
+                                <em class="text-sm opacity-70 italic flex items-center gap-1"><i class="fas fa-ban text-xs"></i> Tin nhắn đã thu hồi</em>
+                            @else
+                                <div class="whitespace-pre-wrap">{!! nl2br(e($msg->content)) !!}</div>
+                                @if($msg->attachment_url)
+                                    <div class="mt-2">
+                                        @if($msg->message_type == 'image')
+                                            <img src="{{ asset($msg->attachment_url) }}" class="rounded-lg max-w-xs cursor-pointer hover:opacity-90" onclick="window.open(this.src)">
+                                        @else
+                                            <a href="{{ asset($msg->attachment_url) }}" target="_blank" class="flex items-center gap-2 bg-black/5 p-2 rounded text-sm">
+                                                <i class="fas fa-file-download"></i> {{ $msg->attachment_name ?? 'File đính kèm' }}
+                                            </a>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                {{-- Hiển thị Reaction (Fixed Position) --}}
+                                @if(count($validReactions) > 0)
+                                    <div class="reaction-display" id="reaction-display-{{ $msg->message_id }}">
+                                        @foreach($reactionCounts as $type => $cnt)
+                                            <span>
+                                                @if($type=='like')👍@elseif($type=='love')❤️@elseif($type=='haha')😂@elseif($type=='sad')😢@elseif($type=='angry')😠@endif
+                                            </span>
+                                        @endforeach
+                                        <span class="ml-1 font-bold text-gray-600">{{ count($validReactions) }}</span>
+                                    </div>
+                                @else
+                                    <div class="reaction-display" id="reaction-display-{{ $msg->message_id }}" style="display:none"></div>
+                                @endif
                             @endif
                         </div>
-                        <div class="message-time">{{ $message->sent_at->format('g:i A') }}</div>
+                        <div class="msg-time">{{ $msg->sent_at->format('H:i') }}</div>
                     </div>
-
-                    @if($isSent)
-                        <img src="{{ auth()->user()->avatar_url ?? asset('images/default-avatar.png') }}"
-                             alt="{{ auth()->user()->first_name }}"
-                             class="message-avatar">
-                    @endif
                 </div>
             @endforeach
-        @else
-            <div class="empty-messages text-center text-gray-500 py-12">
-                <i class="fas fa-comments text-5xl mb-4 opacity-50"></i>
-                <p class="text-lg">No messages yet. Start the conversation!</p>
-            </div>
-        @endif
-    </div>
+        </div>
 
-    <div class="typing-indicator" id="typing-indicator">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-    </div>
-
-    <!-- Input Area -->
-    <div class="input-area">
-        <form id="message-form">
-            @csrf
-            <input type="hidden" name="conversation_id" value="{{ $conversation->conversation_id }}">
-
-            <div class="input-wrapper">
-                <div class="input-actions">
-                    <button type="button" class="input-btn" id="attach-btn" title="Attach file">
-                        <i class="fas fa-paperclip"></i>
-                    </button>
+        {{-- Input Area --}}
+        <div class="input-area">
+            <form id="message-form" class="flex items-end gap-2">
+                @csrf
+                <button type="button" class="p-2 text-gray-400 hover:text-indigo-600 transition"><i class="fas fa-paperclip text-xl"></i></button>
+                
+                <div class="input-wrapper flex-1">
+                    <textarea id="message-input" class="message-input" placeholder="Nhập tin nhắn..." rows="1"></textarea>
+                    <button type="button" id="emoji-toggle-btn" class="text-yellow-500 hover:scale-110 transition"><i class="fas fa-smile text-xl"></i></button>
                 </div>
-
-                <div class="message-input-wrapper">
-                    <textarea name="content"
-                              id="message-input"
-                              class="message-input"
-                              placeholder="Type a message..."
-                              rows="1"></textarea>
-                </div>
-            </div>
-            
-            <!-- Emoji Button - moved outside input wrapper -->
-            <button type="button" class="emoji-btn" id="emoji-toggle-btn" title="Emoji">
-                😊
-            </button>
-            
-            <!-- Send Button -->
-            <button type="submit" class="send-btn" id="send-btn">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </form>
+                
+                <button type="submit" id="send-btn" class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition shadow-lg disabled:opacity-50" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loading-overlay">
-    <div class="loading-content">
-        <div class="loading-spinner"></div>
-        <p id="loading-text">Initiating call...</p>
-    </div>
-</div>
+{{-- Sound --}}
+<audio id="msg-sound" src="{{ asset('sounds/message_tone.mp3') }}" preload="auto"></audio>
+
 @endsection
 
 @push('scripts')
 <script>
-/**
- * Chat & Video Call Integration
- */
+    // 1. CONFIG & INIT
+    window.chatConfig = {
+        conversationId: {{ $conversation->conversation_id }},
+        csrfToken: '{{ csrf_token() }}',
+        currentUserId: {{ auth()->id() }},
+        currentUserAvatar: "{!! $currentUserAvatar !!}", 
+        otherUserAvatar: "{!! $otherUserAvatar !!}"
+    };
 
-// Global configuration
-window.chatConfig = {
-    conversationId: {{ $conversation->conversation_id }},
-    currentUserId: {{ auth()->id() }},
-    receiverId: {{ $otherUser?->user_id ?? 0 }},
-    currentUserName: "{{ addslashes(auth()->user()->first_name) }}",
-    otherUserName: "{{ addslashes($otherUser ? $otherUser->first_name . ' ' . $otherUser->last_name : 'User') }}",
-    otherUserAvatar: "{{ $otherUser ? ($otherUser->avatar_url ?? asset('images/default-avatar.png')) : asset('images/default-avatar.png') }}",
-    otherUserIsOnline: {{ $otherUser && $otherUser->is_online ? 'true' : 'false' }},
-    otherUserLastActivity: "{{ $otherUser ? addslashes($otherUser->last_activity_text) : 'Offline' }}"
-};
+    const msgArea = document.getElementById('messages-area');
+    function scrollToBottom() { msgArea.scrollTop = msgArea.scrollHeight; }
+    scrollToBottom();
 
-console.log('💬 Chat configuration:', window.chatConfig);
+    // 2. INPUT LOGIC
+    const input = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
 
-// Emoji data
-const emojiCategories = {
-    people: ['😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '🥱', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '🥴', '😠', '😡', '🤬', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '😇', '🥳', '🥺', '🤠', '🤡', '🤥', '🤫', '🤭', '🧐'],
-    animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🐇', '🦝', '🦨', '🦦', '🦥', '🐁', '🐀', '🦔'],
-    food: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯'],
-    activities: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸', '🥌', '🎿', '⛷', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖', '🏵', '🎗', '🎫', '🎟', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟', '🎯', '🎳', '🎮', '🎰'],
-    objects: ['💡', '🔦', '🕯', '🪔', '🧯', '🛢', '💸', '💵', '💴', '💶', '💷', '💰', '💎', '🪙', '💳', '💻', '🖥', '🖨', '⌨️', '🖱', '🖲', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽', '🎞', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙', '🎚', '🎛', '🧭', '⏱', '⏲', '⏰', '🕰', '⌛', '⏳', '📡', '🔋', '🔌', '💻', '🖨', '🖱', '🖲', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽', '🎞', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙', '🎚', '🎛', '🧭', '⏱', '⏲', '⏰', '🕰', '⌛', '⏳', '📡', '🔋', '🔌']
-};
+    input.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        sendBtn.disabled = !this.value.trim();
+    });
 
-// Emoji Picker Manager
-class EmojiPickerManager {
-    constructor() {
-        this.picker = null;
-        this.createPicker();
-        this.toggleBtn = document.getElementById('emoji-toggle-btn');
-        this.messageInput = document.getElementById('message-input');
-        this.isPickerVisible = false;
-        
-        this.init();
-    }
-    
-    createPicker() {
-        // Create emoji picker element
-        this.picker = document.createElement('div');
-        this.picker.id = 'emoji-picker';
-        this.picker.className = 'emoji-picker';
-        this.picker.innerHTML = `
-            <div class="emoji-picker-header">
-                <button class="emoji-category-btn active" data-category="people">😀</button>
-                <button class="emoji-category-btn" data-category="animals">🐶</button>
-                <button class="emoji-category-btn" data-category="food">🍎</button>
-                <button class="emoji-category-btn" data-category="activities">⚽</button>
-                <button class="emoji-category-btn" data-category="objects">💡</button>
-            </div>
-            <div class="emoji-picker-body">
-                <div class="emoji-grid" id="emoji-grid">
-                    <!-- Emojis will be populated by JavaScript -->
-                </div>
-            </div>
-            <div class="emoji-picker-footer">
-                Click an emoji to insert
-            </div>
-        `;
-        
-        // Append to body
-        document.body.appendChild(this.picker);
-        
-        // Get references to internal elements
-        this.emojiGrid = this.picker.querySelector('#emoji-grid');
-        this.categoryButtons = this.picker.querySelectorAll('.emoji-category-btn');
-    }
-    
-    init() {
-        // Toggle picker visibility
-        this.toggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.togglePicker();
-        });
-        
-        // Load default category
-        this.loadCategory('people');
-        
-        // Setup category buttons
-        this.categoryButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const category = btn.dataset.category;
-                this.loadCategory(category);
-                
-                // Update active state
-                this.categoryButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-        
-        // Close picker when clicking outside
-        document.addEventListener('click', (e) => {
-            if (this.isPickerVisible && 
-                !this.picker.contains(e.target) && 
-                e.target !== this.toggleBtn) {
-                this.hidePicker();
-            }
-        });
-        
-        // Close on Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isPickerVisible) {
-                this.hidePicker();
-            }
-        });
-    }
-    
-    loadCategory(category) {
-        const emojis = emojiCategories[category] || [];
-        this.emojiGrid.innerHTML = '';
-        
-        emojis.forEach(emoji => {
-            const emojiElement = document.createElement('div');
-            emojiElement.className = 'emoji-item';
-            emojiElement.textContent = emoji;
-            emojiElement.title = `Emoji: ${emoji}`;
-            
-            emojiElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.insertEmoji(emoji);
-            });
-            
-            this.emojiGrid.appendChild(emojiElement);
-        });
-    }
-    
-    insertEmoji(emoji) {
-        const input = this.messageInput;
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        const text = input.value;
-        
-        // Insert emoji at cursor position
-        input.value = text.substring(0, start) + emoji + text.substring(end);
-        
-        // Move cursor after inserted emoji
-        input.selectionStart = input.selectionEnd = start + emoji.length;
-        
-        // Focus back on input
-        input.focus();
-        
-        // Trigger input event for auto-resize
-        input.dispatchEvent(new Event('input'));
-        
-        // Close picker after insertion
-        this.hidePicker();
-    }
-    
-    togglePicker() {
-        if (this.isPickerVisible) {
-            this.hidePicker();
-        } else {
-            this.showPicker();
-        }
-    }
-    
-    showPicker() {
-        // Position picker relative to emoji button
-        const buttonRect = this.toggleBtn.getBoundingClientRect();
-        const pickerWidth = 320;
-        
-        // Calculate position
-        let left = buttonRect.left + window.scrollX;
-        let bottom = window.innerHeight - buttonRect.top + 10;
-        
-        // Adjust if picker would go off screen on the right
-        if (left + pickerWidth > window.innerWidth) {
-            left = window.innerWidth - pickerWidth - 10;
-        }
-        
-        // Adjust if picker would go off screen on the left
-        if (left < 10) {
-            left = 10;
-        }
-        
-        // Set position
-        this.picker.style.position = 'fixed';
-        this.picker.style.left = left + 'px';
-        this.picker.style.bottom = bottom + 'px';
-        this.picker.style.right = 'auto';
-        this.picker.style.top = 'auto';
-        
-        // Show picker
-        this.picker.classList.add('show');
-        this.isPickerVisible = true;
-    }
-    
-    hidePicker() {
-        this.picker.classList.remove('show');
-        this.isPickerVisible = false;
-    }
-}
-
-// Video Call Manager
-class VideoCallManager {
-    constructor() {
-        this.config = window.chatConfig;
-        this.currentCallId = null;
-        this.setupCallButtons();
-        this.listenForIncomingCalls();
-    }
-
-    setupCallButtons() {
-        const videoBtn = document.getElementById('start-video-call');
-        const voiceBtn = document.getElementById('start-voice-call');
-
-        if (videoBtn) {
-            videoBtn.addEventListener('click', () => this.initiateCall('video'));
-        }
-
-        if (voiceBtn) {
-            voiceBtn.addEventListener('click', () => this.initiateCall('audio'));
-        }
-    }
-
-    listenForIncomingCalls() {
-        if (!window.Echo) {
-            console.error('❌ Echo not initialized');
-            return;
-        }
-
-        window.Echo.private(`user.${this.config.currentUserId}`)
-            .listen('.call.invitation', (data) => {
-                console.log('📞 Incoming call:', data);
-                this.showIncomingCallModal(data);
-            });
-    }
-
-    async initiateCall(callType) {
-        try {
-            console.log(`🚀 Initiating ${callType} call...`);
-
-            this.showLoading(`Starting ${callType} call...`);
-
-            const response = await fetch('/api/video-calls/initiate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': this.getCSRFToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    conversation_id: this.config.conversationId,
-                    call_type: callType
-                })
-            });
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await response.text();
-                console.error('❌ Non-JSON response:', text.substring(0, 500));
-                throw new Error('Server returned HTML instead of JSON. Check if you are logged in.');
-            }
-
-            const data = await response.json();
-            console.log('Response data:', data);
-
-            if (!response.ok) {
-                throw new Error(data.error || data.message || 'Failed to initiate call');
-            }
-
-            if (!data.success || !data.call_id) {
-                throw new Error('Invalid response from server: ' + JSON.stringify(data));
-            }
-
-            console.log('✅ Call initiated successfully:', data);
-
-            // Redirect to call room
-            const roomUrl = `/video-calls/${data.call_id}/room`;
-            console.log('Redirecting to:', roomUrl);
-            window.location.href = roomUrl;
-
-        } catch (error) {
-            console.error('❌ Failed to initiate call:', error);
-            this.hideLoading();
-            
-            let errorMessage = error.message;
-            if (errorMessage.includes('HTML instead of JSON')) {
-                errorMessage = 'Server error. Please refresh the page and try again.';
-            }
-            
-            alert('Failed to start call:\n' + errorMessage);
-        }
-    }
-
-    showIncomingCallModal(callData) {
-        const { callId, roomId, caller, callType } = callData;
-
-        const modal = document.createElement('div');
-        modal.id = 'incoming-call-modal';
-        modal.className = 'incoming-call-modal';
-        modal.innerHTML = `
-            <div class="incoming-call-overlay"></div>
-            <div class="incoming-call-content">
-                <div class="incoming-call-header">
-                    <i class="fas fa-${callType === 'video' ? 'video' : 'phone'}"></i>
-                    <h3>Incoming ${callType === 'video' ? 'Video' : 'Voice'} Call</h3>
-                </div>
-                
-                <div class="incoming-call-body">
-                    <div class="caller-avatar">
-                        <img src="${this.config.otherUserAvatar}" alt="${caller.name}">
-                    </div>
-                    <h4 class="caller-name">${caller.name}</h4>
-                    <p class="call-type">${callType === 'video' ? 'Video' : 'Voice'} call</p>
-                </div>
-
-                <div class="incoming-call-actions">
-                    <button class="call-action-btn btn-decline" onclick="videoCallManager.declineCall(${callId})">
-                        <i class="fas fa-phone-slash"></i>
-                        Decline
-                    </button>
-                    <button class="call-action-btn btn-accept" onclick="videoCallManager.acceptCall(${callId})">
-                        <i class="fas fa-phone"></i>
-                        Accept
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Play ringtone
-        const ringtone = document.getElementById('ringtone-audio');
-        if (ringtone) {
-            ringtone.play().catch(e => console.warn('Cannot play ringtone:', e));
-        }
-    }
-
-    async acceptCall(callId) {
-        try {
-            console.log('✅ Accepting call:', callId);
-
-            const response = await fetch('/api/video-calls/accept', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': this.getCSRFToken()
-                },
-                body: JSON.stringify({ call_id: callId })
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to accept call');
-            }
-
-            // Stop ringtone
-            const ringtone = document.getElementById('ringtone-audio');
-            if (ringtone) ringtone.pause();
-
-            // Remove modal
-            this.removeIncomingCallModal();
-
-            // Redirect to call room
-            window.location.href = `/video-calls/${callId}/room`;
-
-        } catch (error) {
-            console.error('❌ Failed to accept call:', error);
-            alert('Failed to accept call: ' + error.message);
-        }
-    }
-
-    async declineCall(callId) {
-        try {
-            console.log('❌ Declining call:', callId);
-
-            const response = await fetch('/api/video-calls/decline', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': this.getCSRFToken()
-                },
-                body: JSON.stringify({ call_id: callId })
-            });
-
-            if (!response.ok) {
-                console.error('Failed to decline call');
-            }
-
-            // Stop ringtone
-            const ringtone = document.getElementById('ringtone-audio');
-            if (ringtone) ringtone.pause();
-
-            // Remove modal
-            this.removeIncomingCallModal();
-
-        } catch (error) {
-            console.error('❌ Failed to decline call:', error);
-            this.removeIncomingCallModal();
-        }
-    }
-
-    removeIncomingCallModal() {
-        const modal = document.getElementById('incoming-call-modal');
-        if (modal) modal.remove();
-    }
-
-    showLoading(message = 'Loading...') {
-        let overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.add('show');
-            const text = document.getElementById('loading-text');
-            if (text) text.textContent = message;
-        }
-    }
-
-    hideLoading() {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.remove('show');
-        }
-    }
-
-    getCSRFToken() {
-        const token = document.querySelector('meta[name="csrf-token"]')?.content;
-        if (!token) {
-            console.error('❌ CSRF token not found!');
-        }
-        return token || '';
-    }
-}
-
-// Chat Input Manager
-class ChatInputManager {
-    constructor() {
-        this.messageInput = document.getElementById('message-input');
-        this.messageForm = document.getElementById('message-form');
-        this.sendBtn = document.getElementById('send-btn');
-        
-        this.init();
-    }
-    
-    init() {
-        // Auto-resize textarea
-        this.messageInput.addEventListener('input', () => {
-            this.autoResizeTextarea();
-        });
-        
-        // Form submission
-        this.messageForm.addEventListener('submit', (e) => {
+    input.addEventListener('keydown', function(e) {
+        if(e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            this.sendMessage();
-        });
-        
-        // Enable/disable send button based on input
-        this.messageInput.addEventListener('input', () => {
-            this.sendBtn.disabled = !this.messageInput.value.trim();
-        });
-        
-        // Submit on Ctrl+Enter
-        this.messageInput.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                this.sendMessage();
-            }
-        });
-        
-        // Initial disable
-        this.sendBtn.disabled = true;
-    }
-    
-    autoResizeTextarea() {
-        const textarea = this.messageInput;
-        textarea.style.height = 'auto';
-        const maxHeight = 150;
-        textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + 'px';
-    }
-    
-    async sendMessage() {
-        const content = this.messageInput.value.trim();
-        if (!content) return;
-        
-        // Add sending logic here
-        console.log('Sending message:', content);
-        
-        // Clear input
-        this.messageInput.value = '';
-        this.autoResizeTextarea();
-        this.sendBtn.disabled = true;
-        
-        // You would typically make an AJAX request here
-        // await fetch('/api/messages/send', { ... })
-    }
-}
+            if(!sendBtn.disabled) document.getElementById('message-form').dispatchEvent(new Event('submit'));
+        }
+    });
 
-// Initialize
-let videoCallManager;
-let emojiPickerManager;
-let chatInputManager;
+    // 3. SEND MESSAGE
+    document.getElementById('message-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const content = input.value.trim();
+        if(!content) return;
 
-async function initializeApp() {
-    console.log('🚀 Initializing app...');
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
 
-    // Validate config
-    if (!window.chatConfig.conversationId) {
-        console.error('❌ Missing conversationId');
-        return;
-    }
+        // Optimistic UI
+        const tempMsg = {
+            content: content,
+            sent_at: new Date().toISOString(),
+            message_type: 'text'
+        };
+        appendMessage(tempMsg, true);
 
-    // Initialize managers
-    emojiPickerManager = new EmojiPickerManager();
-    chatInputManager = new ChatInputManager();
+        fetch(`/conversations/${window.chatConfig.conversationId}/messages`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': window.chatConfig.csrfToken 
+            },
+            body: JSON.stringify({ content: content, message_type: 'text' })
+        })
+        .then(r => r.json())
+        .catch(err => console.error(err));
+    });
 
-    // Wait for Echo
-    let attempts = 0;
-    while (!window.Echo && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
+    // 4. APPEND FUNCTION
+    function appendMessage(msg, isMe) {
+        const time = new Date(msg.sent_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const avatar = isMe ? window.chatConfig.currentUserAvatar : window.chatConfig.otherUserAvatar;
+        
+        const html = `
+            <div class="message-wrapper ${isMe ? 'sent' : 'received'}" id="msg-${msg.message_id || 'temp'}">
+                ${!isMe ? `<img src="${avatar}" class="msg-avatar">` : ''}
+                <div class="msg-content">
+                    <div class="message-actions-menu">
+                        <button class="action-mini-btn reaction-trigger"><i class="far fa-smile"></i></button>
+                        <button class="action-mini-btn delete"><i class="far fa-trash-alt"></i></button>
+                    </div>
+                    <div class="msg-bubble">
+                        <div class="whitespace-pre-wrap">${msg.content}</div>
+                    </div>
+                    <div class="msg-time">${time}</div>
+                </div>
+            </div>
+        `;
+        msgArea.insertAdjacentHTML('beforeend', html);
+        scrollToBottom();
     }
 
-    if (!window.Echo) {
-        console.error('❌ Echo not initialized after 5 seconds');
-        return;
+    // 5. VIDEO CALL
+    window.initiateCall = function(type) {
+        const overlay = document.getElementById('loading-overlay');
+        overlay.classList.add('show');
+
+        fetch('/api/video-calls/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': window.chatConfig.csrfToken },
+            body: JSON.stringify({ conversation_id: window.chatConfig.conversationId, call_type: type })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) window.location.href = `/video-calls/${data.call_id}/room`;
+            else { alert(data.message); overlay.classList.remove('show'); }
+        })
+        .catch(err => { alert('Lỗi kết nối'); overlay.classList.remove('show'); });
+    };
+
+    // 6. EMOJI PICKER
+    class EmojiPickerManager {
+        constructor() {
+            this.picker = null;
+            this.toggleBtn = document.getElementById('emoji-toggle-btn');
+            this.messageInput = document.getElementById('message-input');
+            this.createPicker();
+            this.init();
+        }
+        createPicker() {
+            if(document.querySelector('.emoji-picker')) return;
+            this.picker = document.createElement('div');
+            this.picker.className = 'emoji-picker';
+            this.picker.innerHTML = `<div class="emoji-grid"></div>`;
+            document.querySelector('.input-area').appendChild(this.picker);
+            this.emojiGrid = this.picker.querySelector('.emoji-grid');
+        }
+        init() {
+            const emojis = ['😀','😁','😂','🤣','😃','😄','😅','😉','😊','😍','🥰','😘','😎','😭','😤','😡','👍','👎','❤️','💔','🎉','🔥','💯'];
+            emojis.forEach(emoji => {
+                const el = document.createElement('div');
+                el.className = 'emoji-item';
+                el.textContent = emoji;
+                el.onclick = () => {
+                    this.messageInput.value += emoji;
+                    this.messageInput.dispatchEvent(new Event('input'));
+                };
+                this.emojiGrid.appendChild(el);
+            });
+            this.toggleBtn.addEventListener('click', (e) => { e.stopPropagation(); this.picker.classList.toggle('show'); });
+            document.addEventListener('click', (e) => {
+                if(this.picker.classList.contains('show') && !this.picker.contains(e.target) && e.target !== this.toggleBtn) {
+                    this.picker.classList.remove('show');
+                }
+            });
+        }
     }
+    new EmojiPickerManager();
 
-    console.log('✅ Echo ready');
+    // 7. REACT & RECALL LOGIC
+    window.toggleReactionPopup = function(id) {
+        document.querySelectorAll('.reaction-popup').forEach(el => el.classList.remove('show'));
+        const p = document.getElementById('popup-' + id);
+        if(p) p.classList.toggle('show');
+    };
 
-    // Initialize video call manager
-    videoCallManager = new VideoCallManager();
-    window.videoCallManager = videoCallManager;
-    console.log('✅ Video call manager initialized');
-}
+    window.submitReaction = function(msgId, type) {
+        toggleReactionPopup(msgId);
+        fetch(`/conversations/messages/${msgId}/react`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': window.chatConfig.csrfToken },
+            body: JSON.stringify({ reaction: type })
+        }).then(r => r.json()).then(d => { if(d.success) location.reload(); });
+    };
 
-// Run initialization
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-    initializeApp();
-}
+    window.recallMessage = function(msgId) {
+        if(confirm('Thu hồi?')) {
+            fetch(`/conversations/messages/${msgId}/recall`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': window.chatConfig.csrfToken }
+            }).then(r=>r.json()).then(d => { if(d.success) location.reload(); });
+        }
+    };
+
+    window.deleteMessage = function(msgId) {
+        if(confirm('Xóa?')) {
+            fetch(`/conversations/messages/${msgId}/delete`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': window.chatConfig.csrfToken }
+            }).then(r=>r.json()).then(d => { if(d.success) document.getElementById('msg-'+msgId).remove(); });
+        }
+    };
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.reaction-trigger') && !e.target.closest('.reaction-popup')) {
+            document.querySelectorAll('.reaction-popup').forEach(el => el.classList.remove('show'));
+        }
+    });
+
+    // 8. POLLING (Heartbeat & Realtime fallback)
+    let lastMsgId = {{ $messages->last()->message_id ?? 0 }};
+    setInterval(() => {
+        fetch(`/conversations/${window.chatConfig.conversationId}/messages/latest?after_id=${lastMsgId}`)
+            .then(r => r.json())
+            .then(data => {
+                if(data.success && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        if(msg.sender_id != window.chatConfig.currentUserId) {
+                            appendMessage(msg, false);
+                            document.getElementById('msg-sound').play().catch(()=>{});
+                        }
+                        lastMsgId = msg.message_id;
+                    });
+                }
+            });
+    }, 1500);
+
 </script>
-
-{{-- Load Vite assets for chat functionality --}}
-@vite([
-    'resources/js/bootstrap.ts',
-    'resources/js/chat-page.ts'
-])
-
-{{-- Hidden ringtone audio --}}
-<audio id="ringtone-audio" loop style="display: none;">
-    <source src="{{ asset('sounds/ringtone.mp3') }}" type="audio/mpeg">
-</audio>
 @endpush

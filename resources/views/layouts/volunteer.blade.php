@@ -292,6 +292,60 @@
     </div>
 
     @stack('scripts')
+    <div x-data="{
+        show: !localStorage.getItem('cookie_consent_accepted'),
+        accept() {
+            localStorage.setItem('cookie_consent_accepted', 'true');
+            this.show = false;
+        },
+        decline() {
+            this.show = false;
+            // Xử lý logic từ chối nếu cần (tuỳ chọn)
+        }
+    }"
+    x-init="$watch('show', value => { if(value) document.body.classList.add('overflow-hidden'); else document.body.classList.remove('overflow-hidden'); })"
+    x-show="show"
+    x-transition:enter="transition ease-out duration-500"
+    x-transition:enter-start="opacity-0 translate-y-full"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-end="opacity-0 translate-y-full"
+    class="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-6"
+    style="display: none;"> {{-- style display none để tránh giật layout khi load --}}
+    
+    <div class="max-w-6xl mx-auto bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border border-purple-100 dark:border-purple-800 p-6 md:flex items-center justify-between gap-6 relative overflow-hidden">
+        
+        {{-- Background decoration --}}
+        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        
+        <div class="flex items-start gap-4 mb-4 md:mb-0 relative z-10">
+            <div class="hidden sm:flex flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 rounded-xl items-center justify-center text-purple-600 dark:text-purple-400">
+                <i class="fas fa-cookie-bite text-2xl"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-900 dark:text-white text-lg mb-1 flex items-center gap-2">
+                    <i class="fas fa-cookie-bite sm:hidden text-purple-600"></i>
+                    Chúng tôi trân trọng quyền riêng tư của bạn
+                </h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Website sử dụng cookies để cải thiện trải nghiệm người dùng, phân tích lưu lượng truy cập và cá nhân hóa nội dung. Bằng cách nhấn "Chấp nhận", bạn đồng ý với việc lưu trữ cookies trên thiết bị của mình.
+                    <a href="{{ route('privacy') ?? '#' }}" class="text-purple-600 hover:text-purple-700 font-medium underline decoration-purple-300 underline-offset-2">Xem Chính sách bảo mật</a>.
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-shrink-0 relative z-10">
+            <button @click="decline()" 
+                class="px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition">
+                Để sau
+            </button>
+            <button @click="accept()" 
+                class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-purple-500/30 rounded-xl transform hover:-translate-y-0.5 transition-all duration-200">
+                Chấp nhận tất cả
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 
 </html>

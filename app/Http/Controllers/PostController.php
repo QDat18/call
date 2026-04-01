@@ -23,22 +23,21 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
+        // 1. Khởi tạo Query
         $query = Post::with(['user', 'likes', 'comments.user'])
             ->published();
 
-        // Filter by post type
+        // 2. Các bộ lọc (Filters)
         if ($request->filled('type')) {
             $query->where('post_type', $request->type);
         }
 
-        // Filter by user type
         if ($request->filled('user_type')) {
             $query->whereHas('user', function ($q) use ($request) {
                 $q->where('user_type', $request->user_type);
             });
         }
 
-        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -47,9 +46,18 @@ class PostController extends Controller
             });
         }
 
-        $posts = $query->latest('published_at')->paginate(10);
+        // 3. [QUAN TRỌNG] Sắp xếp & Phân trang
+        // Thay vì dùng latest() rải rác, hãy gom lại đây:
+        // Ưu tiên 1: Bài ghim (is_pinned = 1) lên trước
+        // Ưu tiên 2: Bài mới nhất (published_at giảm dần)
+        $posts = $query->orderBy('is_pinned', 'desc')
+            ->orderBy('published_at', 'desc')
+            ->paginate(10);
 
-        // Pinned posts
+        // ---------------------------------------------------------
+        // 4. Lấy riêng danh sách ghim (Nếu bạn muốn hiển thị Slider riêng)
+        // Lưu ý: Nếu ở View bạn chỉ dùng biến $posts ở trên thì không cần biến $pinnedPosts này nữa.
+        // Biến này chỉ cần thiết nếu bạn muốn tách bài ghim ra một khu vực riêng biệt (ví dụ: Banner đầu trang).
         $pinnedPosts = Post::with(['user'])
             ->published()
             ->where('is_pinned', true)
@@ -59,7 +67,7 @@ class PostController extends Controller
 
         $pinnedCampaigns = \App\Models\DonationCampaign::where('is_pinned', true)
             ->where('status', 'Active')
-            ->where('end_date', '>', now()) // Chỉ lấy chiến dịch còn hạn
+            ->where('end_date', '>', now())
             ->orderBy('created_at', 'desc')
             ->get();
 

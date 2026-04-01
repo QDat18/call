@@ -25,9 +25,9 @@ class ConversationController extends Controller
 
         $query = Conversation::whereHas('participants', function ($q) use ($user) {
             $q->where('user_id', $user->user_id)
-              ->where('is_active', true);
+                ->where('is_active', true);
         })
-        ->with(['participants.user', 'opportunity', 'creator', 'lastMessage']);
+            ->with(['participants.user', 'opportunity', 'creator', 'lastMessage']);
 
         if ($request->filled('type')) {
             $query->where('conversation_type', $request->type);
@@ -37,10 +37,10 @@ class ConversationController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%$search%")
-                  ->orWhereHas('participants.user', function ($subQ) use ($search) {
-                      $subQ->where('first_name', 'like', "%$search%")
-                           ->orWhere('last_name', 'like', "%$search%");
-                  });
+                    ->orWhereHas('participants.user', function ($subQ) use ($search) {
+                        $subQ->where('first_name', 'like', "%$search%")
+                            ->orWhere('last_name', 'like', "%$search%");
+                    });
             });
         }
 
@@ -60,14 +60,16 @@ class ConversationController extends Controller
     {
         $user = Auth::user();
 
+        // 1. Lấy Conversation hiện tại
         $conversation = Conversation::with([
             'participants.user.volunteerProfile',
             'participants.user.organization',
             'opportunity',
             'creator',
-            'messages.sender'
+            'messages.sender',
         ])->findOrFail($id);
 
+        // Check quyền
         $participant = $conversation->participants()
             ->where('user_id', $user->user_id)
             ->where('is_active', true)
@@ -77,20 +79,40 @@ class ConversationController extends Controller
             abort(403, 'Bạn không có quyền xem conversation này');
         }
 
+        // 2. Lấy danh sách Conversations cho Sidebar
+        $sidebarConversations = Conversation::whereHas('participants', function ($q) use ($user) {
+            $q->where('user_id', $user->user_id)
+                ->where('is_active', true);
+        })
+            ->with(['participants.user', 'lastMessage'])
+            ->orderBy('last_message_at', 'desc')
+            ->get();
+
+        // 3. Xử lý thông tin người chat cùng
         $otherParticipant = $conversation->participants()
             ->where('user_id', '!=', $user->user_id)
             ->first();
 
         $otherUser = $otherParticipant ? $otherParticipant->user : null;
 
-        $messages = $conversation->messages()
+        // 4. Lấy tin nhắn và lọc tin đã xóa (soft delete phía user)
+        $allMessages = $conversation->messages()
             ->with('sender')
             ->orderBy('sent_at', 'asc')
-            ->paginate(50);
+            ->get();
 
         $this->markAsRead($conversation, $user);
 
-        return view('conversations.show', compact('conversation', 'messages', 'participant', 'otherUser'));
+        // Lọc tin nhắn: Ẩn những tin mà user hiện tại đã đánh dấu 'deleted' trong cột reactions
+        $messages = $allMessages->filter(function ($msg) use ($user) {
+            $reactions = $msg->reactions ?? [];
+            if (isset($reactions[$user->user_id]) && $reactions[$user->user_id] === 'deleted') {
+                return false;
+            }
+            return true;
+        });
+
+        return view('conversations.show', compact('conversation', 'messages', 'participant', 'otherUser', 'sidebarConversations'));
     }
 
     // Tạo conversation mới
@@ -104,7 +126,7 @@ class ConversationController extends Controller
         $connections = \App\Models\Connection::where('status', 'accepted')
             ->where(function ($q) use ($user) {
                 $q->where('user_id', $user->user_id)
-                  ->orWhere('friend_id', $user->user_id);
+                    ->orWhere('friend_id', $user->user_id);
             })
             ->with(['user', 'friend'])
             ->get();
@@ -443,5 +465,67 @@ class ConversationController extends Controller
             'action_url' => route('conversations.show', $conversation->conversation_id),
             'created_at' => now()
         ]);
+    }
+
+    // React Message (Thêm/Sửa/Xóa Reaction)
+    public function reactMessage(Request $request, $messageId)
+    {
+        $request->validate([
+            'reaction' => 'required|string|in:like,love,haha,wow,sad,angry'
+        ]);
+
+        $message = Message::findOrFail($messageId);
+        $userId = Auth::id();
+
+        // Lấy mảng reactions hiện tại
+        $reactions = $message->reactions ?? [];
+
+        // Logic toggle: Nếu đã thả icon đó rồi thì xóa, chưa thì thêm/đổi
+        if (isset($reactions[$userId]) && $reactions[$userId] == $request->reaction) {
+            unset($reactions[$userId]);
+        } else {
+            $reactions[$userId] = $request->reaction;
+        }
+
+        $message->reactions = $reactions;
+        $message->save();
+
+        return response()->json(['success' => true, 'reactions' => $reactions]);
+    }
+
+    // Xóa tin nhắn (Soft delete - chỉ ẩn phía mình bằng cách đánh dấu vào reactions)
+    public function deleteMessage($messageId)
+    {
+        $message = Message::findOrFail($messageId);
+        $userId = Auth::id();
+
+        $reactions = $message->reactions ?? [];
+
+        // Đánh dấu 'deleted' cho user này
+        $reactions[$userId] = 'deleted';
+
+        $message->reactions = $reactions;
+        $message->save();
+
+        return response()->json(['success' => true]);
+    }
+
+    // Thu hồi tin nhắn (Recall - ẩn với tất cả mọi người)
+    public function recallMessage($messageId)
+    {
+        $message = Message::findOrFail($messageId);
+
+        if ($message->sender_id != Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Đánh dấu là đã thu hồi bằng cách đổi type
+        $message->update([
+            'message_type' => 'recalled',
+            'content' => null,
+            'attachment_url' => null
+        ]);
+
+        return response()->json(['success' => true]);
     }
 }

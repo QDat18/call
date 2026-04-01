@@ -7,7 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'VolunteerConnect Platform')</title>
-
+    <link rel="icon" href="{{ asset('local.jpg') }}">
+    <link rel="shortcut icon" href="{{ asset('local.jpg') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -263,11 +264,108 @@
                                 </div>
                             </div>
 
-                            <a href="{{ route('conversations.index') }}"
-                                class="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg transition hidden sm:block">
-                                <i class="fas fa-comments text-lg"></i>
-                            </a>
+<div class="relative hidden sm:block" x-data="{ msgOpen: false }">
+    <button @click="msgOpen = !msgOpen" type="button"
+        class="relative p-2.5 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/50 dark:hover:bg-gray-800/50 rounded-lg transition">
+        <i class="fas fa-comments text-lg"></i>
+        
+        {{-- Badge tin nhắn chưa đọc --}}
+        @php
+            $unreadMsgCount = \App\Models\ConversationParticipant::where('user_id', auth()->id())
+                ->where('is_active', true)
+                ->sum('unread_count');
+        @endphp
+        
+        @if($unreadMsgCount > 0)
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full notification-badge"></span>
+        @endif
+    </button>
 
+    {{-- Dropdown Content --}}
+    <div x-show="msgOpen" @click.away="msgOpen = false" x-transition
+        class="absolute right-0 mt-2 w-80 glass dark:glass-dark rounded-xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 py-2 z-50 overflow-hidden"
+        style="display: none;">
+
+        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h6 class="text-sm font-bold text-gray-900 dark:text-white">Tin nhắn</h6>
+            <a href="{{ route('conversations.index') }}" class="text-xs text-indigo-600 hover:underline">Xem tất cả</a>
+        </div>
+
+        <div class="max-h-80 overflow-y-auto">
+            @php
+                // Lấy 5 cuộc trò chuyện gần nhất để hiển thị nhanh
+                $recentConvs = \App\Models\Conversation::whereHas('participants', function ($q) {
+                        $q->where('user_id', auth()->id())->where('is_active', true);
+                    })
+                    ->with(['participants.user', 'lastMessage'])
+                    ->orderBy('last_message_at', 'desc')
+                    ->take(5)
+                    ->get();
+            @endphp
+
+            @forelse($recentConvs as $conv)
+                @php
+                    $p = $conv->participants->where('user_id', '!=', auth()->id())->first();
+                    $u = $p ? $p->user : null;
+                    $lastMsg = $conv->lastMessage;
+                    $myPart = $conv->participants->where('user_id', auth()->id())->first();
+                    $isUnread = $myPart && $myPart->unread_count > 0;
+                @endphp
+
+                @if($u)
+                    <a href="{{ route('conversations.show', $conv->conversation_id) }}" 
+                       class="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition border-b border-gray-100 dark:border-gray-700 last:border-0 flex items-center gap-3">
+                        
+                        {{-- Avatar --}}
+                        <div class="relative flex-shrink-0">
+                            <img src="{{ !empty($u->avatar_url) ? (Str::startsWith($u->avatar_url, ['http']) ? $u->avatar_url : asset('storage/'.$u->avatar_url)) : asset('images/default-avatar.png') }}" 
+                                 class="w-10 h-10 rounded-full object-cover border border-gray-200">
+                            @if($u->is_online)
+                                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                            @endif
+                        </div>
+
+                        {{-- Info --}}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-baseline mb-0.5">
+                                <h4 class="text-sm font-semibold text-gray-900 dark:text-white truncate {{ $isUnread ? 'font-bold' : '' }}">
+                                    {{ $u->first_name }} {{ $u->last_name }}
+                                </h4>
+                                <span class="text-[10px] text-gray-400 flex-shrink-0">
+                                    {{ $lastMsg ? $lastMsg->sent_at->diffForHumans(null, true, true) : '' }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate {{ $isUnread ? 'font-semibold text-gray-800 dark:text-gray-200' : '' }}">
+                                @if($lastMsg)
+                                    {{ $lastMsg->sender_id == auth()->id() ? 'Bạn: ' : '' }}
+                                    {{ $lastMsg->is_deleted ? 'Tin nhắn đã thu hồi' : $lastMsg->content }}
+                                @else
+                                    Bắt đầu trò chuyện
+                                @endif
+                            </p>
+                        </div>
+
+                        {{-- Unread Dot --}}
+                        @if($isUnread)
+                            <div class="w-2 h-2 bg-indigo-600 rounded-full flex-shrink-0"></div>
+                        @endif
+                    </a>
+                @endif
+            @empty
+                <div class="px-4 py-8 text-center text-gray-500 text-sm">
+                    <i class="far fa-comments text-2xl mb-2 text-gray-300"></i>
+                    <p>Chưa có tin nhắn nào</p>
+                </div>
+            @endforelse
+        </div>
+        
+        <div class="p-2 text-center border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+            <a href="{{ route('conversations.index') }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                Mở Messenger
+            </a>
+        </div>
+    </div>
+</div>
 <div class="relative" x-data="{ open: false }">
     <button @click="open = !open" type="button"
         class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition">
@@ -503,7 +601,7 @@
                                     class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition">
                                 </div>
                                 <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-lg">
-                                    <i class="fas fa-hands-helping text-white text-xl"></i>
+                                    <img src="{{ asset('local.jpg') }}" alt="VolunteerConnect Logo" class="h-8 w-auto object-cover">                                
                                 </div>
                             </div>
                             <span class="font-bold text-xl gradient-text">VolunteerConnect</span>
@@ -932,6 +1030,61 @@
             animation: zoom-in 0.2s ease-out forwards;
         }
     </style>
+
+    <div x-data="{
+        show: !localStorage.getItem('cookie_consent_accepted'),
+        accept() {
+            localStorage.setItem('cookie_consent_accepted', 'true');
+            this.show = false;
+        },
+        decline() {
+            this.show = false;
+            // Xử lý logic từ chối nếu cần (tuỳ chọn)
+        }
+    }"
+    x-init="$watch('show', value => { if(value) document.body.classList.add('overflow-hidden'); else document.body.classList.remove('overflow-hidden'); })"
+    x-show="show"
+    x-transition:enter="transition ease-out duration-500"
+    x-transition:enter-start="opacity-0 translate-y-full"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-end="opacity-0 translate-y-full"
+    class="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-6"
+    style="display: none;"> {{-- style display none để tránh giật layout khi load --}}
+    
+    <div class="max-w-6xl mx-auto bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border border-purple-100 dark:border-purple-800 p-6 md:flex items-center justify-between gap-6 relative overflow-hidden">
+        
+        {{-- Background decoration --}}
+        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        
+        <div class="flex items-start gap-4 mb-4 md:mb-0 relative z-10">
+            <div class="hidden sm:flex flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 rounded-xl items-center justify-center text-purple-600 dark:text-purple-400">
+                <i class="fas fa-cookie-bite text-2xl"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-900 dark:text-white text-lg mb-1 flex items-center gap-2">
+                    <i class="fas fa-cookie-bite sm:hidden text-purple-600"></i>
+                    Chúng tôi trân trọng quyền riêng tư của bạn
+                </h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Website sử dụng cookies để cải thiện trải nghiệm người dùng, phân tích lưu lượng truy cập và cá nhân hóa nội dung. Bằng cách nhấn "Chấp nhận", bạn đồng ý với việc lưu trữ cookies trên thiết bị của mình.
+                    <a href="{{ route('privacy') ?? '#' }}" class="text-purple-600 hover:text-purple-700 font-medium underline decoration-purple-300 underline-offset-2">Xem Chính sách bảo mật</a>.
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 flex-shrink-0 relative z-10">
+            <button @click="decline()" 
+                class="px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition">
+                Để sau
+            </button>
+            <button @click="accept()" 
+                class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-purple-500/30 rounded-xl transform hover:-translate-y-0.5 transition-all duration-200">
+                Chấp nhận tất cả
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 
 </html>

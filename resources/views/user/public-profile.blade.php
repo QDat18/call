@@ -72,9 +72,21 @@
                                 <i class="fas fa-ellipsis-h text-gray-700 dark:text-gray-300"></i>
                             </button>
                         @else
-                            <a href="{{ route('profile') }}" 
+                            @if (Auth::user()->user_type === 'Volunteer')
+                                <a href="{{ route('volunteer.profile.edit') }}" 
+                                   class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                    <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân
+                                </a>
+                            @elseif (Auth::user()->user_type === 'Organization')
+                                <a href="{{ route('organization.profile.edit') }}" 
+                                   class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
+                                    <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân
+                                </a>
+                            @endif
+                            
+                            {{-- <a href="{{ route('profile') }}" 
                                class="px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition flex items-center gap-2">
-                                <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân
+                                <i class="fas fa-pen"></i> Chỉnh sửa trang cá nhân --}}
                             </a>
                         @endif
                     @endauth
@@ -155,16 +167,43 @@
                 </div>
 
                 {{-- Photos Card (Placeholder) --}}
+{{-- Photos Card --}}
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xl font-bold text-gray-900 dark:text-white">Ảnh</h3>
                         <a href="#" class="text-blue-600 hover:underline text-sm font-semibold">Xem tất cả</a>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        @for($i = 0; $i < 9; $i++)
-                        <div class="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                        @endfor
-                    </div>
+                    
+                    {{-- Logic lấy 9 ảnh mới nhất từ bảng PostMedia của user này --}}
+                    @php
+                        $latestPhotos = \App\Models\PostMedia::whereHas('post', function($q) use ($user) {
+                                $q->where('user_id', $user->user_id)
+                                  ->where('status', 'published'); // Chỉ lấy ảnh từ bài công khai
+                            })
+                            ->where('file_type', 'image') // Chỉ lấy file ảnh
+                            ->latest()
+                            ->take(9)
+                            ->get();
+                    @endphp
+
+                    @if($latestPhotos->count() > 0)
+                        <div class="grid grid-cols-3 gap-2">
+                            @foreach($latestPhotos as $photo)
+                                <a href="{{ route('posts.show', $photo->post_id) }}" class="aspect-square block overflow-hidden rounded-lg group relative">
+                                    <img src="{{ asset('storage/' . $photo->file_path) }}" 
+                                         alt="Photo" 
+                                         class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                                    {{-- Overlay nhẹ khi hover --}}
+                                    <div class="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-images text-2xl mb-2 opacity-50"></i>
+                            <p class="text-sm">Chưa có ảnh nào</p>
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Activity Card --}}

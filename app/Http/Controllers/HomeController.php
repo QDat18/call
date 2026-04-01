@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\VolunteerOpportunity;
 use App\Models\User;
+use App\Models\VolunteerProfile;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -54,14 +55,18 @@ class HomeController extends Controller
             'projects_completed' => '500+',
             'communities_served' => '63',
         ];
-
+        $topVolunteers = VolunteerProfile::with('user')
+        ->orderByDesc('total_volunteer_hours') // Xếp theo giờ làm
+        ->take(3)
+        ->get();
         return view('pages.home', compact(
             'stats',
             'latestPosts',
             'featuredPost',
             'trendingPosts',
             'featuredOpportunities',
-            'impactStats'
+            'impactStats',
+            'topVolunteers'
         ));
     }
 }

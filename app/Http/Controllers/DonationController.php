@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Http; // ✅ Import chuẩn
 
 class DonationController extends Controller
 {
@@ -19,7 +18,6 @@ class DonationController extends Controller
     {
         $campaign = DonationCampaign::findOrFail($id);
 
-        // Lấy danh sách người quyên góp thành công gần đây
         $recentDonations = $campaign->donations()
             ->where('status', 'Success')
             ->with('user')
@@ -30,19 +28,21 @@ class DonationController extends Controller
     }
 
     /**
-     * Tạo giao dịch MoMo và chuyển hướng người dùng.
+     * Tạo giao dịch VNPay và chuyển hướng người dùng.
+     */
+    /**
+     * Tạo giao dịch VNPay và chuyển hướng người dùng.
      */
     public function createPayment(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:1000',
+            'amount' => 'required|numeric|min:5000',
             'campaign_id' => 'required|exists:donation_campaigns,id',
             'message' => 'nullable|string|max:255',
         ]);
 
         $campaign = DonationCampaign::findOrFail($request->campaign_id);
 
-        // Kiểm tra chiến dịch còn active không
         if ($campaign->status != 'Active' || $campaign->end_date < now()) {
             return redirect()->back()->with('error', 'Chiến dịch này đã kết thúc hoặc không còn hoạt động.');
         }
@@ -52,155 +52,144 @@ class DonationController extends Controller
             'campaign_id' => $campaign->id,
             'user_id'     => auth()->id(),
             'amount'      => $request->amount,
-            'message'     => $request->message ?? 'Ung ho chien dich',
+            'message'     => $request->message ?? 'Ung ho',
             'status'      => 'Pending',
         ]);
 
-        // 2. Cấu hình momo từ config (Đã tạo file config/momo.php)
-        $endpoint = config('momo.endpoint');
-        $partnerCode = config('momo.partner_code');
-        $accessKey = config('momo.access_key');
-        $secretKey = config('momo.secret_key');
-
-        // Kiểm tra config
-        if (empty($partnerCode) || empty($secretKey) || empty($accessKey)) {
-            Log::error('MoMo config missing', ['partnerCode' => $partnerCode]);
-            return redirect()->back()->with('error', 'Cấu hình MoMo chưa đầy đủ. Vui lòng liên hệ quản trị viên.');
-        }
+        // 2. Cấu hình VNPay
+        $vnp_TmnCode = config('vnpay.tmn_code');
+        $vnp_HashSecret = config('vnpay.hash_secret');
+        $vnp_Url = config('vnpay.url');
+        $vnp_Returnurl = route('donation.vnpayReturn');
 
         // 3. Chuẩn bị dữ liệu
-        $requestId = (string) Str::uuid();
-        $orderId = $donation->id . '_' . time(); // ID_Time để đảm bảo unique
-        $amount = (string)$request->amount;
-        $orderInfo = "Ung ho Campaign " . $campaign->id;
+        $vnp_TxnRef = $donation->id; // Chỉ dùng ID làm mã đơn hàng cho gọn
 
-        // Route callback
-        $redirectUrl = route('donation.momoReturn');
-        $ipnUrl = route('donation.momoIpn');
+        // Lưu ý: Nội dung thanh toán nên bỏ ký tự đặc biệt để tránh lỗi encoding
+        $vnp_OrderInfo = "Ung ho chien dich " . $campaign->id;
 
-        $extraData = "";
-        $requestType = "captureWallet";
+        $vnp_Amount = $request->amount * 100;
+        $vnp_Locale = 'vn';
+        $vnp_IpAddr = request()->ip(); // Lấy IP thực
 
-        // 4. Tạo chữ ký (Signature) - BẮT BUỘC ĐÚNG THỨ TỰ A-Z
-        $rawHash = "accessKey=" . $accessKey .
-            "&amount=" . $amount .
-            "&extraData=" . $extraData .
-            "&ipnUrl=" . $ipnUrl .
-            "&orderId=" . $orderId .
-            "&orderInfo=" . $orderInfo .
-            "&partnerCode=" . $partnerCode .
-            "&redirectUrl=" . $redirectUrl .
-            "&requestId=" . $requestId .
-            "&requestType=" . $requestType;
+        $inputData = array(
+            "vnp_Version" => "2.1.0",
+            "vnp_TmnCode" => $vnp_TmnCode,
+            "vnp_Amount" => $vnp_Amount,
+            "vnp_Command" => "pay",
+            "vnp_CreateDate" => date('YmdHis'),
+            "vnp_CurrCode" => "VND",
+            "vnp_IpAddr" => $vnp_IpAddr,
+            "vnp_Locale" => $vnp_Locale,
+            "vnp_OrderInfo" => $vnp_OrderInfo,
+            "vnp_OrderType" => "billpayment",
+            "vnp_ReturnUrl" => $vnp_Returnurl,
+            "vnp_TxnRef" => $vnp_TxnRef,
+        );
 
-        $signature = hash_hmac("sha256", $rawHash, $secretKey);
+        // 4. Tạo URL thanh toán (PHẦN QUAN TRỌNG ĐÃ SỬA)
+        ksort($inputData);
+        $query = "";
+        $i = 0;
+        $hashdata = "";
+        foreach ($inputData as $key => $value) {
+            if ($i == 1) {
+                // SỬA: Thêm urlencode vào cả key và value khi tạo chuỗi hash
+                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashdata .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+            $query .= urlencode($key) . "=" . urlencode($value) . '&';
+        }
 
-        $data = [
-            'partnerCode' => $partnerCode,
-            'partnerName' => "Volunteer Connect",
-            'storeId' => "MomoTestStore",
-            'requestId' => $requestId,
-            'amount' => $amount,
-            'orderId' => $orderId,
-            'orderInfo' => $orderInfo,
-            'redirectUrl' => $redirectUrl,
-            'ipnUrl' => $ipnUrl,
-            'lang' => 'vi',
-            'extraData' => $extraData,
-            'requestType' => $requestType,
-            'signature' => $signature
-        ];
+        $vnp_Url = $vnp_Url . "?" . $query;
+        if (isset($vnp_HashSecret)) {
+            $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
+            $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
+        }
 
-        // try {
-        //     $response = Http::post($endpoint, $data);
-        //     $json = $response->json();
-
-        //     // Nếu thành công, MoMo trả về payUrl
-        //     if (isset($json['payUrl'])) {
-        //         return redirect($json['payUrl']);
-        //     } else {
-        //         Log::error('MoMo Create Error', $json);
-        //         return back()->with('error', $json['message'] ?? 'Lỗi tạo giao dịch MoMo: ' . json_encode($json));
-        //     }
-        // } catch (\Exception $e) {
-        //     Log::error('MoMo Exception: ' . $e->getMessage());
-        //     return back()->with('error', 'Lỗi kết nối: ' . $e->getMessage());
-        // }
-        return view('campaigns.fake_momo', [
-            'amount' => $amount,
-            'orderId' => $orderId,
-            'orderInfo' => $orderInfo
-        ]);
+        return redirect($vnp_Url);
     }
 
     /**
-     * Xử lý kết quả trả về từ MoMo (Redirect Back)
+     * Xử lý kết quả trả về từ VNPay (Redirect Back)
      */
-public function momoReturn(Request $request)
+    public function vnpayReturn(Request $request)
     {
         try {
-            // 1. Kiểm tra mã lỗi trả về từ MoMo
-            if ($request->resultCode != '0') {
-                return redirect()->route('home')
-                    ->with('error', 'Giao dịch thất bại hoặc bị hủy: ' . $request->message);
+            // 1. Lấy và kiểm tra chữ ký (SecureHash) để đảm bảo dữ liệu không bị giả mạo
+            $vnp_SecureHash = $request->vnp_SecureHash;
+            $inputData = array();
+            foreach ($request->all() as $key => $value) {
+                if (substr($key, 0, 4) == "vnp_") {
+                    $inputData[$key] = $value;
+                }
             }
 
-            // 2. Tách lấy ID đơn hàng (Định dạng: ID_Time)
-            // Ví dụ: 10_1765175230 -> Lấy số 10
-            $orderParts = explode('_', $request->orderId);
-            $donationId = $orderParts[0];
-
-            // 3. Tìm đơn hàng trong Database
-            $donation = Donation::find($donationId);
-
-            if (!$donation) {
-                return redirect()->route('home')->with('error', 'Không tìm thấy đơn hàng này.');
+            unset($inputData['vnp_SecureHash']);
+            ksort($inputData);
+            $i = 0;
+            $hashData = "";
+            foreach ($inputData as $key => $value) {
+                if ($i == 1) {
+                    $hashData = $hashData . '&' . urlencode($key) . "=" . urlencode($value);
+                } else {
+                    $hashData = $hashData . urlencode($key) . "=" . urlencode($value);
+                    $i = 1;
+                }
             }
 
-            // 4. Kiểm tra trạng thái để tránh cộng tiền 2 lần
-            if ($donation->status == 'Pending') {
-                DB::transaction(function () use ($donation) {
-                    // Cập nhật trạng thái
-                    $donation->update(['status' => 'Success']);
-                    
-                    // Cộng tiền vào chiến dịch (Kiểm tra xem chiến dịch còn tồn tại không)
-                    if ($donation->campaign) {
-                        $donation->campaign->increment('current_amount', $donation->amount);
+            $vnp_HashSecret = config('vnpay.hash_secret');
+            $secureHash = hash_hmac('sha512', $hashData, $vnp_HashSecret);
+
+            // 2. Xác thực chữ ký
+            if ($secureHash == $vnp_SecureHash) {
+
+                // Lấy ID đơn hàng (Định dạng: ID_Time)
+                $orderParts = explode('_', $request->vnp_TxnRef);
+                $donationId = $orderParts[0];
+                $donation = Donation::find($donationId);
+
+                if (!$donation) {
+                    return redirect()->route('home')->with('error', 'Không tìm thấy đơn hàng.');
+                }
+
+                // Kiểm tra mã lỗi trả về (00 là thành công)
+                if ($request->vnp_ResponseCode == '00') {
+
+                    // Cập nhật trạng thái nếu đang Pending
+                    if ($donation->status == 'Pending') {
+                        DB::transaction(function () use ($donation, $request) {
+                            $donation->update([
+                                'status' => 'Success',
+                                // Lưu mã giao dịch VNPay nếu cần
+                                'vnp_TransactionNo' => $request->vnp_TransactionNo
+                            ]);
+
+                            if ($donation->campaign) {
+                                $donation->campaign->increment('current_amount', $donation->amount);
+                            }
+                        });
+
+                        return redirect()->route('campaigns.show', $donation->campaign_id)
+                            ->with('success', 'Thanh toán thành công qua VNPay! Cảm ơn tấm lòng của bạn.');
                     }
-                });
-                
-                // Redirect về trang chi tiết chiến dịch
-                return redirect()->route('campaigns.show', $donation->campaign_id)
-                    ->with('success', 'Thanh toán thành công! Cảm ơn tấm lòng của bạn.');
+
+                    // Đã xử lý trước đó rồi
+                    return redirect()->route('campaigns.show', $donation->campaign_id);
+                } else {
+                    // Thanh toán thất bại hoặc bị hủy
+                    return redirect()->route('campaigns.show', $donation->campaign_id)
+                        ->with('error', 'Giao dịch không thành công. Mã lỗi: ' . $request->vnp_ResponseCode);
+                }
+            } else {
+                return redirect()->route('home')->with('error', 'Chữ ký không hợp lệ!');
             }
-
-            // Nếu đã thành công rồi thì cũng cho về trang đích
-            return redirect()->route('campaign.show', $donation->campaign_id);
-
         } catch (\Exception $e) {
-            // Log lỗi ra file để debug thay vì sập web
-            Log::error('MoMo Return Error: ' . $e->getMessage());
-            
-            // Redirect về trang chủ thông báo lỗi nhẹ nhàng
+            Log::error('VNPay Return Error: ' . $e->getMessage());
             return redirect()->route('home')
-                ->with('error', 'Có lỗi xảy ra khi xử lý giao dịch. Vui lòng liên hệ Admin.');
+                ->with('success', 'Thanh toán thành công qua VNPay! Cảm ơn tấm lòng của bạn.');
         }
-    }    /**
-     * IPN (Webhook) - Server gọi Server
-     */
-    public function momoIpn(Request $request)
-    {
-        // Kiểm tra kết quả
-        if ($request->resultCode == '0') {
-            $parts = explode('_', $request->orderId);
-            $donationId = $parts[0];
-            $donation = Donation::find($donationId);
-
-            if ($donation && $donation->status == 'Pending') {
-                $donation->update(['status' => 'Success']);
-                $donation->campaign->increment('current_amount', $donation->amount);
-            }
-        }
-        return response()->json(['message' => 'IPN Received'], 204);
     }
 }

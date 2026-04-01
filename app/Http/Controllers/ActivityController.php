@@ -5,9 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\VolunteerActivity;
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Models\VolunteerProfile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Models\VolunteerOpportunity;
 
 class ActivityController extends Controller
 {
@@ -32,8 +38,8 @@ class ActivityController extends Controller
         if ($request->search) {
             $query->whereHas('volunteer', function ($q) use ($request) {
                 $q->where('first_name', 'like', "%{$request->search}%")
-                  ->orWhere('last_name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%");
+                    ->orWhere('last_name', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%");
             });
         }
 
@@ -59,8 +65,12 @@ class ActivityController extends Controller
         $activities = $query->latest('activity_date')->paginate(15);
 
         // Get organization's opportunities for filter
-        $opportunities = $organization->opportunities()->get();
-
+        $opportunities = $organization->opportunities()->where('status', '!=', 'Cancelled')->get();
+        $volunteers = User::whereHas('applications', function ($q) use ($organization) {
+            $q->whereHas('opportunity', function ($oq) use ($organization) {
+                $oq->where('org_id', $organization->org_id);
+            })->where('status', 'Accepted');
+        })->select('user_id', 'first_name', 'last_name', 'email')->get();
         // Statistics
         $stats = [
             'total_hours' => VolunteerActivity::where('org_id', $organization->org_id)
@@ -77,7 +87,96 @@ class ActivityController extends Controller
                 ->count(),
         ];
 
-        return view('organization.activities.index', compact('activities', 'opportunities', 'stats'));
+        return view('organization.activities.index', compact('activities', 'opportunities', 'stats', 'volunteers'));
+    }
+
+
+    public function logHours(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user->isOrganization()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'volunteer_id' => 'required|exists:users,user_id',
+            'opportunity_id' => 'required|exists:volunteer_opportunities,opportunity_id',
+            'activity_date' => 'required|date|before_or_equal:today',
+            'hours_worked' => 'required|numeric|min:0.5|max:24',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+            $organization = $user->organization;
+
+            // 1. Kiểm tra Opportunity có thuộc về Org này không
+            $opportunity = \App\Models\VolunteerOpportunity::where('opportunity_id', $request->opportunity_id)
+                ->where('org_id', $organization->org_id)
+                ->firstOrFail();
+
+            // 2. Kiểm tra xem Volunteer này có Application Accepted cho Opportunity này không (Optional - tùy policy của bạn)
+            // Nếu muốn chặt chẽ:
+            $hasApplication = \App\Models\Application::where('volunteer_id', $request->volunteer_id)
+                ->where('opportunity_id', $request->opportunity_id)
+                ->where('status', 'Accepted')
+                ->exists();
+
+            if (!$hasApplication) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This volunteer is not an accepted participant for this opportunity.'
+                ], 400);
+            }
+
+            // 3. Tạo Activity với status = Verified (Vì Org tự tạo)
+            $activity = VolunteerActivity::create([
+                'volunteer_id' => $request->volunteer_id,
+                'opportunity_id' => $request->opportunity_id,
+                'org_id' => $organization->org_id,
+                'activity_date' => $request->activity_date,
+                'hours_worked' => $request->hours_worked,
+                'activity_description' => $request->description ?? 'Logged by Organization',
+                'status' => 'Verified', // Auto verified
+                'verified_by' => $user->user_id,
+                'verified_date' => now(),
+            ]);
+
+            // 4. Cộng dồn giờ cho Volunteer
+            $volunteerProfile = VolunteerProfile::where('user_id', $request->volunteer_id)->first();
+            if ($volunteerProfile) {
+                $volunteerProfile->increment('total_volunteer_hours', $request->hours_worked);
+            }
+
+            // 5. Gửi thông báo cho Volunteer
+            Notification::create([
+                'user_id' => $request->volunteer_id,
+                'notification_type' => 'System',
+                'title' => 'New Hours Logged 🕒',
+                'content' => "Organization {$organization->organization_name} logged {$request->hours_worked} hours for you regarding '{$opportunity->title}'.",
+                'related_id' => $activity->activity_id,
+                'related_type' => 'activity',
+                'priority' => 'medium',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hours logged and verified successfully.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -169,7 +268,7 @@ class ActivityController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to verify activity: ' . $e->getMessage()
@@ -371,8 +470,15 @@ class ActivityController extends Controller
 
             // CSV headers
             fputcsv($file, [
-                'ID', 'Volunteer Name', 'Email', 'Opportunity', 
-                'Date', 'Hours', 'Status', 'Verified By', 'Verified Date'
+                'ID',
+                'Volunteer Name',
+                'Email',
+                'Opportunity',
+                'Date',
+                'Hours',
+                'Status',
+                'Verified By',
+                'Verified Date'
             ]);
 
             foreach ($activities as $activity) {
@@ -393,6 +499,141 @@ class ActivityController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function downloadTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Header
+        $headers = ['Volunteer Email', 'Opportunity ID', 'Date (YYYY-MM-DD)', 'Hours', 'Description'];
+        $sheet->fromArray($headers, NULL, 'A1');
+
+        // Style Header
+        $sheet->getStyle('A1:E1')->getFont()->setBold(true);
+        foreach (range('A', 'E') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Dữ liệu mẫu (Example row)
+        $sheet->setCellValue('A2', 'volunteer@example.com');
+        $sheet->setCellValue('B2', '123');
+        $sheet->setCellValue('C2', date('Y-m-d'));
+        $sheet->setCellValue('D2', '4.5');
+        $sheet->setCellValue('E2', 'Support event logistics');
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'log_hours_template.xlsx');
+    }
+
+    /**
+     * Xử lý Import file Excel
+     */
+    public function import(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->isOrganization()) abort(403);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ]);
+
+        $file = $request->file('file');
+        $organization = $user->organization;
+
+        try {
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+
+            $successCount = 0;
+            $errors = [];
+
+            DB::beginTransaction();
+
+            foreach ($rows as $index => $row) {
+                if ($index === 0) continue; // Bỏ qua dòng Header
+
+                // Giả sử thứ tự cột: 0:Email, 1:OppID, 2:Date, 3:Hours, 4:Desc
+                $email = trim($row[0] ?? '');
+                $oppId = trim($row[1] ?? '');
+                $date = trim($row[2] ?? '');
+                $hours = floatval($row[3] ?? 0);
+                $desc = trim($row[4] ?? 'Logged via Excel Import');
+
+                if (empty($email) || empty($oppId)) continue; // Bỏ dòng trống
+
+                // 1. Tìm Volunteer
+                $volunteer = User::where('email', $email)->where('user_type', 'Volunteer')->first();
+                if (!$volunteer) {
+                    $errors[] = "Row " . ($index + 1) . ": Volunteer email '$email' not found.";
+                    continue;
+                }
+
+                // 2. Kiểm tra Opportunity (Phải thuộc về Org này)
+                $opportunity = VolunteerOpportunity::where('opportunity_id', $oppId)
+                    ->where('org_id', $organization->org_id)
+                    ->first();
+
+                if (!$opportunity) {
+                    $errors[] = "Row " . ($index + 1) . ": Opportunity ID '$oppId' invalid or not yours.";
+                    continue;
+                }
+
+                // 3. Tạo Activity
+                $activity = VolunteerActivity::create([
+                    'volunteer_id' => $volunteer->user_id,
+                    'opportunity_id' => $opportunity->opportunity_id,
+                    'org_id' => $organization->org_id,
+                    'activity_date' => date('Y-m-d', strtotime($date)),
+                    'hours_worked' => $hours,
+                    'activity_description' => $desc,
+                    'status' => 'Verified', // Auto verified
+                    'verified_by' => $user->user_id,
+                    'verified_date' => now(),
+                ]);
+
+                // 4. Cộng giờ
+                $profile = VolunteerProfile::where('user_id', $volunteer->user_id)->first();
+                if ($profile) {
+                    $profile->increment('total_volunteer_hours', $hours);
+                }
+
+                // 5. Notify
+                Notification::create([
+                    'user_id' => $volunteer->user_id,
+                    'notification_type' => 'System',
+                    'title' => 'Hours Logged (Bulk Import)',
+                    'content' => "Organization {$organization->organization_name} logged $hours hours via bulk import.",
+                    'related_id' => $activity->activity_id,
+                    'related_type' => 'activity',
+                ]);
+
+                $successCount++;
+            }
+
+            DB::commit();
+
+            if (count($errors) > 0) {
+                return response()->json([
+                    'success' => true, // Vẫn trả true để reload, nhưng hiện warning
+                    'message' => "Imported $successCount rows. Errors: " . implode(' | ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? '...' : ''),
+                    'warning' => true
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported $successCount activities."
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Import failed: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

@@ -3,7 +3,7 @@
 @section('title', 'Manage Volunteers')
 
 @section('content')
-{{-- Thêm viewMode vào x-data --}}
+{{-- Thêm biến kickModalOpen vào x-data --}}
 <div id="volunteers-manager-area" class="container mx-auto px-4 py-6" 
      x-data="{ 
         contactModalOpen: false, 
@@ -11,7 +11,10 @@
         contactName: '', 
         subject: '', 
         message: '',
-        viewMode: localStorage.getItem('volunteersViewMode') || 'grid' 
+        viewMode: localStorage.getItem('volunteersViewMode') || 'grid',
+        kickModalOpen: false,
+        kickId: null,
+        kickName: ''
      }"
      x-init="$watch('viewMode', val => localStorage.setItem('volunteersViewMode', val))">
     
@@ -53,8 +56,8 @@
         </div>
     </div>
 
+    {{-- Statistics Cards --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {{-- Stats Total --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -66,7 +69,6 @@
                 </div>
             </div>
         </div>
-        {{-- Stats Active --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -78,7 +80,6 @@
                 </div>
             </div>
         </div>
-        {{-- Stats Hours --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -90,7 +91,6 @@
                 </div>
             </div>
         </div>
-        {{-- Stats Rating --}}
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -104,6 +104,7 @@
         </div>
     </div>
 
+    {{-- Filter Form --}}
     <div class="bg-white rounded-lg shadow mb-6">
         <form method="GET" class="p-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -184,30 +185,6 @@
                     </div>
                     @endif
 
-                    {{-- Skills --}}
-                    @if($volunteer->volunteerProfile && !empty($volunteer->volunteerProfile->skills))
-                    <div class="mb-4 h-8 overflow-hidden">
-                        <div class="flex flex-wrap gap-1">
-                            @php
-                                $skills = $volunteer->volunteerProfile->skills;
-                                if (is_string($skills)) $skills = explode(',', $skills);
-                                elseif (!is_array($skills)) $skills = [];
-                            @endphp
-                            
-                            @foreach(array_slice($skills, 0, 3) as $skill)
-                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full border border-gray-200">
-                                {{ trim($skill) }}
-                            </span>
-                            @endforeach
-                            @if(count($skills) > 3)
-                            <span class="px-2 py-0.5 bg-gray-50 text-gray-400 text-xs rounded-full border border-gray-200">
-                                +{{ count($skills) - 3 }}
-                            </span>
-                            @endif
-                        </div>
-                    </div>
-                    @endif
-
                     {{-- Actions --}}
                     <div class="flex gap-2 mt-auto pt-2">
                         <a href="{{ route('organization.volunteers.show', $volunteer->user_id) }}" 
@@ -218,6 +195,12 @@
                                 class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition"
                                 title="Send Email">
                             <i class="fas fa-envelope"></i>
+                        </button>
+                        {{-- NÚT KICK --}}
+                        <button @click="kickModalOpen = true; kickId = {{ $volunteer->user_id }}; kickName = '{{ $volunteer->first_name }} {{ $volunteer->last_name }}'"
+                                class="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 text-sm rounded-lg transition"
+                                title="Remove Volunteer">
+                            <i class="fas fa-user-times"></i>
                         </button>
                     </div>
                 </div>
@@ -233,7 +216,6 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                             <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stats</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</th>
                             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -268,28 +250,18 @@
                                     <i class="fas fa-star"></i>
                                 </div>
                             </td>
-                            <td class="px-6 py-4">
-                                <div class="flex flex-wrap gap-1 max-w-xs">
-                                    @php
-                                        $skills = $volunteer->volunteerProfile->skills ?? [];
-                                        if (is_string($skills)) $skills = explode(',', $skills);
-                                        elseif (!is_array($skills)) $skills = [];
-                                    @endphp
-                                    @foreach(array_slice($skills, 0, 2) as $skill)
-                                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full border">{{ trim($skill) }}</span>
-                                    @endforeach
-                                    @if(count($skills) > 2)
-                                        <span class="text-xs text-gray-400">+{{ count($skills) - 2 }}</span>
-                                    @endif
-                                </div>
-                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <a href="{{ route('organization.volunteers.show', $volunteer->user_id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3" title="View Profile">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 <button @click="contactModalOpen = true; contactId = {{ $volunteer->user_id }}; contactName = '{{ $volunteer->first_name }} {{ $volunteer->last_name }}'" 
-                                        class="text-green-600 hover:text-green-900" title="Send Email">
+                                        class="text-green-600 hover:text-green-900 mr-3" title="Send Email">
                                     <i class="fas fa-envelope"></i>
+                                </button>
+                                {{-- NÚT KICK --}}
+                                <button @click="kickModalOpen = true; kickId = {{ $volunteer->user_id }}; kickName = '{{ $volunteer->first_name }} {{ $volunteer->last_name }}'" 
+                                        class="text-red-600 hover:text-red-900" title="Remove Volunteer">
+                                    <i class="fas fa-user-times"></i>
                                 </button>
                             </td>
                         </tr>
@@ -312,6 +284,7 @@
         @endif
     </div>
 
+    {{-- Contact Modal --}}
     <div x-show="contactModalOpen" 
          class="fixed inset-0 z-50 overflow-y-auto" 
          style="display: none;"
@@ -365,19 +338,62 @@
         </div>
     </div>
 
+    {{-- Kick Confirmation Modal --}}
+    <div x-show="kickModalOpen" 
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;"
+         x-cloak>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" @click="kickModalOpen = false">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                Remove <span x-text="kickName"></span>?
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Are you sure you want to remove this volunteer from your organization? 
+                                    This will cancel their active participation in your opportunities.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" 
+                            @click="removeVolunteer()"
+                            id="btn-confirm-kick"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                        Confirm Remove
+                    </button>
+                    <button type="button" 
+                            @click="kickModalOpen = false" 
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
     function sendEmail() {
-        // Lấy đúng container
         const container = document.getElementById('volunteers-manager-area');
-        
-        if (!container) {
-            console.error('Không tìm thấy container dữ liệu!');
-            return;
-        }
+        if (!container) return;
 
         const data = Alpine.$data(container);
 
@@ -421,6 +437,44 @@
         .finally(() => {
             btn.disabled = false;
             btn.innerHTML = originalText;
+        });
+    }
+
+    function removeVolunteer() {
+        const container = document.getElementById('volunteers-manager-area');
+        const data = Alpine.$data(container);
+        const btn = document.getElementById('btn-confirm-kick');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        // Gọi route remove (sử dụng route name trong blade hoặc hardcode nếu cần)
+        const url = `/organization/volunteers/${data.kickId}/remove`;
+
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if(result.success) {
+                showToast(result.message, 'success');
+                setTimeout(() => location.reload(), 1000); 
+            } else {
+                showToast(result.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error(error);
+            showToast('Something went wrong', 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = 'Confirm Remove';
+            data.kickModalOpen = false;
         });
     }
 </script>

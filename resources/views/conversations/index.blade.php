@@ -1,501 +1,525 @@
 @extends('layouts.app')
 
-@section('title', 'Messages')
+@section('title', 'Tin nhắn')
 
 @push('styles')
-<style>
-:root {
-    --primary-color: #6366f1;
-    --secondary-color: #8b5cf6;
-    --success-color: #10b981;
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
-    --dark-color: #1f2937;
-    --light-color: #f3f4f6;
-    --border-color: #e5e7eb;
-    --shadow: 0 1px 3px rgba(0,0,0,0.1);
-    --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
-}
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            /* Indigo 600 */
+            --primary-light: #e0e7ff;
+            --secondary-color: #8b5cf6;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --dark-color: #1f2937;
+            --light-color: #f3f4f6;
+            --border-color: #e5e7eb;
+            --text-muted: #6b7280;
+        }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+        body {
+            background-color: #f9fafb;
+            overflow-y: hidden;
+            /* Cố định body để scroll nội dung bên trong */
+        }
 
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f8fafc;
-}
+        /* Layout chính */
+        .messages-container {
+            height: calc(100vh - 65px);
+            /* Trừ header của layout app */
+            display: flex;
+            background: white;
+            max-width: 1600px;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
-.messages-container {
-    height: calc(100vh - 70px);
-    display: flex;
-    background: white;
-}
+        /* --- SIDEBAR --- */
+        .messages-sidebar {
+            width: 380px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            background: white;
+            flex-shrink: 0;
+        }
 
-/* Sidebar */
-.messages-sidebar {
-    width: 360px;
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    background: white;
-}
+        /* Sidebar Header: Title + Button tìm bạn */
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+        }
 
-.sidebar-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
 
-.sidebar-header h4 {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--dark-color);
-    margin-bottom: 15px;
-}
+        .header-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--dark-color);
+            margin: 0;
+        }
 
-.search-box {
-    position: relative;
-}
+        /* Nút "Tìm bạn mới" */
+        .btn-new-chat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
 
-.search-input {
-    width: 100%;
-    padding: 12px 40px 12px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 25px;
-    font-size: 14px;
-    transition: all 0.3s;
-    background: var(--light-color);
-}
+        .btn-new-chat:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
 
-.search-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
+        /* Search Box */
+        .search-box {
+            position: relative;
+        }
 
-.search-icon {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
-}
+        .search-input {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--light-color);
+            transition: all 0.2s;
+        }
 
-/* Conversations List */
-.conversations-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 0;
-}
+        .search-input:focus {
+            outline: none;
+            background: white;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+        }
 
-.conversation-item {
-    padding: 15px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-left: 3px solid transparent;
-    text-decoration: none;
-    color: inherit;
-}
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
 
-.conversation-item:hover {
-    background: var(--light-color);
-}
+        /* Danh sách hội thoại */
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
 
-.conversation-item.active {
-    background: #eef2ff;
-    border-left-color: var(--primary-color);
-}
+        .conversation-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+        }
 
-.conversation-item.unread {
-    background: #fef3c7;
-}
+        .conversation-item:hover {
+            background-color: #f3f4f6;
+        }
 
-.conversation-avatar {
-    position: relative;
-    flex-shrink: 0;
-}
+        .conversation-item.active {
+            background-color: #eef2ff;
+            /* Màu nền khi đang chọn */
+            border-color: #e0e7ff;
+        }
 
-.avatar-img {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-}
+        .conversation-item.unread {
+            background-color: #fffbeb;
+            /* Màu nền tin chưa đọc (vàng nhạt) */
+        }
 
-.online-badge {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 14px;
-    height: 14px;
-    background: var(--success-color);
-    border: 2px solid white;
-    border-radius: 50%;
-}
+        /* Avatar & Status */
+        .avatar-wrapper {
+            position: relative;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
 
-.offline-badge {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 14px;
-    height: 14px;
-    background: #9ca3af;
-    border: 2px solid white;
-    border-radius: 50%;
-}
+        .avatar-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
 
-.conversation-info {
-    flex: 1;
-    min-width: 0;
-}
+        .status-dot {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
 
-.conversation-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
+        .status-dot.online {
+            background-color: var(--success-color);
+        }
 
-.conversation-name {
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--dark-color);
-}
+        .status-dot.offline {
+            background-color: #9ca3af;
+        }
 
-.conversation-time {
-    font-size: 12px;
-    color: #6b7280;
-}
+        /* Nội dung item */
+        .conv-details {
+            flex: 1;
+            min-width: 0;
+            /* Quan trọng để text-overflow hoạt động */
+        }
 
-.conversation-status {
-    font-size: 11px;
-    margin-top: 2px;
-}
+        .conv-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
 
-.conversation-status.online {
-    color: var(--success-color);
-    font-weight: 500;
-}
+        .conv-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--dark-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-.conversation-status.offline {
-    color: #6b7280;
-}
+        .conv-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
 
-.conversation-last-message {
-    font-size: 14px;
-    color: #6b7280;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+        .conv-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.conversation-item.unread .conversation-name,
-.conversation-item.unread .conversation-last-message {
-    font-weight: 600;
-    color: var(--dark-color);
-}
+        .conv-message {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 85%;
+        }
 
-.unread-badge {
-    background: var(--primary-color);
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin-left: auto;
-}
+        /* Style cho tin chưa đọc */
+        .conversation-item.unread .conv-name {
+            color: black;
+            font-weight: 700;
+        }
 
-/* Empty State */
-.empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-    text-align: center;
-}
+        .conversation-item.unread .conv-message {
+            color: var(--dark-color);
+            font-weight: 600;
+        }
 
-.empty-icon {
-    width: 120px;
-    height: 120px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-}
+        .badge-unread {
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
 
-.empty-icon i {
-    font-size: 48px;
-    color: white;
-}
+        /* --- MAIN CONTENT (Placeholder) --- */
+        .messages-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
 
-.empty-state h4 {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--dark-color);
-    margin-bottom: 10px;
-}
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            animation: fadeIn 0.5s ease-out;
+        }
 
-.empty-state p {
-    font-size: 15px;
-    color: #6b7280;
-    margin-bottom: 20px;
-}
+        .empty-icon-circle {
+            width: 100px;
+            height: 100px;
+            background-color: #e0e7ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 25px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
+        .empty-icon-circle i {
+            font-size: 40px;
+            color: var(--primary-color);
+        }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
+        .empty-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
 
-/* Main Content */
-.messages-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: #fafafa;
-}
+        .empty-desc {
+            color: var(--text-muted);
+            max-width: 400px;
+            margin: 0 auto 25px;
+            line-height: 1.5;
+        }
 
-.content-placeholder {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-}
+        .btn-find-friends {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+        }
 
-.content-placeholder i {
-    font-size: 64px;
-    opacity: 0.3;
-}
+        .btn-find-friends:hover {
+            background-color: #4338ca;
+            /* Indigo 700 */
+            transform: translateY(-1px);
+        }
 
-/* Scrollbar */
-.conversations-list::-webkit-scrollbar {
-    width: 6px;
-}
+        /* Scrollbar đẹp */
+        .conversations-list::-webkit-scrollbar {
+            width: 5px;
+        }
 
-.conversations-list::-webkit-scrollbar-track {
-    background: transparent;
-}
+        .conversations-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-.conversations-list::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 3px;
-}
+        .conversations-list::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
 
-.conversations-list::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-}
+        .conversations-list::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .messages-sidebar {
-        width: 100%;
-    }
-    
-    .messages-content {
-        display: none;
-    }
-}
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
 
-/* Animation */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-.conversation-item {
-    animation: fadeIn 0.3s ease-out;
-}
-</style>
+        /* Responsive */
+        @media (max-width: 768px) {
+            .messages-sidebar {
+                width: 100%;
+                border-right: none;
+            }
+
+            .messages-content {
+                display: none;
+            }
+
+            /* Ẩn phần nội dung trên mobile khi đang xem list */
+        }
+    </style>
 @endpush
 
 @section('content')
-<div class="messages-container">
-    <!-- Left Sidebar -->
-    <div class="messages-sidebar">
-        <div class="sidebar-header">
-            <h4><i class="fas fa-comments"></i> Messages</h4>
-            <div class="search-box">
-                <input 
-                    type="text" 
-                    class="search-input" 
-                    placeholder="Search conversations..."
-                    id="search-conversations">
-                <i class="fas fa-search search-icon"></i>
-            </div>
-        </div>
-        
-        <!-- Conversations List -->
-        <div class="conversations-list" id="conversations-list">
-            @forelse($conversations as $conversation)
-                @php
-                    // Get other participant
-                    $otherParticipant = $conversation->participants
-                        ->where('user_id', '!=', auth()->id())
-                        ->first();
-                    
-                    $otherUser = $otherParticipant ? $otherParticipant->user : null;
-                    
-                    // Get last message
-                    $lastMessage = $conversation->messages->first();
-                    
-                    // Check unread
-                    $myParticipant = $conversation->participants
-                        ->where('user_id', auth()->id())
-                        ->first();
-                    
-                    $unreadCount = $myParticipant ? $myParticipant->unread_count : 0;
-                @endphp
-                
-                @if($otherUser)
-                    <a href="{{ route('conversations.show', $conversation->conversation_id) }}" 
-                       class="conversation-item {{ $unreadCount > 0 ? 'unread' : '' }}"
-                       data-conversation-id="{{ $conversation->conversation_id }}">
-                        <div class="conversation-avatar">
-                            <img src="{{ $otherUser->avatar_url ?? asset('images/default-avatar.png') }}" 
-                                 alt="{{ $otherUser->first_name }}" 
-                                 class="avatar-img">
-                            @if($otherUser->is_online)
-                                <span class="online-badge" title="Online"></span>
-                            @else
-                                <span class="offline-badge" title="Offline"></span>
-                            @endif
-                        </div>
-                        
-                        <div class="conversation-info">
-                            <div class="conversation-header">
-                                <span class="conversation-name">
-                                    {{ $otherUser->first_name }} {{ $otherUser->last_name }}
-                                </span>
-                                @if($lastMessage)
-                                    <span class="conversation-time">
-                                        {{ $lastMessage->sent_at->diffForHumans(null, true) }}
-                                    </span>
-                                @endif
-                            </div>
-                            
-                            {{-- Hiển thị trạng thái online/offline --}}
-                            <div class="conversation-status {{ $otherUser->is_online ? 'online' : 'offline' }}">
-                                {{ $otherUser->last_activity_text }}
-                            </div>
-                            
-                            <div class="conversation-last-message">
-                                @if($lastMessage)
-                                    @if($lastMessage->sender_id === auth()->id())
-                                        <span>You: </span>
-                                    @endif
-                                    @if($lastMessage->message_type === 'text')
-                                        {{ Str::limit($lastMessage->content, 50) }}
-                                    @elseif($lastMessage->message_type === 'image')
-                                        <i class="fas fa-image"></i> Photo
-                                    @elseif($lastMessage->message_type === 'file')
-                                        <i class="fas fa-file"></i> File
-                                    @elseif($lastMessage->message_type === 'video')
-                                        <i class="fas fa-video"></i> Video
-                                    @endif
-                                @else
-                                    <span class="text-muted">No messages yet</span>
-                                @endif
-                            </div>
-                        </div>
-                        
-                        @if($unreadCount > 0)
-                            <span class="unread-badge">{{ $unreadCount }}</span>
-                        @endif
-                    </a>
-                @endif
-            @empty
-                <!-- Empty State in Sidebar -->
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <h4>No messages yet</h4>
-                    <p>Start a conversation with your friends!</p>
-                    <a href="{{ route('connections.index') }}" class="btn-primary">
-                        <i class="fas fa-user-friends"></i> Find Friends
-                    </a>
-                </div>
-            @endforelse
-        </div>
-    </div>
+    <div class="messages-container">
 
-    <!-- Main Content -->
-    <div class="messages-content">
-        <div class="content-placeholder">
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <i class="fas fa-comments"></i>
+        {{-- SIDEBAR --}}
+        <div class="messages-sidebar">
+            {{-- Header: Tiêu đề + Nút Tìm Bạn --}}
+            <div class="sidebar-header">
+                <div class="header-top">
+                    <h1 class="header-title">Đoạn chat</h1>
+                    {{-- Nút Liên kết sang trang Connections --}}
+                    <a href="{{ route('connections.index') }}" class="btn-new-chat" title="Tìm bạn mới">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Kết nối mới</span>
+                    </a>
                 </div>
-                <h4>Select a conversation</h4>
-                <p>Choose a conversation from the list to start messaging</p>
+
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Tìm kiếm cuộc trò chuyện..."
+                        id="search-conversations">
+                </div>
+            </div>
+
+            {{-- List Conversation --}}
+            <div class="conversations-list" id="conversations-list">
+                @forelse($conversations as $conversation)
+                    @php
+                        // Logic lấy người chat cùng
+                        $otherParticipant = $conversation->participants->where('user_id', '!=', auth()->id())->first();
+                        $otherUser = $otherParticipant ? $otherParticipant->user : null;
+
+                        // Logic tin nhắn cuối
+                        $lastMessage = $conversation->messages->first();
+
+                        // Logic unread
+                        $myParticipant = $conversation->participants->where('user_id', auth()->id())->first();
+                        $unreadCount = $myParticipant ? $myParticipant->unread_count : 0;
+
+                        // Avatar Helper (dùng asset nếu cần)
+                        $avatarUrl = asset('images/default-avatar.png'); // Mặc định
+
+                        if ($otherUser && $otherUser->avatar_url) {
+                            // 1. Nếu là link online (http/https)
+                            if (Str::startsWith($otherUser->avatar_url, ['http://', 'https://'])) {
+                                $avatarUrl = $otherUser->avatar_url;
+                            }
+                            // 2. Nếu là file local
+                            else {
+                                // Kiểm tra xem đã có chữ 'storage/' ở đầu chưa
+                                $path = Str::startsWith($otherUser->avatar_url, 'storage/')
+                                    ? $otherUser->avatar_url
+                                    : 'storage/' . $otherUser->avatar_url;
+
+                                $avatarUrl = asset($path);
+                            }
+                        }
+                    @endphp
+
+                    @if($otherUser)
+                        <a href="{{ route('conversations.show', $conversation->conversation_id) }}"
+                            class="conversation-item {{ $unreadCount > 0 ? 'unread' : '' }}"
+                            data-search-name="{{ strtolower($otherUser->first_name . ' ' . $otherUser->last_name) }}">
+
+                            <div class="avatar-wrapper">
+                                <img src="{{ $avatarUrl }}" alt="Avatar" class="avatar-img">
+                                <span class="status-dot {{ $otherUser->is_online ? 'online' : 'offline' }}"></span>
+                            </div>
+
+                            <div class="conv-details">
+                                <div class="conv-top">
+                                    <span class="conv-name">{{ $otherUser->first_name }} {{ $otherUser->last_name }}</span>
+                                    @if($lastMessage)
+                                        <span class="conv-time">{{ $lastMessage->sent_at->diffForHumans(null, true) }}</span>
+                                    @endif
+                                </div>
+
+                                <div class="conv-bottom">
+                                    <div class="conv-message">
+                                        @if($lastMessage)
+                                            @if($lastMessage->sender_id === auth()->id())
+                                                <span style="font-weight: normal; color: #6b7280;">Bạn:</span>
+                                            @endif
+
+                                            @if($lastMessage->is_deleted)
+                                                <span style="font-style: italic;">Tin nhắn đã thu hồi</span>
+                                            @elseif($lastMessage->message_type === 'image')
+                                                <span><i class="fas fa-image"></i> Hình ảnh</span>
+                                            @elseif($lastMessage->message_type === 'file')
+                                                <span><i class="fas fa-file"></i> Tệp tin</span>
+                                            @else
+                                                {{ Str::limit($lastMessage->content, 35) }}
+                                            @endif
+                                        @else
+                                            <span>Bắt đầu cuộc trò chuyện ngay!</span>
+                                        @endif
+                                    </div>
+
+                                    @if($unreadCount > 0)
+                                        <span class="badge-unread">{{ $unreadCount }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </a>
+                    @endif
+                @empty
+                    {{-- Empty state trong Sidebar nếu chưa có chat nào --}}
+                    <div class="text-center py-8 px-4">
+                        <p class="text-gray-500 text-sm mb-4">Bạn chưa có cuộc trò chuyện nào.</p>
+                        <a href="{{ route('connections.index') }}"
+                            class="text-indigo-600 font-semibold text-sm hover:underline">
+                            Tìm bạn bè ngay
+                        </a>
+                    </div>
+                @endforelse
             </div>
         </div>
+
+        {{-- MAIN CONTENT (Placeholder khi chưa chọn chat) --}}
+        <div class="messages-content">
+            <div class="empty-state">
+                <div class="empty-icon-circle">
+                    <i class="far fa-comments"></i>
+                </div>
+                <h2 class="empty-title">Chào mừng đến với Chat!</h2>
+                <p class="empty-desc">
+                    Chọn một cuộc trò chuyện từ danh sách bên trái hoặc kết nối với bạn bè mới để bắt đầu nhắn tin.
+                </p>
+                <a href="{{ route('connections.index') }}" class="btn-find-friends">
+                    <i class="fas fa-user-plus"></i>
+                    Tìm bạn bè mới
+                </a>
+            </div>
+        </div>
+
     </div>
-</div>
 @endsection
 
 @push('scripts')
-<script>
-// Search conversations
-document.getElementById('search-conversations').addEventListener('input', function(e) {
-    const query = e.target.value.toLowerCase();
-    const conversations = document.querySelectorAll('.conversation-item');
-    
-    conversations.forEach(conv => {
-        const name = conv.querySelector('.conversation-name').textContent.toLowerCase();
-        const message = conv.querySelector('.conversation-last-message').textContent.toLowerCase();
-        
-        if (name.includes(query) || message.includes(query)) {
-            conv.style.display = 'flex';
-        } else {
-            conv.style.display = 'none';
-        }
-    });
-});
+    <script>
+        // Xử lý tìm kiếm trong danh sách (Client-side search)
+        document.getElementById('search-conversations').addEventListener('input', function (e) {
+            const query = e.target.value.toLowerCase().trim();
+            const items = document.querySelectorAll('.conversation-item');
 
-// Real-time updates (if using Echo)
-@if(config('broadcasting.default') !== 'null')
-if (window.Echo) {
-    window.Echo.private('user.{{ auth()->id() }}')
-        .listen('.message.sent', (data) => {
-            // Update conversation list
-            console.log('New message received:', data);
-            // Reload or update dynamically
-            location.reload();
+            items.forEach(item => {
+                // Tìm theo tên (được lưu trong data-attribute)
+                const name = item.getAttribute('data-search-name');
+                // Tìm theo nội dung tin nhắn mới nhất
+                const msg = item.querySelector('.conv-message').textContent.toLowerCase();
+
+                if (name.includes(query) || msg.includes(query)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
         });
-}
-@endif
-</script>
+    </script>
 @endpush

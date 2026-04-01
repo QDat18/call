@@ -39,6 +39,7 @@ use App\Http\Controllers\Admin\ActivityVerificationController;
 use App\Http\Controllers\Admin\ReportGenerationController;
 use App\Http\Controllers\MapController;
 use App\Models\VnLocation;
+use App\Http\Controllers\LeaderboardController;
 /*
 |--------------------------------------------------------------------------
 | Broadcast Routes - MUST BE FIRST
@@ -93,7 +94,7 @@ Route::get('/privacy', function () {
 Route::get('/term', function () {
     return view('pages.term');
 })->name('terms');
-
+Route::get('/leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard.index');
 Route::get('/upgrade', function () {
     return view('pages.upgrade');
 })->name('upgrade');
@@ -237,8 +238,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/{id}/add-participants', [ConversationController::class, 'addParticipants'])->name('add-participants');
         Route::post('/{id}/leave', [ConversationController::class, 'leave'])->name('leave');
         Route::post('/{id}/archive', [ConversationController::class, 'archive'])->name('archive');
+        Route::post('/{id}/unarchive', [ConversationController::class, 'unarchive'])->name('unarchive');
     });
 
+    // Messages
     Route::get('/conversations/{conversationId}/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/conversations/{conversationId}/messages', [MessageController::class, 'send'])->name('messages.send');
     Route::post('/conversations/{conversationId}/messages/read', [MessageController::class, 'markRead'])->name('messages.read');
@@ -246,20 +249,49 @@ Route::middleware('auth')->group(function () {
     Route::delete('/conversations/{conversationId}/messages/{messageId}', [MessageController::class, 'destroy'])->name('messages.destroy');
     Route::get('/conversations/{conversationId}/messages/latest', [MessageController::class, 'getLatest'])->name('messages.latest');
     Route::get('/messages/unread-count', [MessageController::class, 'getUnreadCount'])->name('messages.unread-count');
+    Route::get('/conversations/{conversationId}/messages/updates', [MessageController::class, 'checkUpdates'])
+        ->name('messages.updates');
+
+    // Message Actions (New routes for delete, recall, react)
+    Route::post('/conversations/messages/{messageId}/delete', [ConversationController::class, 'deleteMessage'])->name('messages.delete');
+    Route::post('/conversations/messages/{messageId}/recall', [ConversationController::class, 'recallMessage'])->name('messages.recall');
+    Route::post('/conversations/messages/{messageId}/react', [ConversationController::class, 'reactMessage'])->name('messages.react');
+
 
     // Connections (Friends)
-    Route::prefix('connections')->name('connections.')->group(function () {
-        Route::get('/', [ConnectionController::class, 'index'])->name('index');
-        Route::get('/search', [ConnectionController::class, 'searchUsers'])->name('search');
-        Route::post('/send-request', [ConnectionController::class, 'sendRequest'])->name('send-request');
-        Route::post('/{id}/accept', [ConnectionController::class, 'acceptRequest'])->name('accept');
-        Route::post('/{id}/decline', [ConnectionController::class, 'declineRequest'])->name('decline');
-        Route::delete('/{id}/remove', [ConnectionController::class, 'removeFriend'])->name('remove');
-        Route::post('/{id}/block', [ConnectionController::class, 'blockUser'])->name('block');
-        Route::post('/{id}/unblock', [ConnectionController::class, 'unblockUser'])->name('unblock');
-        Route::get('/{userId}/status', [ConnectionController::class, 'getConnectionStatus'])->name('status');
-    });
+    Route::middleware(['auth'])->group(function () {
 
+        // Tạo nhóm route bắt đầu bằng /connections
+        Route::prefix('connections')->name('connections.')->group(function () {
+
+            // URL: /connections
+            Route::get('/', [ConnectionController::class, 'index'])->name('index');
+
+            // URL: /connections/search
+            Route::get('/search', [ConnectionController::class, 'searchUsers'])->name('search');
+
+            // URL: /connections/send-request
+            Route::post('/send-request', [ConnectionController::class, 'sendRequest'])->name('send-request');
+
+            // URL: /connections/{id}/accept
+            Route::post('/{id}/accept', [ConnectionController::class, 'acceptRequest'])->name('accept');
+
+            // URL: /connections/{id}/decline
+            Route::post('/{id}/decline', [ConnectionController::class, 'declineRequest'])->name('decline');
+
+            // URL: /connections/{id}/remove  <-- Sửa lỗi 404 của bạn ở đây
+            Route::delete('/{id}/remove', [ConnectionController::class, 'removeFriend'])->name('remove');
+
+            // URL: /connections/{id}/block
+            Route::post('/{id}/block', [ConnectionController::class, 'blockUser'])->name('block');
+
+            // URL: /connections/{id}/unblock
+            Route::post('/{id}/unblock', [ConnectionController::class, 'unblockUser'])->name('unblock');
+
+            // URL: /connections/{userId}/status
+            Route::get('/{userId}/status', [ConnectionController::class, 'getConnectionStatus'])->name('status');
+        });
+    });
     // Video Calls
     Route::prefix('video-calls')->name('video-calls.')->group(function () {
         Route::get('/', [VideoCallController::class, 'index'])->name('index');
@@ -430,8 +462,10 @@ Route::middleware(['auth', \App\Http\Middleware\OrganizationMiddleware::class])
         // Activities (Hoạt động/Giờ làm)
         Route::prefix('activities')->name('activities.')->group(function () {
             Route::get('/', [ActivityController::class, 'organizationIndex'])->name('index');
+            Route::get('/import/template', [ActivityController::class, 'downloadTemplate'])->name('import.template');
+            Route::post('/import', [ActivityController::class, 'import'])->name('import');
             Route::get('/{id}', [ActivityController::class, 'show'])->name('show');
-
+            Route::post('/log', [ActivityController::class, 'logHours'])->name('log');
             // Xác minh
             Route::post('/{id}/verify', [ActivityController::class, 'verify'])->name('verify');
             Route::post('/{id}/dispute', [ActivityController::class, 'dispute'])->name('dispute');
@@ -444,7 +478,7 @@ Route::middleware(['auth', \App\Http\Middleware\OrganizationMiddleware::class])
         Route::get('/volunteers', [OrganizationController::class, 'volunteers'])->name('volunteers.index');
         Route::get('/volunteers/export', [OrganizationController::class, 'exportVolunteers'])->name('volunteers.export');
         Route::get('/volunteers/{id}', [OrganizationController::class, 'showVolunteer'])->name('volunteers.show');
-
+        Route::delete('/volunteers/{id}/remove', [\App\Http\Controllers\VolunteerController::class, 'remove'])->name('volunteers.remove');
 
         // Route Contact
         Route::post('/volunteers/contact', [OrganizationController::class, 'contactVolunteer'])->name('volunteers.contact');
@@ -805,20 +839,12 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    // 1. Route tạo thanh toán
-    // Lưu ý: Đổi tên route thành 'donation.createMomo' để khớp với View show.blade.php
+    // 1. Route tạo thanh toán (Giữ nguyên tên route để không phải sửa View)
     Route::post('/donation/create', [DonationController::class, 'createPayment'])->name('donation.createPayment');
-
-    // 2. Route Fake Gateway (Nếu dùng giả lập)
-    Route::get('/payment/fake-momo', [DonationController::class, 'fakeMomoGateway'])->name('payment.fakeMomo');
 });
 
-// 3. Route Return URL (Người dùng quay về từ MoMo)
-Route::get('/donation/momo', [DonationController::class, 'momoReturn'])->name('donation.momoReturn');
-
-// 4. [QUAN TRỌNG] Route IPN - Đây là cái thiếu gây lỗi 500
-Route::get('/donation/momo-ipn', [DonationController::class, 'momoIpn'])->name('donation.momoIpn');
-
+// 2. Route Return URL (Người dùng quay về từ VnPay)
+Route::get('/donation/vnpay-return', [DonationController::class, 'vnpayReturn'])->name('donation.vnpayReturn');
 Route::get('/api/locations/provinces', function () {
     // Lấy những bản ghi không có cha (parent_code là NULL)
     // Hoặc lọc theo level='tinh' hoặc 'thanh-pho' nếu data có parent_code null

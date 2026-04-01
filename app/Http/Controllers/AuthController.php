@@ -8,7 +8,8 @@ use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password;
+// use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,8 @@ use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\VerificationEmail;
 use Exception;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -67,7 +70,14 @@ class AuthController extends Controller
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
             'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols()
+            ],
             'phone' => 'required|string|max:15|unique:users',
             'date_of_birth' => 'required|date|before:-16 years',
             'gender' => 'required|in:Male,Female,Other',
@@ -222,7 +232,14 @@ class AuthController extends Controller
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
             'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols() // Tự động chấp nhận TẤT CẢ ký tự đặc biệt
+            ],
             'phone' => 'required|string|max:15|unique:users',
             'city' => 'required|string|max:50',
             'district' => 'required|string|max:50',
@@ -367,6 +384,7 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        // 1. Validate Input
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
@@ -382,52 +400,70 @@ class AuthController extends Controller
                 ->withInput($request->only('email', 'remember'));
         }
 
-        // Check if user exists
+        // Key dùng để chặn spam request (theo IP + Email) - Chặn tạm thời 1 phút
+        $throttleKey = Str::transliterate(Str::lower($request->input('email'))) . '|' . $request->ip();
+
+        // 2. KIỂM TRA RATE LIMIT (Chặn tạm thời nếu spam quá nhanh)
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            return redirect()->back()
+                ->with('error', 'Bạn thao tác quá nhanh. Vui lòng thử lại sau ' . $seconds . ' giây.')
+                ->withInput($request->only('email', 'remember'));
+        }
+
+        // 3. Tìm user để kiểm tra
         $user = User::where('email', $request->email)->first();
 
+        // Nếu không có user thì báo lỗi luôn (không cần lock vì tk không tồn tại)
         if (!$user) {
+            RateLimiter::hit($throttleKey); // Tăng bộ đếm spam IP
             return redirect()->back()
                 ->with('error', 'Không tìm thấy tài khoản với email này.')
                 ->withInput($request->only('email', 'remember'));
         }
 
+        // 4. Kiểm tra user có đang bị khóa không
         if (!$user->is_active) {
             return redirect()->back()
                 ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.')
                 ->withInput($request->only('email', 'remember'));
         }
 
-        // Attempt login
+        // --- CẤU HÌNH KHÓA TÀI KHOẢN ---
+        // Key riêng để đếm số lần sai của User này (Lưu trong 24h)
+        $userLockoutKey = 'login_fail_' . $user->id;
+
+        // 5. Thử đăng nhập
         $credentials = $request->only('email', 'password');
         $remember = $request->has('remember');
 
         if (Auth::attempt($credentials, $remember)) {
+            // === ĐĂNG NHẬP THÀNH CÔNG ===
 
+            // Xóa bộ đếm spam IP
+            RateLimiter::clear($throttleKey);
+            // Xóa bộ đếm sai 7 lần của user (vì đã nhập đúng)
+            RateLimiter::clear($userLockoutKey);
+
+            // Kiểm tra trạng thái Organization (Logic cũ của bạn)
             if ($user->user_type == 'Organization') {
                 $organization = $user->organization;
                 if ($organization && $organization->verification_status == 'Pending') {
                     Auth::logout();
-                    return redirect()->back()
-                        ->with('error', 'Tài khoản của bạn đang chờ xét duyệt. Vui lòng thử lại sau.')
-                        ->withInput($request->only('email', 'remember'));
+                    return redirect()->back()->with('error', 'Tài khoản đang chờ xét duyệt.');
                 }
                 if ($organization && $organization->verification_status == 'Rejected') {
                     Auth::logout();
-                    return redirect()->back()
-                        ->with('error', 'Tài khoản của bạn đã bị từ chối. Vui lòng liên hệ hỗ trợ')
-                        ->withInput($request->only('email', 'remember'));
+                    return redirect()->back()->with('error', 'Tài khoản đã bị từ chối.');
                 }
             }
 
             $request->session()->regenerate();
-
-            // SỬA: Update last login và last activity
             $user->update([
                 'last_login_at' => now(),
-                'last_activity_at' => now() // THÊM: Cập nhật last_activity_at khi login
+                'last_activity_at' => now()
             ]);
 
-            // Redirect based on user type
             $redirectRoute = match ($user->user_type) {
                 'Admin' => route('admin.dashboard'),
                 'Organization' => route('organization.dashboard'),
@@ -439,11 +475,34 @@ class AuthController extends Controller
                 ->with('success', 'Chào mừng trở lại, ' . $user->first_name . '!');
         }
 
+        // === ĐĂNG NHẬP THẤT BẠI ===
+
+        // 1. Tăng bộ đếm spam IP
+        RateLimiter::hit($throttleKey);
+
+        // 2. Tăng bộ đếm sai mật khẩu của User (Lưu nhớ trong 1 ngày)
+        RateLimiter::hit($userLockoutKey, 86400);
+
+        // 3. Kiểm tra xem đã sai quá 7 lần chưa
+        if (RateLimiter::attempts($userLockoutKey) >= 7) {
+            // KHOÁ TÀI KHOẢN VĨNH VIỄN
+            $user->update(['is_active' => 0]);
+
+            // Xóa cache để lần sau check dòng if(!$user->is_active) ở trên
+            RateLimiter::clear($userLockoutKey);
+
+            return redirect()->back()
+                ->with('error', 'Tài khoản đã bị vô hiệu hóa do nhập sai mật khẩu quá 7 lần. Vui lòng liên hệ Admin.')
+                ->withInput($request->only('email', 'remember'));
+        }
+
+        // Lấy số lần còn lại được phép nhập sai
+        $remaining = 7 - RateLimiter::attempts($userLockoutKey);
+
         return redirect()->back()
-            ->with('error', 'Email hoặc mật khẩu không đúng.')
+            ->with('error', 'Mật khẩu không đúng. Bạn còn ' . $remaining . ' lần thử trước khi tài khoản bị khóa.')
             ->withInput($request->only('email', 'remember'));
     }
-
     /**
      * Handle logout
      */
@@ -540,7 +599,14 @@ class AuthController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|confirmed|min:8',
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols() // Tự động chấp nhận TẤT CẢ ký tự đặc biệt
+            ],
         ]);
 
         // 2. Tìm user khớp email và token

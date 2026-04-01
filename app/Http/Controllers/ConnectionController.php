@@ -256,6 +256,7 @@ class ConnectionController extends Controller
     // Search users
     $users = User::where('user_id', '!=', auth()->id())
         ->where('is_active', true)
+        ->where('user_type', '!=', 'admin')
         ->where(function($q) use ($query) {
             // Search by name
             $q->where('first_name', 'like', "%{$query}%")

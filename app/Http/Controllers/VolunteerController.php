@@ -30,7 +30,7 @@ class VolunteerController extends Controller
                 $q->whereHas('opportunity', function ($oq) use ($organization) {
                     $oq->where('org_id', $organization->org_id);
                 })
-                ->where('status', 'Accepted');
+                    ->where('status', 'Accepted');
             })
             ->with(['volunteerProfile', 'applications' => function ($q) use ($organization) {
                 $q->whereHas('opportunity', function ($oq) use ($organization) {
@@ -42,8 +42,8 @@ class VolunteerController extends Controller
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('first_name', 'like', "%{$request->search}%")
-                  ->orWhere('last_name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%");
+                    ->orWhere('last_name', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%");
             });
         }
 
@@ -51,7 +51,7 @@ class VolunteerController extends Controller
         if ($request->opportunity) {
             $query->whereHas('applications', function ($q) use ($request) {
                 $q->where('opportunity_id', $request->opportunity)
-                  ->where('status', 'Accepted');
+                    ->where('status', 'Accepted');
             });
         }
 
@@ -60,17 +60,17 @@ class VolunteerController extends Controller
             $query->whereHas('applications', function ($q) use ($organization) {
                 $q->whereHas('opportunity', function ($oq) use ($organization) {
                     $oq->where('org_id', $organization->org_id)
-                       ->where('status', 'Active');
+                        ->where('status', 'Active');
                 })
-                ->where('status', 'Accepted');
+                    ->where('status', 'Accepted');
             });
         } elseif ($request->status == 'completed') {
             $query->whereHas('applications', function ($q) use ($organization) {
                 $q->whereHas('opportunity', function ($oq) use ($organization) {
                     $oq->where('org_id', $organization->org_id)
-                       ->where('status', 'Completed');
+                        ->where('status', 'Completed');
                 })
-                ->where('status', 'Accepted');
+                    ->where('status', 'Accepted');
             });
         }
 
@@ -79,7 +79,7 @@ class VolunteerController extends Controller
             $q->whereHas('opportunity', function ($oq) use ($organization) {
                 $oq->where('org_id', $organization->org_id);
             })
-            ->where('status', 'Accepted');
+                ->where('status', 'Accepted');
         }]);
 
         $volunteers = $query->paginate(15);
@@ -94,16 +94,16 @@ class VolunteerController extends Controller
                     $q->whereHas('opportunity', function ($oq) use ($organization) {
                         $oq->where('org_id', $organization->org_id);
                     })
-                    ->where('status', 'Accepted');
+                        ->where('status', 'Accepted');
                 })
                 ->count(),
             'active' => User::where('user_type', 'Volunteer')
                 ->whereHas('applications', function ($q) use ($organization) {
                     $q->whereHas('opportunity', function ($oq) use ($organization) {
                         $oq->where('org_id', $organization->org_id)
-                           ->where('status', 'Active');
+                            ->where('status', 'Active');
                     })
-                    ->where('status', 'Accepted');
+                        ->where('status', 'Accepted');
                 })
                 ->count(),
             'total_hours' => VolunteerActivity::where('org_id', $organization->org_id)
@@ -185,12 +185,12 @@ class VolunteerController extends Controller
         }
 
         $search = $request->input('query', '');
-        
+
         $volunteers = User::where('user_type', 'Volunteer')
             ->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             })
             ->with('volunteerProfile')
             ->limit(10)
@@ -278,7 +278,7 @@ class VolunteerController extends Controller
                 $q->whereHas('opportunity', function ($oq) use ($organization) {
                     $oq->where('org_id', $organization->org_id);
                 })
-                ->where('status', 'Accepted');
+                    ->where('status', 'Accepted');
             })
             ->with('volunteerProfile')
             ->get();
@@ -295,9 +295,16 @@ class VolunteerController extends Controller
 
             // CSV headers
             fputcsv($file, [
-                'ID', 'Name', 'Email', 'Phone', 'City', 
-                'Occupation', 'Education', 'Rating', 
-                'Total Hours', 'Opportunities'
+                'ID',
+                'Name',
+                'Email',
+                'Phone',
+                'City',
+                'Occupation',
+                'Education',
+                'Rating',
+                'Total Hours',
+                'Opportunities'
             ]);
 
             foreach ($volunteers as $volunteer) {
@@ -333,5 +340,41 @@ class VolunteerController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function remove(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user->isOrganization()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $organization = $user->organization;
+
+            // XÓA HẲN bản ghi trong bảng applications
+            // Điều này sẽ xóa mọi liên kết giữa Volunteer này và các cơ hội của Tổ chức bạn
+            $deletedCount = \App\Models\Application::where('volunteer_id', $id)
+                ->whereHas('opportunity', function ($q) use ($organization) {
+                    $q->where('org_id', $organization->org_id);
+                })
+                // Bạn có thể bỏ dòng where status này nếu muốn xóa sạch bất kể trạng thái
+                // ->where('status', 'Accepted') 
+                ->delete(); // <--- DÙNG HÀM DELETE THAY VÌ UPDATE
+
+            if ($deletedCount > 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Đã xóa hoàn toàn volunteer khỏi dữ liệu của tổ chức.'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Volunteer này không còn trong danh sách của bạn.'
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

@@ -5,8 +5,9 @@
             <div class="p-6 flex flex-col flex-grow">
                 {{-- Header Card --}}
                 <div class="flex justify-between items-start mb-4">
-                    <span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wide text-white"
+                    <span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wide text-white flex items-center gap-1"
                           style="background-color: {{ $opportunity->category->color ?? '#3B82F6' }}">
+                        <i class="{{ $opportunity->category->icon ?? 'fas fa-tag' }}"></i>
                         {{ $opportunity->category->category_name ?? 'General' }}
                     </span>
                     @if(auth()->check() && auth()->user()->user_type === 'Volunteer')
@@ -34,7 +35,7 @@
                         $skills = is_array($rawSkills) ? $rawSkills : explode(',', $rawSkills);
                         $skills = array_filter($skills, function($v) { return !empty(trim($v)); });
                     @endphp
-                    <div class="flex flex-wrap gap-1 mb-4 mt-auto">
+                    <div class="flex flex-wrap gap-1 mb-4">
                         @foreach($skills as $skill)
                             @if($loop->index < 2)
                             <span class="px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded border border-gray-100">{{ trim($skill) }}</span>
@@ -46,13 +47,37 @@
                     </div>
                 @endif
 
-                <div class="flex flex-wrap gap-2 mb-4 mt-auto">
-                    <span class="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-lg font-medium">
-                        <i class="fas fa-map-marker-alt text-red-400 mr-1"></i> {{ Str::limit($opportunity->location, 12) }}
-                    </span>
-                    <span class="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-lg font-medium">
-                        <i class="fas fa-users text-blue-400 mr-1"></i> {{ $opportunity->volunteers_registered }}/{{ $opportunity->volunteers_needed }}
-                    </span>
+                {{-- [ĐỒNG BỘ] Progress Bar giống hệt trang Show --}}
+                <div class="mt-auto mb-5">
+                    {{-- Location --}}
+                    <div class="flex items-center text-xs text-gray-500 font-medium mb-3">
+                        <i class="fas fa-map-marker-alt text-blue-500 mr-1.5"></i> 
+                        {{ Str::limit($opportunity->location, 30) }}
+                    </div>
+
+                    {{-- Logic tính phần trăm --}}
+                    @php
+                        $percentage = $opportunity->volunteers_needed > 0
+                            ? ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100
+                            : 0;
+                    @endphp
+
+                    {{-- Thanh tiến độ --}}
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1.5">
+                            <span class="text-gray-600">Đã đăng ký: 
+                                <b class="text-indigo-600">{{ $opportunity->volunteers_registered }}/{{ $opportunity->volunteers_needed }}</b>
+                            </span>
+                            <span class="text-gray-500">
+                                {{ round($percentage) }}%
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            {{-- Sử dụng bg-indigo-600 để khớp màu với trang chi tiết --}}
+                            <div class="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                                 style="width: {{ min($percentage, 100) }}%"></div>
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Action --}}
