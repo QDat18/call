@@ -58,7 +58,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/about', function () {
     return view('pages.about');
-})->name('about');
+})->name('web.about');
 
 Route::get('/contact', function () {
     return view('pages.contact');
@@ -126,10 +126,6 @@ Route::prefix('search')->name('search.')->group(function () {
     Route::get('/popular', [SearchController::class, 'popularSearches'])->name('popular');
 });
 
-
-// Reviews (Public)
-Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
-Route::get('/reviews/user/{userId}', [ReviewController::class, 'userReviews'])->name('reviews.user');
 
 // Reviews (Public)
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
@@ -640,6 +636,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
         Route::prefix('reports')->name('reports.')->group(function () {
             // Route chính: admin.reports.index
             Route::get('/', [ReportGenerationController::class, 'index'])->name('index');
+            Route::get('/posts', [PostController::class, 'reports'])->name('posts');
             Route::get('/', [PostController::class, 'reports'])->name('index');
             Route::post('/{id}/handle', [PostController::class, 'handleReport'])->name('handle');
             // Route tạo báo cáo (xem trước): admin.reports.generate
