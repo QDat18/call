@@ -1,38 +1,33 @@
-FROM php:8.2-fpm
+# Base PHP
+FROM php:8.2-cli
 
+# Install system deps
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    zip \
-    unzip \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libzip-dev \
-    libonig-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql zip
+    git unzip curl libpq-dev libzip-dev zip npm \
+    && docker-php-ext-install pdo pdo_pgsql zip
 
-COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+# Set working dir
+WORKDIR /app
 
+# Copy code
 COPY . .
 
-# Composer but disable post-scripts (avoid DB access)
-RUN COMPOSER_ALLOW_SUPERUSER=1 \
-    composer install --no-interaction --prefer-dist \
-    --optimize-autoloader --no-scripts
+# Install PHP deps
+RUN composer install --no-dev --optimize-autoloader
 
-# Clear caches (safe)
-RUN php artisan config:clear || true
-RUN php artisan route:clear || true
-RUN php artisan view:clear || true
+# Install Node deps & build Vite
+RUN npm install && npm run build
 
-# DO NOT RUN: package:discover (some providers query DB)
-# DO NOT RUN: migrate, seed, optimize
+# Laravel optimize
+RUN php artisan config:cache \
+ && php artisan route:cache \
+ && php artisan view:cache
 
-RUN chown -R www-data:www-data storage bootstrap/cache
+# Expose port
+EXPOSE 10000
 
-EXPOSE 8080
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
+# Start server
+CMD php artisan serve --host=0.0.0.0 --port=10000
