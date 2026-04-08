@@ -29,32 +29,6 @@ use App\Http\Controllers\ConnectionController; // NEW: Connections/Friends
 use App\Models\Province;
 use App\Models\Ward;
 use App\Models\VnLocation;
-/*
-|--------------------------------------------------------------------------
-| Public Routes (Không cần đăng nhập)
-|--------------------------------------------------------------------------
-*/
-
-// Home & Static Pages
-Route::get('/about', function () {
-    return view('pages.about');
-})->name('about');
-
-Route::get('/contact', function () {
-    return view('pages.contact');
-})->name('contact');
-
-Route::get('/privacy', function () {
-    return view('pages.privacy');
-})->name('privacy');
-
-Route::get('/term', function () {
-    return view('pages.term');
-})->name('terms');
-
-Route::get('/upgrade', function () {
-    return view('pages.upgrade');
-})->name('upgrade');
 
 // Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
 
