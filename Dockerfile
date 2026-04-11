@@ -29,10 +29,11 @@ RUN php artisan config:clear || true
 RUN php artisan route:clear || true
 RUN php artisan view:clear || true
 
-# DO NOT RUN: package:discover (some providers query DB)
-# DO NOT RUN: migrate, seed, optimize
-
 RUN chown -R www-data:www-data storage bootstrap/cache
 
+# Copy và cấp quyền cho script khởi động (giúp chạy cả Web và Queue)
+COPY render-start.sh /usr/local/bin/render-start.sh
+RUN chmod +x /usr/local/bin/render-start.sh
+
 EXPOSE 8080
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8080"]
+CMD ["/usr/local/bin/render-start.sh"]
