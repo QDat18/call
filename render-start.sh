@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Dọn dẹp cache cấu hình để nhận biến môi trường mới
+echo "Clearing config and cache..."
+php artisan config:clear
+php artisan cache:clear
+
 # Tạo liên kết Storage (để hiện ảnh)
 echo "Linking storage..."
 php artisan storage:link --force
