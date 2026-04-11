@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Tạo liên kết Storage (để hiện ảnh)
+echo "Linking storage..."
+php artisan storage:link --force
+
 # Khởi động Queue worker ở chế độ chạy ngầm
 echo "Starting Queue Worker..."
 php artisan queue:work --daemon --tries=3 --timeout=90 &
