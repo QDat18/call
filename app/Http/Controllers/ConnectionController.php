@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Connection;
 use App\Models\User;
+use App\Jobs\SendNotificationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -101,6 +102,17 @@ class ConnectionController extends Controller
             'requested_at' => now(),
         ]);
 
+        // Notify friend
+        $senderName = auth()->user()->first_name . ' ' . auth()->user()->last_name;
+        SendNotificationJob::dispatch($friendId, [
+            'type' => 'Connection',
+            'title' => 'Yêu cầu kết bạn mới 👋',
+            'content' => "{$senderName} đã gửi cho bạn một yêu cầu kết nối.",
+            'related_id' => $connection->connection_id,
+            'related_type' => 'connection',
+            'priority' => 'low'
+        ]);
+
         broadcast(new \App\Events\FriendRequestSent($connection))->toOthers();
 
         return response()->json([
@@ -121,6 +133,17 @@ class ConnectionController extends Controller
             ->firstOrFail();
 
         $connection->accept();
+
+        // Notify requester
+        $accepterName = auth()->user()->first_name . ' ' . auth()->user()->last_name;
+        SendNotificationJob::dispatch($connection->user_id, [
+            'type' => 'Connection',
+            'title' => 'Yêu cầu kết nối đã được chấp nhận ✅',
+            'content' => "{$accepterName} đã chấp nhận yêu cầu kết nối của bạn.",
+            'related_id' => $connection->connection_id,
+            'related_type' => 'connection',
+            'priority' => 'low'
+        ]);
 
         return response()->json([
             'success' => true,

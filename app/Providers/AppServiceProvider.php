@@ -39,22 +39,17 @@ class AppServiceProvider extends ServiceProvider
             // 'comment' => \App\Models\Comment::class, // Thêm dòng này nếu sau này có report Comment
         ]);
 
-        try {
-            if (Schema::hasTable('settings')) {
+if (!app()->runningInConsole()) {
+        if (Schema::hasTable('settings')) {
+            // 1. Chia sẻ biến 'site_name' cho TẤT CẢ các View
+            View::share('site_name', get_setting('site_name', 'VolunteerConnect'));
+            View::share('site_description', get_setting('site_description'));
+            View::share('contact_email', get_setting('contact_email'));
 
-                // 1. Chia sẻ biến 'site_name' cho TẤT CẢ các View
-                // Lúc này trong file blade chỉ cần gọi {{ $site_name }} thay vì get_setting('site_name')
-                View::share('site_name', get_setting('site_name', 'VolunteerConnect'));
-                View::share('site_description', get_setting('site_description'));
-                View::share('contact_email', get_setting('contact_email'));
-
-                // 2. Cấu hình Mail động theo Database
-                // Ghi đè file config/mail.php bằng dữ liệu từ DB
-                Config::set('mail.from.address', get_setting('mail_from_address', env('MAIL_FROM_ADDRESS')));
-                Config::set('mail.from.name', get_setting('mail_from_name', env('MAIL_FROM_NAME')));
-            }
-        } catch (\Exception $e) {
-            // DB chưa sẵn sàng (hoặc trong lúc composer install), bỏ qua để không crash ứng dụng
+            // 2. Cấu hình Mail động theo Database
+            Config::set('mail.from.address', get_setting('mail_from_address', env('MAIL_FROM_ADDRESS')));
+            Config::set('mail.from.name', get_setting('mail_from_name', env('MAIL_FROM_NAME')));
         }
+    }
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class VolunteerOpportunityController extends Controller
@@ -77,11 +78,16 @@ class VolunteerOpportunityController extends Controller
             default: // latest
                 $query->orderBy('created_at', 'desc');
         }
+        $cacheKey = 'opportunities_list_' . md5(serialize($request->all()));
 
-        $opportunities = $query->where('status', 'Active')
-            ->orderBy('created_at', 'desc')
-            ->paginate(9);
-        $categories = Category::all();
+        $opportunities = Cache::tags(['opportunities'])->remember($cacheKey, 600, function () use ($query) {
+            return $query->paginate(9);
+        });
+
+        $categories = Cache::tags(['opportunities'])->remember('all_categories', 3600, function () {
+            return Category::all();
+        });
+        
         if ($request->ajax()) {
             return view('opportunities.partials.list', compact('opportunities'))->render();
         }
@@ -210,8 +216,11 @@ class VolunteerOpportunityController extends Controller
                 'application_deadline' => $request->application_deadline,
             ]);
 
-            // Update organization total opportunities count
+            // Increment organization total opportunities count
             $organization->increment('total_opportunities');
+
+            // Invalidate cache
+            Cache::tags(['opportunities'])->flush();
 
             return redirect()->route('opportunities.show', $opportunity->opportunity_id)
                 ->with('success', 'Opportunity posted successfully!');
@@ -275,6 +284,9 @@ class VolunteerOpportunityController extends Controller
         try {
             $opportunity->update($request->all());
 
+            // Invalidate cache
+            Cache::tags(['opportunities'])->flush();
+
             return redirect()->route('opportunities.show', $opportunity->opportunity_id)
                 ->with('success', 'Opportunity updated successfully!');
         } catch (\Exception $e) {
@@ -295,6 +307,9 @@ class VolunteerOpportunityController extends Controller
 
         try {
             $opportunity->delete();
+
+            // Invalidate cache
+            Cache::tags(['opportunities'])->flush();
 
             return redirect()->route('opportunities.index')
                 ->with('success', 'Opportunity deleted successfully!');

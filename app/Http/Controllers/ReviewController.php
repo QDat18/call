@@ -8,6 +8,8 @@ use App\Models\VolunteerOpportunity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use App\Jobs\SendNotificationJob;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ReviewController extends Controller
@@ -203,18 +205,20 @@ class ReviewController extends Controller
             $this->updateUserRating($review->reviewee_id);
             
             // Notify reviewee
-            DB::table('notifications')->insert([
-                'user_id' => $review->reviewee_id,
-                'notification_type' => 'Review',
+            SendNotificationJob::dispatch($review->reviewee_id, [
+                'type' => 'Review',
                 'title' => 'Bạn nhận được review mới',
                 'content' => $review->reviewer->first_name . ' đã đánh giá ' . $review->rating . ' sao',
                 'related_id' => $review->review_id,
                 'related_type' => 'review',
                 'action_url' => route('reviews.show', $review->review_id),
-                'created_at' => now()
+                'priority' => 'medium'
             ]);
             
             DB::commit();
+            
+            // Invalidate stats cache
+            Cache::tags(['user_stats'])->flush();
             
             return back()->with('success', 'Đã approve review thành công!');
             
@@ -240,17 +244,19 @@ class ReviewController extends Controller
             $review->delete();
             
             // Notify reviewer
-            DB::table('notifications')->insert([
-                'user_id' => $review->reviewer_id,
-                'notification_type' => 'Review',
+            SendNotificationJob::dispatch($review->reviewer_id, [
+                'type' => 'Review',
                 'title' => 'Review của bạn đã bị từ chối',
                 'content' => 'Lý do: ' . $validated['reason'],
                 'related_id' => $review->review_id,
                 'related_type' => 'review',
-                'created_at' => now()
+                'priority' => 'low'
             ]);
             
             DB::commit();
+            
+            // Invalidate stats cache
+            Cache::tags(['user_stats'])->flush();
             
             return back()->with('success', 'Đã reject review!');
             
@@ -285,20 +291,36 @@ class ReviewController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
         
-        // Tính stats
-        $stats = [
-            'total' => $reviews->total(),
-            'average_rating' => $reviews->avg('rating'),
-            'rating_distribution' => []
-        ];
-        
-        for ($i = 5; $i >= 1; $i--) {
-            $count = Review::where('reviewee_id', $userId)
+        // Define cache key
+        $cacheKey = "user_stats_{$userId}";
+
+        // Tối ưu bằng Single Query Scan và Caching
+        $stats = Cache::tags(['reviews', 'user_stats'])->remember($cacheKey, 3600, function() use ($userId) {
+            $data = Review::where('reviewee_id', $userId)
                 ->where('is_approved', true)
-                ->where('rating', $i)
-                ->count();
-            $stats['rating_distribution'][$i] = $count;
-        }
+                ->select([
+                    DB::raw('COUNT(*) as total'),
+                    DB::raw('AVG(rating) as average_rating'),
+                    DB::raw('COUNT(CASE WHEN rating = 5 THEN 1 END) as star_5'),
+                    DB::raw('COUNT(CASE WHEN rating = 4 THEN 1 END) as star_4'),
+                    DB::raw('COUNT(CASE WHEN rating = 3 THEN 1 END) as star_3'),
+                    DB::raw('COUNT(CASE WHEN rating = 2 THEN 1 END) as star_2'),
+                    DB::raw('COUNT(CASE WHEN rating = 1 THEN 1 END) as star_1'),
+                ])
+                ->first();
+
+            return [
+                'total' => (int) ($data->total ?? 0),
+                'average_rating' => round($data->average_rating ?? 0, 2),
+                'rating_distribution' => [
+                    5 => (int) ($data->star_5 ?? 0),
+                    4 => (int) ($data->star_4 ?? 0),
+                    3 => (int) ($data->star_3 ?? 0),
+                    2 => (int) ($data->star_2 ?? 0),
+                    1 => (int) ($data->star_1 ?? 0),
+                ]
+            ];
+        });
         
         return view('reviews.user-reviews', compact('user', 'reviews', 'stats'));
     }
@@ -377,30 +399,27 @@ class ReviewController extends Controller
     private function sendReviewNotification($review)
     {
         // Notify reviewee
-        DB::table('notifications')->insert([
-            'user_id' => $review->reviewee_id,
-            'notification_type' => 'Review',
+        SendNotificationJob::dispatch($review->reviewee_id, [
+            'type' => 'Review',
             'title' => 'Bạn có review mới',
             'content' => 'Review đang chờ admin duyệt',
             'related_id' => $review->review_id,
             'related_type' => 'review',
             'action_url' => route('reviews.show', $review->review_id),
-            'created_at' => now()
+            'priority' => 'low'
         ]);
         
         // Notify admin
         $admins = User::where('user_type', 'Admin')->get();
-        foreach ($admins as $admin) {
-            DB::table('notifications')->insert([
-                'user_id' => $admin->user_id,
-                'notification_type' => 'Review',
+        if ($admins->count() > 0) {
+            SendNotificationJob::dispatch($admins->pluck('user_id')->toArray(), [
+                'type' => 'Review',
                 'title' => 'Review mới cần duyệt',
                 'content' => 'Review ' . $review->rating . ' sao cho ' . $review->reviewee->first_name,
                 'related_id' => $review->review_id,
                 'related_type' => 'review',
                 'action_url' => route('reviews.pending'),
-                'priority' => 'medium',
-                'created_at' => now()
+                'priority' => 'medium'
             ]);
         }
     }

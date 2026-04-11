@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\SendNotificationJob;
 
 class OpportunityController extends Controller
 {
@@ -348,6 +349,24 @@ class OpportunityController extends Controller
 
             $opportunity->update(['status' => 'Paused']);
 
+            // Notify all accepted volunteers
+            $volunteerIds = $opportunity->applications()
+                ->where('status', 'Accepted')
+                ->pluck('volunteer_id')
+                ->toArray();
+
+            if (!empty($volunteerIds)) {
+                SendNotificationJob::dispatch($volunteerIds, [
+                    'type' => 'Opportunity',
+                    'title' => 'Hoạt động đã tạm dừng',
+                    'content' => "Hoạt động \"{$opportunity->title}\" đã bị tạm dừng bởi tổ chức.",
+                    'related_id' => $opportunity->opportunity_id,
+                    'related_type' => 'opportunity',
+                    'action_url' => route('opportunities.show', $opportunity->opportunity_id),
+                    'priority' => 'high'
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Opportunity paused successfully'
@@ -395,6 +414,24 @@ class OpportunityController extends Controller
 
             $opportunity->update(['status' => 'Active']);
 
+            // Notify all accepted volunteers
+            $volunteerIds = $opportunity->applications()
+                ->where('status', 'Accepted')
+                ->pluck('volunteer_id')
+                ->toArray();
+
+            if (!empty($volunteerIds)) {
+                SendNotificationJob::dispatch($volunteerIds, [
+                    'type' => 'Opportunity',
+                    'title' => 'Hoạt động đã hoạt động trở lại',
+                    'content' => "Hoạt động \"{$opportunity->title}\" đã được mở lại.",
+                    'related_id' => $opportunity->opportunity_id,
+                    'related_type' => 'opportunity',
+                    'action_url' => route('opportunities.show', $opportunity->opportunity_id),
+                    'priority' => 'high'
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Opportunity activated successfully'
@@ -425,6 +462,24 @@ class OpportunityController extends Controller
             $opportunity = $user->organization->opportunities()->findOrFail($id);
 
             $opportunity->update(['status' => 'Completed']);
+
+            // Notify all accepted volunteers
+            $volunteerIds = $opportunity->applications()
+                ->where('status', 'Accepted')
+                ->pluck('volunteer_id')
+                ->toArray();
+
+            if (!empty($volunteerIds)) {
+                SendNotificationJob::dispatch($volunteerIds, [
+                    'type' => 'Opportunity',
+                    'title' => 'Hoạt động đã hoàn thành',
+                    'content' => "Chúc mừng! Hoạt động \"{$opportunity->title}\" đã hoàn thành tốt đẹp.",
+                    'related_id' => $opportunity->opportunity_id,
+                    'related_type' => 'opportunity',
+                    'action_url' => route('opportunities.show', $opportunity->opportunity_id),
+                    'priority' => 'medium'
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -458,7 +513,21 @@ class OpportunityController extends Controller
             $opportunity->update(['status' => 'Cancelled']);
 
             // Notify all registered volunteers
-            // TODO: Send notifications
+            $volunteerIds = $opportunity->applications()
+                ->whereIn('status', ['Pending', 'Accepted'])
+                ->pluck('volunteer_id')
+                ->toArray();
+
+            if (!empty($volunteerIds)) {
+                SendNotificationJob::dispatch($volunteerIds, [
+                    'type' => 'Opportunity',
+                    'title' => 'Hoạt động đã bị hủy',
+                    'content' => "Rất tiếc, hoạt động \"{$opportunity->title}\" đã bị hủy bỏ bởi ban tổ chức.",
+                    'related_id' => $opportunity->opportunity_id,
+                    'related_type' => 'opportunity',
+                    'priority' => 'high'
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

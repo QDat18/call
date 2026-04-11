@@ -10,8 +10,11 @@ use App\Events\UserTyping;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Jobs\SendNotificationJob;
+use App\Models\User;
 
 class MessageController extends Controller
 {
@@ -108,8 +111,25 @@ class MessageController extends Controller
         // Broadcast sự kiện
         try {
             broadcast(new MessageSent($message))->toOthers();
+            
+            // Notify other participants via background job
+            $otherParticipants = $conversation->participants()
+                ->where('user_id', '!=', $user->user_id)
+                ->pluck('user_id')
+                ->toArray();
+                
+            if (!empty($otherParticipants)) {
+                SendNotificationJob::dispatch($otherParticipants, [
+                    'type' => 'Message',
+                    'title' => 'Bạn có tin nhắn mới từ ' . $user->first_name,
+                    'content' => Str::limit($message->content, 50),
+                    'related_id' => $conversationId,
+                    'related_type' => 'conversation',
+                    'priority' => 'low'
+                ]);
+            }
         } catch (\Exception $e) {
-            Log::error("Broadcast error: " . $e->getMessage());
+            Log::error("Broadcast/Notification error: " . $e->getMessage());
         }
 
         return response()->json([

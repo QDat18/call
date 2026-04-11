@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\SendNotificationJob;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class VolunteerActivityController extends Controller
@@ -389,15 +390,14 @@ class VolunteerActivityController extends Controller
         })->first();
         
         if ($organization) {
-            DB::table('notifications')->insert([
-                'user_id' => $organization->user_id,
-                'notification_type' => 'System',
+            SendNotificationJob::dispatch($organization->user_id, [
+                'type' => 'System',
                 'title' => 'Yêu cầu xác nhận giờ tình nguyện',
                 'content' => 'Tình nguyện viên đã log ' . $activity->hours_worked . ' giờ cho hoạt động của bạn',
                 'related_id' => $activity->activity_id,
                 'related_type' => 'activity',
                 'action_url' => route('volunteer-activities.show', $activity->activity_id),
-                'created_at' => now()
+                'priority' => 'medium'
             ]);
         }
     }
@@ -405,15 +405,14 @@ class VolunteerActivityController extends Controller
     // Helper: Send verified notification
     private function sendVerifiedNotification($activity)
     {
-        DB::table('notifications')->insert([
-            'user_id' => $activity->volunteer_id,
-            'notification_type' => 'System',
+        SendNotificationJob::dispatch($activity->volunteer_id, [
+            'type' => 'System',
             'title' => 'Giờ tình nguyện đã được xác nhận',
             'content' => $activity->hours_worked . ' giờ của bạn đã được tổ chức xác nhận',
             'related_id' => $activity->activity_id,
             'related_type' => 'activity',
             'action_url' => route('volunteer-activities.show', $activity->activity_id),
-            'created_at' => now()
+            'priority' => 'medium'
         ]);
     }
 
@@ -422,17 +421,15 @@ class VolunteerActivityController extends Controller
     {
         // Notify admin
         $admins = User::where('user_type', 'Admin')->get();
-        foreach ($admins as $admin) {
-            DB::table('notifications')->insert([
-                'user_id' => $admin->user_id,
-                'notification_type' => 'System',
+        if ($admins->count() > 0) {
+            SendNotificationJob::dispatch($admins->pluck('user_id')->toArray(), [
+                'type' => 'System',
                 'title' => 'Activity bị tranh chấp',
                 'content' => 'Activity #' . $activity->activity_id . ' cần được xem xét',
                 'related_id' => $activity->activity_id,
                 'related_type' => 'activity',
                 'action_url' => route('admin.activities.show', $activity->activity_id),
-                'priority' => 'high',
-                'created_at' => now()
+                'priority' => 'high'
             ]);
         }
     }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Donation;
 use App\Models\DonationCampaign;
+use App\Models\User;
+use App\Jobs\SendNotificationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -171,6 +173,19 @@ class DonationController extends Controller
                                 $donation->campaign->increment('current_amount', $donation->amount);
                             }
                         });
+
+                        // Notify campaign owner
+                        if ($donation->campaign && $donation->campaign->admin_user_id) {
+                            $donorName = $donation->user ? ($donation->user->first_name . ' ' . $donation->user->last_name) : 'Người dùng ẩn danh';
+                            SendNotificationJob::dispatch($donation->campaign->admin_user_id, [
+                                'type' => 'Donation',
+                                'title' => 'Quyên góp mới 💰',
+                                'content' => "{$donorName} đã quyên góp " . number_format($donation->amount) . "đ cho chiến dịch: {$donation->campaign->title}",
+                                'related_id' => $donation->id,
+                                'related_type' => 'donation',
+                                'priority' => 'medium'
+                            ]);
+                        }
 
                         return redirect()->route('campaigns.show', $donation->campaign_id)
                             ->with('success', 'Thanh toán thành công qua VNPay! Cảm ơn tấm lòng của bạn.');

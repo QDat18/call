@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\VolunteerOpportunity;
-use App\Models\Notification;
+use App\Jobs\SendNotificationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -121,16 +121,14 @@ class ApplicationController extends Controller
                 $orgOwnerId = $opportunity->organization->user_id;
                 $volunteerName = Auth::user()->first_name . ' ' . Auth::user()->last_name;
 
-                Notification::create([
-                    'user_id'           => $orgOwnerId, // Gửi cho chủ tổ chức
-                    'notification_type' => 'Application',
-                    'title'             => 'Đơn ứng tuyển mới 📝',
-                    'content'           => "$volunteerName đã ứng tuyển vào cơ hội: {$opportunity->title}",
-                    'related_id'        => $application->application_id,
-                    'related_type'      => 'application', // Để click vào xem chi tiết
-                    'is_read'           => false,
-                    'priority'          => 'medium',
-                    'created_at'        => now(),
+                SendNotificationJob::dispatch($orgOwnerId, [
+                    'type' => 'Application',
+                    'title' => 'Đơn ứng tuyển mới 📝',
+                    'content' => "$volunteerName đã ứng tuyển vào cơ hội: {$opportunity->title}",
+                    'related_id' => $application->application_id,
+                    'related_type' => 'application',
+                    'priority' => 'medium',
+                    'action_url' => route('organization.applications.show', $application->application_id)
                 ]);
             }
 
@@ -308,15 +306,14 @@ class ApplicationController extends Controller
             $application->update($updateData);
 
             // Gửi thông báo cho Tình nguyện viên
-            Notification::create([
-                'user_id' => $application->volunteer_id,
-                'notification_type' => 'Application',
+            SendNotificationJob::dispatch($application->volunteer_id, [
+                'type' => 'Application',
                 'title' => 'Application Update 📢',
                 'content' => 'Your application for "' . $application->opportunity->title . '" has been ' . $status,
                 'related_id' => $application->application_id,
                 'related_type' => 'application',
-                'is_read' => false,
-                'created_at' => now()
+                'priority' => 'high',
+                'action_url' => route('volunteer.applications.show', $application->application_id)
             ]);
 
             return response()->json([
@@ -372,14 +369,14 @@ class ApplicationController extends Controller
             ]);
 
             // Notify volunteer
-            Notification::create([
-                'user_id' => $application->volunteer_id,
-                'notification_type' => 'Application',
+            SendNotificationJob::dispatch($application->volunteer_id, [
+                'type' => 'Application',
                 'title' => 'Application ' . $request->status,
                 'content' => 'Your application to "' . $application->opportunity->title . '" has been ' . strtolower($request->status),
                 'related_id' => $application->application_id,
                 'related_type' => 'application',
                 'priority' => 'high',
+                'action_url' => route('volunteer.applications.show', $application->application_id)
             ]);
 
             return response()->json([
@@ -438,15 +435,15 @@ class ApplicationController extends Controller
             ]);
 
             // Notify volunteer
-            Notification::create([
-                'user_id' => $application->volunteer_id,
-                'notification_type' => 'Application',
+            SendNotificationJob::dispatch($application->volunteer_id, [
+                'type' => 'Application',
                 'title' => 'Interview Scheduled 📅',
                 'content' => 'An interview has been scheduled for your application to "' . $application->opportunity->title . '" on ' .
                     date('M d, Y H:i', strtotime($request->interview_datetime)),
                 'related_id' => $application->application_id,
                 'related_type' => 'application',
                 'priority' => 'high',
+                'action_url' => route('volunteer.applications.show', $application->application_id)
             ]);
 
             return response()->json([
@@ -519,15 +516,13 @@ class ApplicationController extends Controller
             if ($organization) {
                 $volunteerName = \Illuminate\Support\Facades\Auth::user()->first_name;
 
-                \App\Models\Notification::create([
-                    'user_id'           => $organization->user_id, // Gửi cho chủ tổ chức
-                    'notification_type' => 'Message',
-                    'title'             => 'Tin nhắn từ ứng viên 💬',
-                    'content'           => "$volunteerName: " . $request->message,
-                    'related_id'        => \Illuminate\Support\Facades\Auth::id(),
-                    'related_type'      => 'volunteer_contact',
-                    'is_read'           => false,
-                    'created_at'        => now(),
+                SendNotificationJob::dispatch($organization->user_id, [
+                    'type' => 'Message',
+                    'title' => 'Tin nhắn từ ứng viên 💬',
+                    'content' => "$volunteerName: " . $request->message,
+                    'related_id' => Auth::id(),
+                    'related_type' => 'volunteer_contact',
+                    'priority' => 'medium'
                 ]);
             }
 

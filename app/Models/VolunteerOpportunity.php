@@ -18,30 +18,7 @@ class VolunteerOpportunity extends Model{
     use ClearAnalyticsCache;
     protected $primaryKey = 'opportunity_id';
 
-    protected $fillable = [
-        'org_id',
-        'category_id',
-        'title',
-        'description',
-        'requirements',
-        'benefits',
-        'location',
-        'latitude',
-        'longitude',
-        'start_date',
-        'end_date',
-        'time_commitment',
-        'schedule_type',
-        'volunteers_needed',
-        'volunteers_registered',
-        'min_age',
-        'required_skills',
-        'experience_needed',
-        'status',
-        'application_deadline',
-        'view_count',
-        'application_count',
-    ];
+    protected $fillable = ['org_id','category_id','title','description','requirements','benefits','location','latitude','longitude','start_date','end_date','time_commitment','schedule_type','volunteers_needed','volunteers_registered','min_age','required_skills','experience_needed','status','application_deadline','view_count','application_count'];
 
     protected $casts = [
         'latitude' => 'decimal:8',

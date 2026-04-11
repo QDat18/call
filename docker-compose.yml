@@ -29,6 +29,7 @@ services:
     image: mysql:8.0
     container_name: volunteer_db
     restart: unless-stopped
+    command: --log_bin_trust_function_creators=1
     environment:
       MYSQL_ROOT_PASSWORD: root_pass
       MYSQL_DATABASE: volunteer_db
