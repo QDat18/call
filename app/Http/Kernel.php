@@ -63,5 +63,6 @@ class Kernel extends HttpKernel
         'volunteer' => \App\Http\Middleware\VolunteerMiddleware::class,
         'organization' => \App\Http\Middleware\OrganizationMiddleware::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'cache.response' => \App\Http\Middleware\CacheResponse::class,
     ];
 }

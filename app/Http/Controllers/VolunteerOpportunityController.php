@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Services\VolunteerOpportunityService;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class VolunteerOpportunityController extends Controller
@@ -29,6 +30,8 @@ class VolunteerOpportunityController extends Controller
      */
     public function index(Request $request)
     {
+        $this->middleware('cache.response:60')->only('index');
+
         $filters = [
             'page' => $request->get('page', 1),
             'sort' => $request->get('sort', 'latest'),
@@ -41,14 +44,32 @@ class VolunteerOpportunityController extends Controller
 
         $data = $this->opportunityService->getPaginatedOpportunities($filters);
         
-        $opportunities = $data['opportunities'];
-        $categories = $data['categories'];
+        // --- High Performance Re-hydration ---
+        // Convert arrays back to stdClass objects to avoid heavy Eloquent hydration
+        $items = json_decode(json_encode($data['opportunities']['data']));
+        $categories = json_decode(json_encode($data['categories']));
+
+        // Re-create a Paginator instance so that ->links() and ->appends() work in Blade
+        $opportunities = new Paginator(
+            $items, 
+            $data['opportunities']['per_page'], 
+            $data['opportunities']['current_page'],
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // Tell the paginator if there is more data (from simplePaginate result)
+        if (isset($data['opportunities']['next_page_url']) && $data['opportunities']['next_page_url']) {
+            $opportunities->hasMorePagesWhen(true);
+        }
 
         if ($request->ajax()) {
             return view('opportunities.partials.list', compact('opportunities'))->render();
         }
 
-        return view('opportunities.index', compact('opportunities', 'categories'));
+        return view('opportunities.index', compact('opportunities', 'categories'))->render();
     }
 
     /**

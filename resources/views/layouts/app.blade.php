@@ -9,138 +9,15 @@
     <title>@yield('title', 'VolunteerConnect Platform')</title>
     <link rel="icon" href="{{ asset('local.jpg') }}">
     <link rel="shortcut icon" href="{{ asset('local.jpg') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe',
-                            300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1',
-                            600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81',
-                        }
-                    },
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                }
-            }
-        }
-    </script>
+    
+    {{-- Vite Asset Management (Compiled Tailwind 4) --}}
+    @vite(['resources/css/app.css', 'resources/js/main.tsx'])
 
+    {{-- Fonts & Icons --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
-
-    <style>
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #6366f1, #4f46e5);
-            border-radius: 5px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, #4f46e5, #4338ca);
-        }
-
-        .dark ::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-
-        .dark ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #4f46e5, #3730a3);
-        }
-
-        /* Glass morphism */
-        .glass {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-
-        .glass-dark {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-
-        /* Animations */
-        @keyframes pulse-ring {
-
-            0%,
-            100% {
-                transform: scale(0.8);
-                opacity: 1;
-            }
-
-            50% {
-                transform: scale(1.2);
-                opacity: 0.3;
-            }
-        }
-
-        .notification-badge {
-            animation: pulse-ring 2s ease-in-out infinite;
-        }
-
-        /* Gradient text */
-        .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        /* Nav link underline */
-        .nav-link {
-            position: relative;
-        }
-
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-            transition: width 0.3s ease, left 0.3s ease;
-        }
-
-        .nav-link:hover::after,
-        .nav-link.active::after {
-            width: 100%;
-            left: 0;
-        }
-
-        /* Avatar border */
-        .avatar-border {
-            border: 3px solid transparent;
-            background: linear-gradient(white, white) padding-box, linear-gradient(135deg, #667eea, #764ba2) border-box;
-        }
-
-        /* Selection */
-        ::selection {
-            background-color: #6366f1;
-            color: white;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     @stack('styles')

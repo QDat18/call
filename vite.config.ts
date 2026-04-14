@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [
         laravel({
             input: [
-                //'resources/sass/app.scss',
+                'resources/css/app.css',
                 'resources/js/main.tsx',
                 'resources/js/chat-init.ts',
                 'resources/js/echo.ts',     

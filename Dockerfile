@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql zip
 
+# Cài đặt Node.js và NPM để build asset
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
@@ -30,6 +34,10 @@ RUN php artisan route:clear || true
 RUN php artisan view:clear || true
 
 RUN chown -R www-data:www-data storage bootstrap/cache
+
+# Biên dịch tài nguyên Front-end (Tailwind, JS)
+RUN npm install
+RUN npm run build
 
 # Copy và cấp quyền cho script khởi động (giúp chạy cả Web và Queue)
 COPY render-start.sh /usr/local/bin/render-start.sh

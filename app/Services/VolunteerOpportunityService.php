@@ -54,12 +54,15 @@ class VolunteerOpportunityService
             // Use simplePaginate for better performance (avoids COUNT(*) query)
             $opportunities = $query->simplePaginate($perPage);
             
-            // We return both the opportunities and categories to the controller
-            $categories = Category::all(['category_id', 'category_name']);
+            // Map to array to avoid Model Hydration overhead on retrieval
+            $opportunitiesArray = $opportunities->toArray();
+            
+            // We return both the opportunities and categories
+            $categoriesArray = Category::all(['category_id', 'category_name'])->toArray();
 
             return [
-                'opportunities' => $opportunities,
-                'categories' => $categories
+                'opportunities' => $opportunitiesArray,
+                'categories' => $categoriesArray
             ];
         });
     }
