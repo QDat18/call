@@ -23,7 +23,15 @@ class VolunteerOpportunity extends Model{
     protected $appends = [
         'registration_percentage',
         'is_full',
-        'is_deadline_passed'
+        'is_deadline_passed',
+        'category_color_label',
+        'category_icon_label',
+        'category_name_label',
+        'formatted_start_date',
+        'formatted_deadline',
+        'processed_skills',
+        'remaining_skills_count',
+        'fill_percentage'
     ];
 
     protected $casts = [
