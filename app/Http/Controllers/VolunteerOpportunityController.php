@@ -10,112 +10,45 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use App\Services\VolunteerOpportunityService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class VolunteerOpportunityController extends Controller
 {
     use AuthorizesRequests;
+
+    protected $opportunityService;
+
+    public function __construct(VolunteerOpportunityService $opportunityService)
+    {
+        $this->opportunityService = $opportunityService;
+    }
+
     /**
      * Display listing of opportunities
      */
     public function index(Request $request)
     {
-        $page = $request->get('page', 1);
-        $sortBy = $request->get('sort', 'latest');
-        $search = $request->get('q') ?: $request->get('search');
-        $categoryId = $request->get('category');
-        $locationFilter = $request->get('location');
-        $timeCommitment = $request->get('time_commitment');
-        $experience = $request->get('experience');
+        $filters = [
+            'page' => $request->get('page', 1),
+            'sort' => $request->get('sort', 'latest'),
+            'search' => $request->get('q') ?: $request->get('search'),
+            'category' => $request->get('category'),
+            'location' => $request->get('location'),
+            'time_commitment' => $request->get('time_commitment'),
+            'experience' => $request->get('experience'),
+        ];
 
-        // Cache Key based on page and filters (avoiding full request serialization)
-        $cacheKey = 'opportunities_html_p' . $page . '_s' . $sortBy . '_c' . $categoryId . '_l' . md5($locationFilter . $search);
+        $data = $this->opportunityService->getPaginatedOpportunities($filters);
+        
+        $opportunities = $data['opportunities'];
+        $categories = $data['categories'];
 
-        return Cache::tags(['opportunities'])->remember($cacheKey, 60, function () use ($request, $sortBy, $search, $categoryId, $locationFilter, $timeCommitment, $experience) {
-            $query = VolunteerOpportunity::query()
-                ->select([
-                    'opportunity_id', 'org_id', 'category_id', 'title',
-                    'location', 'volunteers_needed', 'volunteers_registered',
-                    'application_deadline', 'created_at', 'required_skills',
-                    'application_count'
-                ])
-                ->with([
-                    'organization:org_id,organization_name',
-                    'category:category_id,category_name,color,icon'
-                ])
-                ->where('volunteer_opportunities.status', 'Active');
+        if ($request->ajax()) {
+            return view('opportunities.partials.list', compact('opportunities'))->render();
+        }
 
-            // Search logic (Full-Text)
-            if (!empty($search)) {
-                $query->leftJoin('organizations', 'volunteer_opportunities.org_id', '=', 'organizations.org_id')
-                    ->where(function ($sub) use ($search) {
-                        $sub->whereFullText(['volunteer_opportunities.title', 'volunteer_opportunities.description'], $search)
-                            ->orWhereFullText('organizations.organization_name', $search);
-                    });
-            }
-
-            // Category Filter
-            if ($categoryId) {
-                $query->where('volunteer_opportunities.category_id', $categoryId);
-            }
-
-            // Location Filter (Full-Text)
-            if ($locationFilter) {
-                // Check if location matches what we indexed
-                $query->whereFullText('volunteer_opportunities.location', $locationFilter);
-            }
-
-            // Other filters
-            if ($timeCommitment) {
-                $query->where('volunteer_opportunities.time_commitment', $timeCommitment);
-            }
-
-            if ($experience) {
-                $query->where('volunteer_opportunities.experience_needed', $experience);
-            }
-
-            // Sort logic
-            switch ($sortBy) {
-                case 'popular':
-                    $query->orderBy('volunteer_opportunities.application_count', 'desc');
-                    break;
-                case 'urgent':
-                    $query->orderBy('volunteer_opportunities.application_deadline', 'asc');
-                    break;
-                case 'oldest':
-                    $query->orderBy('volunteer_opportunities.created_at', 'asc');
-                    break;
-                default: // latest
-                    $query->orderBy('volunteer_opportunities.created_at', 'desc');
-            }
-
-            // Use simplePaginate to avoid COUNT(*)
-            $opportunities = $query->simplePaginate(9);
-
-            // Move logic from Blade to Controller: pre-process skills and logic using through()
-            $opportunities->through(function ($opportunity) {
-                $skills = $opportunity->required_skills ?: [];
-                $opportunity->processed_skills = array_slice(array_filter($skills, function ($v) {
-                    return !empty(trim($v));
-                }), 0, 2);
-                $opportunity->remaining_skills_count = count($skills) > 2 ? count($skills) - 2 : 0;
-                
-                // Pre-calculate percentage for Blade
-                $opportunity->registration_percentage = $opportunity->volunteers_needed > 0
-                    ? ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100
-                    : 0;
-                
-                return $opportunity;
-            });
-
-            $categories = Category::all(['category_id', 'category_name']);
-
-            if ($request->ajax()) {
-                return view('opportunities.partials.list', compact('opportunities'))->render();
-            }
-
-            return view('opportunities.index', compact('opportunities', 'categories'))->render();
-        });
+        return view('opportunities.index', compact('opportunities', 'categories'));
     }
 
     /**
@@ -244,7 +177,7 @@ class VolunteerOpportunityController extends Controller
             $organization->increment('total_opportunities');
 
             // Invalidate cache
-            Cache::tags(['opportunities'])->flush();
+            $this->opportunityService->clearCache();
 
             return redirect()->route('opportunities.show', $opportunity->opportunity_id)
                 ->with('success', 'Opportunity posted successfully!');
@@ -309,7 +242,7 @@ class VolunteerOpportunityController extends Controller
             $opportunity->update($request->all());
 
             // Invalidate cache
-            Cache::tags(['opportunities'])->flush();
+            $this->opportunityService->clearCache();
 
             return redirect()->route('opportunities.show', $opportunity->opportunity_id)
                 ->with('success', 'Opportunity updated successfully!');
@@ -333,7 +266,7 @@ class VolunteerOpportunityController extends Controller
             $opportunity->delete();
 
             // Invalidate cache
-            Cache::tags(['opportunities'])->flush();
+            $this->opportunityService->clearCache();
 
             return redirect()->route('opportunities.index')
                 ->with('success', 'Opportunity deleted successfully!');

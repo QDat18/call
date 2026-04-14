@@ -6,9 +6,9 @@
                 {{-- Header Card --}}
                 <div class="flex justify-between items-start mb-4">
                     <span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wide text-white flex items-center gap-1"
-                          style="background-color: {{ $opportunity->category->color ?? '#3B82F6' }}">
-                        <i class="{{ $opportunity->category->icon ?? 'fas fa-tag' }}"></i>
-                        {{ $opportunity->category->category_name ?? 'General' }}
+                          style="background-color: {{ $opportunity->category_color_label }}">
+                        <i class="{{ $opportunity->category_icon_label }}"></i>
+                        {{ $opportunity->category_name_label }}
                     </span>
                     @if(auth()->check() && auth()->user()->user_type === 'Volunteer')
                         <button class="text-gray-300 hover:text-red-500 transition favorite-btn" data-id="{{ $opportunity->opportunity_id }}">
@@ -32,7 +32,7 @@
                 @if($opportunity->processed_skills)
                     <div class="flex flex-wrap gap-1 mb-4">
                         @foreach($opportunity->processed_skills as $skill)
-                            <span class="px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded border border-gray-100">{{ trim($skill) }}</span>
+                            <span class="px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded border border-gray-100">{{ $skill }}</span>
                         @endforeach
                         @if($opportunity->remaining_skills_count > 0)
                             <span class="px-2 py-1 bg-gray-50 text-gray-400 text-xs">+{{ $opportunity->remaining_skills_count }}</span>
@@ -48,11 +48,6 @@
                         {{ Str::limit($opportunity->location, 30) }}
                     </div>
 
-                    {{-- Logic tính phần trăm --}}
-                    @php
-                        $percentage = $opportunity->registration_percentage;
-                    @endphp
-
                     {{-- Thanh tiến độ --}}
                     <div>
                         <div class="flex justify-between text-xs font-medium mb-1.5">
@@ -60,13 +55,12 @@
                                 <b class="text-indigo-600">{{ $opportunity->volunteers_registered }}/{{ $opportunity->volunteers_needed }}</b>
                             </span>
                             <span class="text-gray-500">
-                                {{ round($percentage) }}%
+                                {{ round($opportunity->registration_percentage) }}%
                             </span>
                         </div>
                         <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                            {{-- Sử dụng bg-indigo-600 để khớp màu với trang chi tiết --}}
                             <div class="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                                 style="width: {{ min($percentage, 100) }}%"></div>
+                                 style="width: {{ min($opportunity->registration_percentage, 100) }}%"></div>
                         </div>
                     </div>
                 </div>

@@ -34,9 +34,9 @@
                         <div class="flex justify-between items-start mb-6">
                             <div class="flex gap-2">
                                 <span class="px-3 py-1 rounded-full text-xs font-bold text-white flex items-center gap-1"
-                                    style="background-color: {{ $opportunity->category->color ?? '#3B82F6' }}">
-                                    <i class="{{ $opportunity->category->icon ?? 'fas fa-heart' }}"></i>
-                                    {{ $opportunity->category->category_name ?? 'General' }}
+                                    style="background-color: {{ $opportunity->category_color_label }}">
+                                    <i class="{{ $opportunity->category_icon_label }}"></i>
+                                    {{ $opportunity->category_name_label }}
                                 </span>
                                 @if($opportunity->status === 'Active')
                                     <span
@@ -108,7 +108,7 @@
                                 <i class="fas fa-calendar text-green-500 text-xl mb-2"></i>
                                 <div class="text-xs text-gray-500 uppercase font-bold">Bắt đầu</div>
                                 <div class="font-semibold text-gray-800 text-sm">
-                                    {{ \Carbon\Carbon::parse($opportunity->start_date)->format('d/m/Y') }}</div>
+                                    {{ $opportunity->formatted_start_date }}</div>
                             </div>
                             <div class="bg-orange-50 p-4 rounded-2xl text-center">
                                 <i class="fas fa-clock text-orange-500 text-xl mb-2"></i>
@@ -125,20 +125,15 @@
                         </div>
 
                         {{-- Progress Bar --}}
-                        @php
-                            $percentage = $opportunity->volunteers_needed > 0
-                                ? ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100
-                                : 0;
-                        @endphp
                         <div class="mt-6">
                             <div class="flex justify-between text-sm mb-2 font-medium">
                                 <span class="text-gray-600">Đã đăng ký: <b
                                         class="text-indigo-600">{{ $opportunity->volunteers_registered }}/{{ $opportunity->volunteers_needed }}</b></span>
-                                <span class="text-gray-500">{{ round($percentage) }}%</span>
+                                <span class="text-gray-500">{{ round($opportunity->registration_percentage) }}%</span>
                             </div>
                             <div class="w-full bg-gray-100 rounded-full h-2.5">
                                 <div class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500"
-                                    style="width: {{ min($percentage, 100) }}%"></div>
+                                    style="width: {{ min($opportunity->registration_percentage, 100) }}%"></div>
                             </div>
                         </div>
                     </div>
@@ -170,20 +165,10 @@
                                 <div class="mb-6">
                                     <h4 class="font-bold text-gray-700 text-sm uppercase mb-3">Kỹ năng chuyên môn:</h4>
                                     <div class="flex flex-wrap gap-2">
-                                        @php
-                                            // Logic an toàn để xử lý mảng/chuỗi
-                                            $skills = $opportunity->required_skills;
-                                            if (is_string($skills)) {
-                                                $skills = explode(',', $skills);
-                                            } elseif (!is_array($skills)) {
-                                                $skills = [];
-                                            }
-                                        @endphp
-
-                                        @foreach($skills as $skill)
+                                        @foreach($opportunity->required_skills as $skill)
                                             <span
                                                 class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-semibold border border-indigo-100">
-                                                {{ trim($skill) }}
+                                                {{ $skill }}
                                             </span>
                                         @endforeach
                                     </div>
@@ -268,7 +253,7 @@
                                     <span class="text-gray-500"><i class="fas fa-hourglass-start mr-2"></i>Hạn nộp
                                         đơn</span>
                                     <span class="font-bold text-red-600">
-                                        {{ $opportunity->application_deadline ? \Carbon\Carbon::parse($opportunity->application_deadline)->format('d/m/Y') : 'Không giới hạn' }}
+                                        {{ $opportunity->formatted_deadline }}
                                     </span>
                                 </div>
                                 <div class="flex justify-between items-center py-2 border-b border-gray-50">
