@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Jobs;
-
 use App\Models\Notification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -9,29 +7,17 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-
 class SendNotificationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $userIds;
     protected $data;
-
-    /**
-     * Create a new job instance.
-     *
-     * @param array|int $userIds
-     * @param array $data
-     */
     public function __construct($userIds, array $data)
     {
         $this->userIds = is_array($userIds) ? $userIds : [$userIds];
         $this->data = $data;
     }
-
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
         try {
@@ -52,8 +38,6 @@ class SendNotificationJob implements ShouldQueue
                     'created_at' => $now,
                 ];
             }
-
-            // Bulk insert for better performance
             Notification::insert($notifications);
         } catch (\Exception $e) {
             Log::error('Failed to send notifications: ' . $e->getMessage());

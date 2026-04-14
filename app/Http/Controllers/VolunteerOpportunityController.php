@@ -20,78 +20,102 @@ class VolunteerOpportunityController extends Controller
      */
     public function index(Request $request)
     {
-        $query = VolunteerOpportunity::with(['organization.user', 'category'])
-            ->where('status', 'Active');
-
-
-        if ($request->has('q') && $request->q != '') {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('title', 'like', '%' . $q . '%')
-                    ->orWhere('description', 'like', '%' . $q . '%')
-                    ->orWhereHas('organization', function ($org) use ($q) {
-                        $org->where('organization_name', 'like', '%' . $q . '%');
-                    });
-            });
-        }
-        // Filter by category
-        if ($request->has('category') && $request->category != '') {
-            $query->where('category_id', $request->category);
-        }
-
-        // Filter by location
-        if ($request->has('location') && $request->location) {
-            $query->where('location', 'LIKE', "%{$request->location}%");
-        }
-
-        // Filter by time commitment
-        if ($request->has('time_commitment') && $request->time_commitment) {
-            $query->where('time_commitment', $request->time_commitment);
-        }
-
-        // Filter by experience needed
-        if ($request->has('experience') && $request->experience) {
-            $query->where('experience_needed', $request->experience);
-        }
-
-        // Search by title or description
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'LIKE', "%{$search}%")
-                    ->orWhere('description', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Sort
+        $page = $request->get('page', 1);
         $sortBy = $request->get('sort', 'latest');
-        switch ($sortBy) {
-            case 'popular':
-                $query->orderBy('application_count', 'desc');
-                break;
-            case 'urgent':
-                $query->orderBy('application_deadline', 'asc');
-                break;
-            case 'oldest':
-                $query->orderBy('created_at', 'asc');
-                break;
-            default: // latest
-                $query->orderBy('created_at', 'desc');
-        }
-        $cacheKey = 'opportunities_list_' . md5(serialize($request->all()));
+        $search = $request->get('q') ?: $request->get('search');
+        $categoryId = $request->get('category');
+        $locationFilter = $request->get('location');
+        $timeCommitment = $request->get('time_commitment');
+        $experience = $request->get('experience');
 
-        $opportunities = Cache::tags(['opportunities'])->remember($cacheKey, 600, function () use ($query) {
-            return $query->paginate(9);
-        });
+        // Cache Key based on page and filters (avoiding full request serialization)
+        $cacheKey = 'opportunities_html_p' . $page . '_s' . $sortBy . '_c' . $categoryId . '_l' . md5($locationFilter . $search);
 
-        $categories = Cache::tags(['opportunities'])->remember('all_categories', 3600, function () {
-            return Category::all();
+        return Cache::tags(['opportunities'])->remember($cacheKey, 60, function () use ($request, $sortBy, $search, $categoryId, $locationFilter, $timeCommitment, $experience) {
+            $query = VolunteerOpportunity::query()
+                ->select([
+                    'opportunity_id', 'org_id', 'category_id', 'title',
+                    'location', 'volunteers_needed', 'volunteers_registered',
+                    'application_deadline', 'created_at', 'required_skills',
+                    'application_count'
+                ])
+                ->with([
+                    'organization:org_id,organization_name',
+                    'category:category_id,category_name,color,icon'
+                ])
+                ->where('volunteer_opportunities.status', 'Active');
+
+            // Search logic (Full-Text)
+            if (!empty($search)) {
+                $query->leftJoin('organizations', 'volunteer_opportunities.org_id', '=', 'organizations.org_id')
+                    ->where(function ($sub) use ($search) {
+                        $sub->whereFullText(['volunteer_opportunities.title', 'volunteer_opportunities.description'], $search)
+                            ->orWhereFullText('organizations.organization_name', $search);
+                    });
+            }
+
+            // Category Filter
+            if ($categoryId) {
+                $query->where('volunteer_opportunities.category_id', $categoryId);
+            }
+
+            // Location Filter (Full-Text)
+            if ($locationFilter) {
+                // Check if location matches what we indexed
+                $query->whereFullText('volunteer_opportunities.location', $locationFilter);
+            }
+
+            // Other filters
+            if ($timeCommitment) {
+                $query->where('volunteer_opportunities.time_commitment', $timeCommitment);
+            }
+
+            if ($experience) {
+                $query->where('volunteer_opportunities.experience_needed', $experience);
+            }
+
+            // Sort logic
+            switch ($sortBy) {
+                case 'popular':
+                    $query->orderBy('volunteer_opportunities.application_count', 'desc');
+                    break;
+                case 'urgent':
+                    $query->orderBy('volunteer_opportunities.application_deadline', 'asc');
+                    break;
+                case 'oldest':
+                    $query->orderBy('volunteer_opportunities.created_at', 'asc');
+                    break;
+                default: // latest
+                    $query->orderBy('volunteer_opportunities.created_at', 'desc');
+            }
+
+            // Use simplePaginate to avoid COUNT(*)
+            $opportunities = $query->simplePaginate(9);
+
+            // Move logic from Blade to Controller: pre-process skills and logic using through()
+            $opportunities->through(function ($opportunity) {
+                $skills = $opportunity->required_skills ?: [];
+                $opportunity->processed_skills = array_slice(array_filter($skills, function ($v) {
+                    return !empty(trim($v));
+                }), 0, 2);
+                $opportunity->remaining_skills_count = count($skills) > 2 ? count($skills) - 2 : 0;
+                
+                // Pre-calculate percentage for Blade
+                $opportunity->registration_percentage = $opportunity->volunteers_needed > 0
+                    ? ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100
+                    : 0;
+                
+                return $opportunity;
+            });
+
+            $categories = Category::all(['category_id', 'category_name']);
+
+            if ($request->ajax()) {
+                return view('opportunities.partials.list', compact('opportunities'))->render();
+            }
+
+            return view('opportunities.index', compact('opportunities', 'categories'))->render();
         });
-        
-        if ($request->ajax()) {
-            return view('opportunities.partials.list', compact('opportunities'))->render();
-        }
-        return view('opportunities.index', compact('opportunities', 'categories'));
     }
 
     /**

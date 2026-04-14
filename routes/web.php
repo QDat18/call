@@ -211,8 +211,8 @@ Route::middleware('auth')->group(function () {
     // Route::get('/change-password', [UserController::class, 'showChangePasswordForm'])->name('user.change-password');
     Route::post('/user/send-reset-link', [UserController::class, 'sendResetLinkEmail'])
         ->name('user.send-reset-link');
-    // Route::post('/change-password', [UserController::class, 'changePassword'])->name('user.change-password.update');
-    // Route::post('/user/send-verification-code', [UserController::class, 'sendVerificationCode'])->name('user.send-verification-code');
+    Route::post('/change-password', [UserController::class, 'changePassword'])->name('user.change-password.update');
+    Route::post('/user/send-verification-code', [UserController::class, 'sendVerificationCode'])->name('user.send-verification-code');
     // User Deactivation
     Route::post('/user/deactivate', [UserController::class, 'deactivate'])->name('user.deactivate');
 

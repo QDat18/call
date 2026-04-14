@@ -29,20 +29,13 @@
                 </p>
 
                 {{-- Skills/Meta --}}
-                @if($opportunity->required_skills)
-                    @php
-                        $rawSkills = $opportunity->required_skills;
-                        $skills = is_array($rawSkills) ? $rawSkills : explode(',', $rawSkills);
-                        $skills = array_filter($skills, function($v) { return !empty(trim($v)); });
-                    @endphp
+                @if($opportunity->processed_skills)
                     <div class="flex flex-wrap gap-1 mb-4">
-                        @foreach($skills as $skill)
-                            @if($loop->index < 2)
+                        @foreach($opportunity->processed_skills as $skill)
                             <span class="px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded border border-gray-100">{{ trim($skill) }}</span>
-                            @endif
                         @endforeach
-                        @if(count($skills) > 2)
-                            <span class="px-2 py-1 bg-gray-50 text-gray-400 text-xs">+{{ count($skills)-2 }}</span>
+                        @if($opportunity->remaining_skills_count > 0)
+                            <span class="px-2 py-1 bg-gray-50 text-gray-400 text-xs">+{{ $opportunity->remaining_skills_count }}</span>
                         @endif
                     </div>
                 @endif
@@ -57,9 +50,7 @@
 
                     {{-- Logic tính phần trăm --}}
                     @php
-                        $percentage = $opportunity->volunteers_needed > 0
-                            ? ($opportunity->volunteers_registered / $opportunity->volunteers_needed) * 100
-                            : 0;
+                        $percentage = $opportunity->registration_percentage;
                     @endphp
 
                     {{-- Thanh tiến độ --}}
