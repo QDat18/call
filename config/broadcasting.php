@@ -20,11 +20,11 @@ return [
 
     'pusher' => [
         'driver' => 'pusher',
-        'key' => env('PUSHER_APP_KEY', 'deploy'),      // Thêm 'deploy'
-        'secret' => env('PUSHER_APP_SECRET', 'deploy'), // Thêm 'deploy'
-        'app_id' => env('PUSHER_APP_ID', 'deploy'),     // Thêm 'deploy'
+        'key' => env('PUSHER_APP_KEY'),
+        'secret' => env('PUSHER_APP_SECRET'),
+        'app_id' => env('PUSHER_APP_ID'),
         'options' => [
-            'cluster' => env('PUSHER_APP_CLUSTER', 'mt1'), // Thêm 'mt1'
+            'cluster' => env('PUSHER_APP_CLUSTER'),
             'useTLS' => true,
         ],
     ],

@@ -1,0 +1,3 @@
+Label,# Samples,Average,Min,Max,Std. Dev.,Error %,Throughput,Received KB/sec,Sent KB/sec,Avg. Bytes
+Opportunities List (Cached),500,18945,1217,25259,"5077,17","0,800%","2,10077","167,72","0,28","81751,3"
+TOTAL,500,18945,1217,25259,"5077,17","0,800%","2,10077","167,72","0,28","81751,3"

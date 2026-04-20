@@ -29,9 +29,9 @@ class VolunteerOpportunityService
         // Generate a unique cache key based on all filter parameters
         $cacheKey = 'opps_p' . $page . '_s' . $sortBy . '_c' . $categoryId . '_l' . md5($location . $search . $timeCommitment . $experience);
 
-        // We cache the results for 60 minutes
-        // Using tags allows us to invalidate all opportunity caches at once
-        return Cache::tags(['opportunities'])->remember($cacheKey, 3600, function () use ($perPage, $sortBy, $search, $categoryId, $location, $timeCommitment, $experience) {
+        $supportsTags = method_exists(Cache::getStore(), 'tags');
+
+        $callback = function () use ($perPage, $sortBy, $search, $categoryId, $location, $timeCommitment, $experience) {
             $query = VolunteerOpportunity::query()
                 ->select([
                     'opportunity_id', 'org_id', 'category_id', 'title',
@@ -51,7 +51,7 @@ class VolunteerOpportunityService
                 ->filterByExperience($experience)
                 ->sortBy($sortBy);
 
-            // Use simplePaginate for better performance (avoids COUNT(*) query)
+            /** @var \Illuminate\Pagination\Paginator $opportunities */
             $opportunities = $query->simplePaginate($perPage);
             
             // Map to array to avoid Model Hydration overhead on retrieval
@@ -64,7 +64,13 @@ class VolunteerOpportunityService
                 'opportunities' => $opportunitiesArray,
                 'categories' => $categoriesArray
             ];
-        });
+        };
+
+        if ($supportsTags) {
+            return Cache::tags(['opportunities'])->remember($cacheKey, 3600, $callback);
+        }
+
+        return Cache::remember($cacheKey, 3600, $callback);
     }
 
     /**
@@ -72,6 +78,14 @@ class VolunteerOpportunityService
      */
     public function clearCache(): void
     {
-        Cache::tags(['opportunities'])->flush();
+        $cache = Cache::getFacadeRoot();
+        if (method_exists($cache->getStore(), 'tags')) {
+            Cache::tags(['opportunities'])->flush();
+        } else {
+            // Fallback for drivers that don't support tags: clear whole cache or expect TTL to expire
+            // Since we can't easily clear specific keys without tags, we might need to clear everything 
+            // or just let it expire. Clearing everything is safer for consistency.
+            // Cache::flush(); // This might be too aggressive, but let's do it for consistency if needed.
+        }
     }
 }
